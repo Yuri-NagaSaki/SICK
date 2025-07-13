@@ -285,7 +285,7 @@ If you encounter issues, please check:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 👨‍💻 Author
-
+Blog - [猫猫博客](https://catcat.blog)
 Made with ❤️ by Yuri NagaSaki
 
 ---
