@@ -71,23 +71,6 @@ curl -sL https://sick.onl | bash -s -- -cn
 ```
 
 
-
-### 🎮 Usage
-
-```bash
-# English mode (default)
-sudo ./hardware_info.sh
-
-# Chinese mode
-sudo ./hardware_info.sh -cn
-
-# Show help
-./hardware_info.sh --help
-
-# Show version
-./hardware_info.sh --version
-```
-
 ### 📋 Sample Output
 
 ```
