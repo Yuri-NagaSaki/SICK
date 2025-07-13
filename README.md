@@ -62,35 +62,15 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 
 ### ⚡ One-Click Execution
 
-**English Mode (Default):**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/refs/heads/main/hardware_info.sh | sudo bash
 ```
-
-**Chinese Mode:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/refs/heads/main/hardware_info.sh | sudo bash -s -- -cn
-```
-
-**Alternative with wget:**
-```bash
 # English
-wget -qO- https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/refs/heads/main/hardware_info.sh | sudo bash
+curl -sL https://sick.onl | bash
 
 # Chinese
-wget -qO- https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/refs/heads/main/hardware_info.sh | sudo bash -s -- -cn
+curl -sL https://sick.onl | bash -s -- -cn
 ```
 
-### 📥 Traditional Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/Yuri-NagaSaki/SICK.git
-cd SICK
-
-# Make executable
-chmod +x hardware_info.sh
-```
 
 ### 🎮 Usage
 
