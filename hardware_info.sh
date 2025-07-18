@@ -1173,16 +1173,18 @@ get_disk_info() {
                     reads_mb=$(echo "$smart_data" | grep -E "Host_Reads_MiB|Lifetime_Reads_MiB|^[ ]*241[ ].*MiB" | awk '{print $10}' | head -1)
                     writes_mb=$(echo "$smart_data" | grep -E "Host_Writes_MiB|Lifetime_Writes_MiB|^[ ]*242[ ].*MiB" | awk '{print $10}' | head -1)
                     
-                    # Look for GiB format (standard)
+                    # Look for GiB format (standard) - enhanced pattern matching
                     if [[ -z "$reads_mb" ]]; then
-                        reads_gb=$(echo "$smart_data" | grep -E "Host_Reads_GiB|Lifetime_Reads_GiB|Total.*Read.*GiB" | awk '{print $10}' | head -1)
-                        if [[ -n "$reads_gb" ]]; then
+                        # Try multiple patterns for reads including attribute ID-based matching
+                        reads_gb=$(echo "$smart_data" | grep -E "Host_Reads_GiB|Lifetime_Reads_GiB|Total.*Read.*GiB|^[ ]*242[ ].*Host_Reads_GiB|^[ ]*242[ ].*Reads.*GiB" | awk '{print $10}' | head -1)
+                        if [[ -n "$reads_gb" && "$reads_gb" != "0" && "$reads_gb" != "-" ]]; then
                             reads_mb=$(echo "scale=0; $reads_gb * 1024" | bc -l 2>/dev/null)
                         fi
                     fi
                     if [[ -z "$writes_mb" ]]; then
-                        writes_gb=$(echo "$smart_data" | grep -E "Host_Writes_GiB|Lifetime_Writes_GiB|Total.*Writ.*GiB" | awk '{print $10}' | head -1)
-                        if [[ -n "$writes_gb" ]]; then
+                        # Try multiple patterns for writes including attribute ID-based matching
+                        writes_gb=$(echo "$smart_data" | grep -E "Host_Writes_GiB|Lifetime_Writes_GiB|Total.*Writ.*GiB|^[ ]*241[ ].*Host_Writes_GiB|^[ ]*241[ ].*Writes.*GiB" | awk '{print $10}' | head -1)
+                        if [[ -n "$writes_gb" && "$writes_gb" != "0" && "$writes_gb" != "-" ]]; then
                             writes_mb=$(echo "scale=0; $writes_gb * 1024" | bc -l 2>/dev/null)
                         fi
                     fi
@@ -1203,18 +1205,18 @@ get_disk_info() {
                         fi
                     fi
                     
-                    # Look for other vendor-specific GiB formats
+                    # Look for other vendor-specific GiB formats with enhanced pattern matching
                     if [[ -z "$reads_mb" ]]; then
-                        # Check for any attribute with "Read" and GiB
-                        local generic_reads_gb=$(echo "$smart_data" | grep -i -E "[^_]reads?_gib|reads?.*gib" | awk '{print $10}' | head -1)
-                        if [[ -n "$generic_reads_gb" && "$generic_reads_gb" != "0" ]]; then
+                        # Check for any attribute with "Read" and GiB, including attribute number matching
+                        local generic_reads_gb=$(echo "$smart_data" | grep -i -E "[^_]reads?_gib|reads?.*gib|^[ ]*242[ ].*gib" | awk '{print $10}' | head -1)
+                        if [[ -n "$generic_reads_gb" && "$generic_reads_gb" != "0" && "$generic_reads_gb" != "-" ]]; then
                             reads_mb=$(echo "scale=0; $generic_reads_gb * 1024" | bc -l 2>/dev/null)
                         fi
                     fi
                     if [[ -z "$writes_mb" ]]; then
-                        # Check for any attribute with "Write" and GiB
-                        local generic_writes_gb=$(echo "$smart_data" | grep -i -E "[^_]writes?_gib|writes?.*gib" | awk '{print $10}' | head -1)
-                        if [[ -n "$generic_writes_gb" && "$generic_writes_gb" != "0" ]]; then
+                        # Check for any attribute with "Write" and GiB, including attribute number matching
+                        local generic_writes_gb=$(echo "$smart_data" | grep -i -E "[^_]writes?_gib|writes?.*gib|^[ ]*241[ ].*gib" | awk '{print $10}' | head -1)
+                        if [[ -n "$generic_writes_gb" && "$generic_writes_gb" != "0" && "$generic_writes_gb" != "-" ]]; then
                             writes_mb=$(echo "scale=0; $generic_writes_gb * 1024" | bc -l 2>/dev/null)
                         fi
                     fi
