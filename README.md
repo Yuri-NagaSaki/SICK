@@ -254,3 +254,19 @@ Made with ❤️ by Yuri NagaSaki
 ---
 
 **Make server checking no longer sick (frustrating), but sick (awesome)!** 🚀 
+
+## 🚀 Sponsored by SharonNetworks
+
+The construction and release environment of this project is supported by SharonNetworks — specializing in top-tier optimized routes for returning to China in the Asia-Pacific region, offering high bandwidth, low latency direct connections to mainland China, and built-in powerful DDoS cleaning capabilities.
+
+SharonNetworks ensures the smooth operation of your business!
+
+### ✨ Service Advantages
+
+* Asia-Pacific three-network return path optimization with direct connections to mainland China, enabling ultra-fast downloads
+* Ultra-high bandwidth + anti-attack cleaning services to ensure business security and stability
+* Multi-node coverage (Hong Kong, Singapore, Japan, Taiwan, South Korea)
+* High-defense capabilities and high-speed networks; Hong Kong/Japan/Singapore CDN coming soon
+
+Want to experience the same setup environment? Visit the Sharon official [website](https://sharon.io) or join the [Telegram group](https://t.me/SharonNetwork) to learn more and apply for sponsorship.
+
