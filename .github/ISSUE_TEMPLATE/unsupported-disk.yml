@@ -1,0 +1,80 @@
+name: "Unsupported Disk Model / 不支持的硬盘型号"
+description: "Report a disk model that doesn't display I/O statistics / 报告无法显示读写统计的硬盘型号"
+title: "[Disk] Add support for: "
+labels: ["enhancement", "disk-support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## English
+        Thank you for helping improve SICK! Please provide the SMART data from your unsupported disk.
+
+        ## 中文
+        感谢您帮助改进 SICK！请提供您不支持的硬盘的 SMART 数据。
+
+  - type: input
+    id: disk_model
+    attributes:
+      label: "Disk Model / 硬盘型号"
+      description: "e.g., TOSHIBA MG07ACA12TE, Samsung 870 EVO"
+      placeholder: "Enter your disk model here"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: disk_type
+    attributes:
+      label: "Disk Type / 硬盘类型"
+      options:
+        - HDD
+        - SATA SSD
+        - NVMe SSD
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: smart_json
+    attributes:
+      label: "SMART JSON Output / SMART JSON 输出"
+      description: |
+        Run the following command and paste the output:
+        执行以下命令并粘贴输出：
+        ```
+        smartctl -a -j /dev/sdX
+        ```
+        Replace `/dev/sdX` with your actual disk device.
+        将 `/dev/sdX` 替换为你实际的硬盘设备。
+      placeholder: |
+        {
+          "json_format_version": [1, 0],
+          "smartctl": { ... },
+          ...
+        }
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: script_output
+    attributes:
+      label: "Current Script Output / 当前脚本输出"
+      description: |
+        What does SICK currently show for this disk?
+        SICK 当前对此硬盘显示什么内容？
+      placeholder: |
+        │ ═══ /dev/sda ═══
+        │   Basic Info: ...
+        │   I/O Stats: Not supported for this drive model
+        │   ...
+
+  - type: textarea
+    id: additional_info
+    attributes:
+      label: "Additional Information / 其他信息"
+      description: |
+        Any other relevant information (OS, smartctl version, etc.)
+        任何其他相关信息（操作系统、smartctl 版本等）
+      placeholder: |
+        OS: Debian 12
+        smartctl version: 7.2

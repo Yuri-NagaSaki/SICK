@@ -399,6 +399,13 @@ install_packages() {
         echo "  ✓ nvme found"
     fi
 
+    if ! command -v jq >/dev/null 2>&1; then
+        packages_needed+=("jq")
+        echo "  ❌ jq not found (for JSON parsing)"
+    else
+        echo "  ✓ jq found"
+    fi
+
     # Check for sensors command (for CPU temperature)
     if ! command -v sensors >/dev/null 2>&1; then
         case "$pkg_manager" in
@@ -643,6 +650,15 @@ install_packages() {
             echo "  ✓ nvme now available"
         else
             echo "  ❌ nvme still not available"
+            verification_success=false
+        fi
+    fi
+
+    if [[ " ${packages_needed[*]} " =~ " jq " ]]; then
+        if command -v jq >/dev/null 2>&1; then
+            echo "  ✓ jq now available"
+        else
+            echo "  ❌ jq still not available"
             verification_success=false
         fi
     fi
@@ -1039,826 +1055,366 @@ get_ram_info() {
     echo "└$(printf '─%.0s' $(seq 1 50))"
 }
 
+# Helper function: Convert bytes to human readable format
+format_bytes() {
+    local bytes="$1"
+    local suffix="$2"  # Optional suffix like "(SMART)" or "(session)"
+
+    if [[ -z "$bytes" || "$bytes" == "0" || ! "$bytes" =~ ^[0-9]+$ ]]; then
+        echo ""
+        return
+    fi
+
+    local result=""
+    if (( bytes >= 1125899906842624 )); then  # >= 1 PB
+        result=$(echo "scale=2; $bytes / 1125899906842624" | bc -l 2>/dev/null)
+        result="${result} PB"
+    elif (( bytes >= 1099511627776 )); then  # >= 1 TB
+        result=$(echo "scale=2; $bytes / 1099511627776" | bc -l 2>/dev/null)
+        result="${result} TB"
+    elif (( bytes >= 1073741824 )); then  # >= 1 GB
+        result=$(echo "scale=2; $bytes / 1073741824" | bc -l 2>/dev/null)
+        result="${result} GB"
+    elif (( bytes >= 1048576 )); then  # >= 1 MB
+        result=$(echo "scale=2; $bytes / 1048576" | bc -l 2>/dev/null)
+        result="${result} MB"
+    else
+        result=$(echo "scale=2; $bytes / 1024" | bc -l 2>/dev/null)
+        result="${result} KB"
+    fi
+
+    [[ -n "$suffix" ]] && result="$result $suffix"
+    echo "$result"
+}
+
+# Helper function: Extract value from JSON using basic pattern matching
+# Usage: json_extract "key" "$json_string"
+json_extract() {
+    local key="$1"
+    local json="$2"
+    echo "$json" | grep -oP "\"$key\"\s*:\s*\K[0-9]+" | head -1
+}
+
+# Helper function: Extract string value from JSON
+json_extract_string() {
+    local key="$1"
+    local json="$2"
+    echo "$json" | grep -oP "\"$key\"\s*:\s*\"\K[^\"]*" | head -1
+}
+
+# Function to get SMART data using JSON output (smartctl 7.0+)
+get_smart_json() {
+    local disk="$1"
+    local json_output=""
+
+    # Try to get JSON output from smartctl
+    json_output=$(smartctl -a --json=c "/dev/$disk" 2>/dev/null)
+
+    # Check if JSON output is valid
+    if [[ -n "$json_output" ]] && echo "$json_output" | grep -q '"json_format_version"'; then
+        echo "$json_output"
+    else
+        echo ""
+    fi
+}
+
+# Function to parse SMART data from JSON
+parse_smart_json() {
+    local disk="$1"
+    local json="$2"
+
+    if [[ -z "$json" ]]; then
+        return 1
+    fi
+
+    # Extract common fields
+    local smart_status=$(echo "$json" | grep -oP '"passed"\s*:\s*\K(true|false)' | head -1)
+    local temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{\s*"current"\s*:\s*\K[0-9]+' | head -1)
+    local power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{\s*"hours"\s*:\s*\K[0-9]+' | head -1)
+
+    # SMART Status
+    if [[ "$smart_status" == "true" ]]; then
+        echo "│   $(get_label "smart_status"): PASSED"
+    elif [[ "$smart_status" == "false" ]]; then
+        echo "│   $(get_label "smart_status"): ${RED}FAILED${NC}"
+    else
+        echo "│   $(get_label "smart_status"): $(get_label "no_info")"
+    fi
+
+    # Power on hours
+    if [[ -n "$power_on_hours" ]]; then
+        echo "│   $(get_label "power_on_hours"): ${power_on_hours} hours"
+    fi
+
+    # Data transfer - check if NVMe
+    if [[ "$disk" =~ nvme ]]; then
+        # NVMe: data_units_read/written (each unit = 512 * 1000 bytes)
+        local data_units_read=$(echo "$json" | grep -oP '"data_units_read"\s*:\s*\K[0-9]+' | head -1)
+        local data_units_written=$(echo "$json" | grep -oP '"data_units_written"\s*:\s*\K[0-9]+' | head -1)
+
+        if [[ -n "$data_units_read" && "$data_units_read" != "0" ]]; then
+            local bytes_read=$((data_units_read * 512000))
+            local formatted=$(format_bytes "$bytes_read")
+            [[ -n "$formatted" ]] && echo "│   $(get_label "total_reads"): $formatted"
+        fi
+
+        if [[ -n "$data_units_written" && "$data_units_written" != "0" ]]; then
+            local bytes_written=$((data_units_written * 512000))
+            local formatted=$(format_bytes "$bytes_written")
+            [[ -n "$formatted" ]] && echo "│   $(get_label "total_writes"): $formatted"
+        fi
+
+        # NVMe health info
+        local percentage_used=$(echo "$json" | grep -oP '"percentage_used"\s*:\s*\K[0-9]+' | head -1)
+        local available_spare=$(echo "$json" | grep -oP '"available_spare"\s*:\s*\K[0-9]+' | head -1)
+        local critical_warning=$(echo "$json" | grep -oP '"critical_warning"\s*:\s*\K[0-9]+' | head -1)
+
+        if [[ -n "$percentage_used" ]]; then
+            echo "│   $(get_label "percentage_used"): ${percentage_used}%"
+            local health=$((100 - percentage_used))
+            [[ $health -lt 0 ]] && health=0
+            echo "│   $(get_label "health_status"): ${health}%"
+        fi
+
+        if [[ -n "$available_spare" ]]; then
+            echo "│   $(get_label "available_spare"): ${available_spare}%"
+        fi
+
+        if [[ -n "$critical_warning" && "$critical_warning" != "0" ]]; then
+            echo "│   $(get_label "critical_warning"): ${critical_warning}"
+        fi
+    else
+        # SATA/HDD/SSD: Look for LBA counts in ata_smart_attributes
+        # Different vendors use different attribute IDs:
+        #   - ID 241: Total_LBAs_Written (most common)
+        #   - ID 242: Total_LBAs_Read (most common)
+        #   - ID 246: Total_LBAs_Written (some SSDs)
+        #   - ID 247: Host_Reads_32MiB (some vendors)
+        #   - ID 248: Host_Writes_32MiB (some vendors)
+        #   - ID 233: Media_Wearout_Indicator (Intel SSDs, for wear level)
+        local lba_written=""
+        local lba_read=""
+        local write_multiplier=512  # Default: LBA size in bytes
+        local read_multiplier=512
+
+        # Method 1: Try using jq if available (most reliable)
+        if command -v jq >/dev/null 2>&1; then
+            # Try common attribute IDs for writes: 241, 246, 248
+            lba_written=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 241) | .raw.value' 2>/dev/null)
+            if [[ -z "$lba_written" || "$lba_written" == "null" ]]; then
+                lba_written=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 246) | .raw.value' 2>/dev/null)
+            fi
+            if [[ -z "$lba_written" || "$lba_written" == "null" ]]; then
+                # ID 248: Host_Writes_32MiB - value is in 32MiB units
+                lba_written=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 248) | .raw.value' 2>/dev/null)
+                if [[ -n "$lba_written" && "$lba_written" != "null" ]]; then
+                    write_multiplier=$((32 * 1024 * 1024))  # 32 MiB
+                fi
+            fi
+
+            # Try common attribute IDs for reads: 242, 247
+            lba_read=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 242) | .raw.value' 2>/dev/null)
+            if [[ -z "$lba_read" || "$lba_read" == "null" ]]; then
+                # ID 247: Host_Reads_32MiB - value is in 32MiB units
+                lba_read=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 247) | .raw.value' 2>/dev/null)
+                if [[ -n "$lba_read" && "$lba_read" != "null" ]]; then
+                    read_multiplier=$((32 * 1024 * 1024))  # 32 MiB
+                fi
+            fi
+        fi
+
+        # Method 2: Fallback to grep if jq not available or failed
+        if [[ -z "$lba_written" || "$lba_written" == "null" ]]; then
+            # Try by attribute name patterns
+            lba_written=$(echo "$json" | grep -A15 '"Total_LBAs_Written"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+            if [[ -z "$lba_written" ]]; then
+                lba_written=$(echo "$json" | grep -A15 '"Total_Writes_32MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_written" ]] && write_multiplier=$((32 * 1024 * 1024))
+            fi
+            if [[ -z "$lba_written" ]]; then
+                lba_written=$(echo "$json" | grep -A15 '"Host_Writes_32MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_written" ]] && write_multiplier=$((32 * 1024 * 1024))
+            fi
+            if [[ -z "$lba_written" ]]; then
+                lba_written=$(echo "$json" | grep -A15 '"Host_Writes_MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_written" ]] && write_multiplier=$((1024 * 1024))
+            fi
+        fi
+
+        if [[ -z "$lba_read" || "$lba_read" == "null" ]]; then
+            lba_read=$(echo "$json" | grep -A15 '"Total_LBAs_Read"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+            if [[ -z "$lba_read" ]]; then
+                lba_read=$(echo "$json" | grep -A15 '"Total_Reads_32MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_read" ]] && read_multiplier=$((32 * 1024 * 1024))
+            fi
+            if [[ -z "$lba_read" ]]; then
+                lba_read=$(echo "$json" | grep -A15 '"Host_Reads_32MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_read" ]] && read_multiplier=$((32 * 1024 * 1024))
+            fi
+            if [[ -z "$lba_read" ]]; then
+                lba_read=$(echo "$json" | grep -A15 '"Host_Reads_MiB"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+                [[ -n "$lba_read" ]] && read_multiplier=$((1024 * 1024))
+            fi
+        fi
+
+        if [[ -n "$lba_read" && "$lba_read" != "0" && "$lba_read" != "null" ]]; then
+            local bytes_read=$((lba_read * read_multiplier))
+            local formatted=$(format_bytes "$bytes_read")
+            [[ -n "$formatted" ]] && echo "│   $(get_label "total_reads"): $formatted"
+        fi
+
+        if [[ -n "$lba_written" && "$lba_written" != "0" && "$lba_written" != "null" ]]; then
+            local bytes_written=$((lba_written * write_multiplier))
+            local formatted=$(format_bytes "$bytes_written")
+            [[ -n "$formatted" ]] && echo "│   $(get_label "total_writes"): $formatted"
+        fi
+
+        # Track if we found any I/O stats
+        local io_stats_found=false
+        [[ -n "$lba_read" && "$lba_read" != "0" && "$lba_read" != "null" ]] && io_stats_found=true
+        [[ -n "$lba_written" && "$lba_written" != "0" && "$lba_written" != "null" ]] && io_stats_found=true
+
+        # For SSDs without read/write stats, try to show wear level indicator
+        if [[ "$io_stats_found" == false ]]; then
+            local wear_level=""
+            if command -v jq >/dev/null 2>&1; then
+                # ID 177: Wear_Leveling_Count (Samsung, etc.)
+                # ID 231: SSD_Life_Left (various)
+                # ID 233: Media_Wearout_Indicator (Intel)
+                wear_level=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 177 or .id == 231 or .id == 233) | .value' 2>/dev/null | head -1)
+            fi
+            if [[ -z "$wear_level" || "$wear_level" == "null" ]]; then
+                wear_level=$(echo "$json" | grep -A10 '"Wear_Leveling_Count"\|"SSD_Life_Left"\|"Media_Wearout_Indicator"' | grep -oP '"value"\s*:\s*\K[0-9]+' | head -1)
+            fi
+            if [[ -n "$wear_level" && "$wear_level" != "null" && "$wear_level" != "0" ]]; then
+                echo "│   $(get_label "wear_level"): ${wear_level}%"
+                io_stats_found=true
+            fi
+        fi
+
+        # If no I/O stats found at all, show a note with help info
+        if [[ "$io_stats_found" == false ]]; then
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                echo "│   读写统计: 此硬盘型号暂不支持"
+                echo "│   → 如需支持请提交: smartctl -a -j /dev/$disk"
+                echo "│   → 反馈地址: https://github.com/Yuri-NagaSaki/SICK/issues"
+            else
+                echo "│   I/O Stats: Not supported for this drive model"
+                echo "│   → To request support: smartctl -a -j /dev/$disk"
+                echo "│   → Report to: https://github.com/Yuri-NagaSaki/SICK/issues"
+            fi
+        fi
+    fi
+
+    # Temperature
+    if [[ -n "$temperature" ]]; then
+        echo "│   $(get_label "temperature"): ${temperature}°C"
+    fi
+
+    return 0
+}
+
+# Fallback: Parse SMART data from text output (for older smartctl)
+parse_smart_text() {
+    local disk="$1"
+
+    local smart_all=$(smartctl -a "/dev/$disk" 2>/dev/null)
+    if [[ -z "$smart_all" ]]; then
+        return 1
+    fi
+
+    # SMART Status
+    local smart_health=$(echo "$smart_all" | grep -E "SMART overall-health|SMART Health Status" | awk -F': ' '{print $2}')
+    echo "│   $(get_label "smart_status"): ${smart_health:-$(get_label "no_info")}"
+
+    # Power on hours
+    local power_hours=""
+    power_hours=$(echo "$smart_all" | grep -i "power.on" | grep -i hour | head -1 | grep -oE '[0-9,]+' | tr -d ',' | head -1)
+    [[ -n "$power_hours" ]] && echo "│   $(get_label "power_on_hours"): ${power_hours} hours"
+
+    # Temperature
+    local temp=""
+    temp=$(echo "$smart_all" | grep -iE "^Temperature:|Temperature_Celsius" | grep -oE '[0-9]+' | head -1)
+    [[ -n "$temp" ]] && echo "│   $(get_label "temperature"): ${temp}°C"
+
+    # NVMe specific
+    if [[ "$disk" =~ nvme ]]; then
+        # Data units (with human readable in parentheses)
+        local reads=$(echo "$smart_all" | grep -i "Data Units Read" | grep -oE '\([^)]+\)' | tr -d '()' | head -1)
+        local writes=$(echo "$smart_all" | grep -i "Data Units Written" | grep -oE '\([^)]+\)' | tr -d '()' | head -1)
+        [[ -n "$reads" ]] && echo "│   $(get_label "total_reads"): $reads"
+        [[ -n "$writes" ]] && echo "│   $(get_label "total_writes"): $writes"
+
+        # Percentage used
+        local pct_used=$(echo "$smart_all" | grep -i "Percentage Used" | grep -oE '[0-9]+' | head -1)
+        if [[ -n "$pct_used" ]]; then
+            echo "│   $(get_label "percentage_used"): ${pct_used}%"
+            echo "│   $(get_label "health_status"): $((100 - pct_used))%"
+        fi
+
+        # Available spare
+        local spare=$(echo "$smart_all" | grep -i "Available Spare:" | grep -oE '[0-9]+' | head -1)
+        [[ -n "$spare" ]] && echo "│   $(get_label "available_spare"): ${spare}%"
+    fi
+
+    return 0
+}
+
 # Function to get disk information with enhanced SMART data
 get_disk_info() {
     print_subsection "$(get_label "disk_info")"
-    
+
     # Disk usage
     df -h | grep -E '^/dev/' | while IFS= read -r line; do
         echo "│ $line"
     done
-    
+
     echo "│"
     print_color "$GREEN" "│ Physical Disks Details:"
-    
+
     # Physical disk information with enhanced details
     for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'); do
         echo "│"
         print_color "$CYAN" "│ ═══ /dev/$disk ═══"
-        
+
         # Basic disk information
-        local disk_info=$(lsblk -d -n -o SIZE,MODEL,VENDOR "/dev/$disk" 2>/dev/null)
+        local disk_info=$(lsblk -d -n -o SIZE,MODEL,VENDOR "/dev/$disk" 2>/dev/null | sed 's/  */ /g')
         echo "│   Basic Info: $disk_info"
-        
+
         # SMART information
         if command -v smartctl >/dev/null 2>&1; then
-            # Try different methods to check SMART support
-            local smart_check=""
-            
-            # For NVMe drives, try without -d option first
-            if [[ "$disk" =~ nvme ]]; then
-                smart_check=$(smartctl -i "/dev/$disk" 2>/dev/null)
-                if [[ -z "$smart_check" ]]; then
-                    smart_check=$(smartctl -d nvme -i "/dev/$disk" 2>/dev/null)
-                fi
-            else
-                smart_check=$(smartctl -i "/dev/$disk" 2>/dev/null)
+            # Check smartctl version for JSON support (7.0+)
+            local smartctl_version=$(smartctl --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+            local use_json=false
+
+            if [[ -n "$smartctl_version" ]]; then
+                local major_version=$(echo "$smartctl_version" | cut -d. -f1)
+                [[ "$major_version" -ge 7 ]] && use_json=true
             fi
-            
-            # Check if device responds to SMART commands
-            if [[ -n "$smart_check" ]] && [[ ! "$smart_check" =~ "Unable to detect device type" ]]; then
-                local smart_health=$(smartctl -H "/dev/$disk" 2>/dev/null | grep "SMART overall-health" | awk -F': ' '{print $2}')
-                echo "│   $(get_label "smart_status"): ${smart_health:-"$(get_label "no_info")"}"
-                
-                # Get all SMART attributes with device-specific methods
-                local smart_data=""
-                local smart_all=""
-                
-                if [[ "$disk" =~ nvme ]]; then
-                    smart_data=$(smartctl -A "/dev/$disk" 2>/dev/null)
-                    smart_all=$(smartctl -a "/dev/$disk" 2>/dev/null)
-                    if [[ -z "$smart_data" ]]; then
-                        smart_data=$(smartctl -d nvme -A "/dev/$disk" 2>/dev/null)
-                        smart_all=$(smartctl -d nvme -a "/dev/$disk" 2>/dev/null)
-                    fi
-                else
-                    smart_data=$(smartctl -A "/dev/$disk" 2>/dev/null)
-                    smart_all=$(smartctl -a "/dev/$disk" 2>/dev/null)
+
+            # Try JSON parsing first (more reliable)
+            local parsed=false
+            if [[ "$use_json" == true ]]; then
+                local json_data=$(get_smart_json "$disk")
+                if [[ -n "$json_data" ]]; then
+                    parse_smart_json "$disk" "$json_data" && parsed=true
                 fi
-                
-                # Power on hours - try multiple sources
-                local power_hours=""
-                # Traditional SMART attribute
-                power_hours=$(echo "$smart_data" | grep -E "Power_On_Hours|9 Power_On_Hours|Power On Hours" | head -1 | awk '{print $10}')
-                if [[ -z "$power_hours" ]]; then
-                    power_hours=$(echo "$smart_data" | grep -E "^[ ]*9[ ]" | awk '{print $10}')
-                fi
-                # NVMe format
-                if [[ -z "$power_hours" ]]; then
-                    power_hours=$(echo "$smart_all" | grep -i "power on hours" | awk '{print $4}' | tr -d '[]')
-                fi
-                # Alternative format
-                if [[ -z "$power_hours" ]]; then
-                    power_hours=$(echo "$smart_data" | grep -i "power.on\|power_on" | awk '{print $NF}' | tr -d 'h[]')
-                fi
-                echo "│   $(get_label "power_on_hours"): ${power_hours:-"$(get_label "no_info")"} hours"
-                
-                # Data read/written - comprehensive detection
-                echo "│   Data Transfer Statistics:"
-                
-                local data_found=false
-                
-                # Method 1: For NVMe drives - use NVMe specific commands
-                if [[ "$disk" =~ nvme ]]; then
-                    # Try nvme command first (most accurate for NVMe drives)
-                    local nvme_reads_converted=""
-                    local nvme_writes_converted=""
-                    
-                    if command -v nvme >/dev/null 2>&1; then
-                        local nvme_log=$(nvme smart-log "/dev/$disk" 2>/dev/null)
-                        if [[ -n "$nvme_log" ]]; then
-                            nvme_reads_converted=$(echo "$nvme_log" | grep "Data Units Read" | grep -o '([^)]*[PTGM]B)' | tr -d '()' | head -1)
-                            nvme_writes_converted=$(echo "$nvme_log" | grep "Data Units Written" | grep -o '([^)]*[PTGM]B)' | tr -d '()' | head -1)
-                        fi
-                    fi
-                    
-                    # Fallback: try to get the converted values directly from smartctl output
-                    if [[ -z "$nvme_reads_converted" ]]; then
-                        nvme_reads_converted=$(echo "$smart_all" | grep -i "data units read" | grep -o '([^)]*[PTGM]B)' | tr -d '()' | head -1)
-                    fi
-                    if [[ -z "$nvme_writes_converted" ]]; then
-                        nvme_writes_converted=$(echo "$smart_all" | grep -i "data units written" | grep -o '([^)]*[PTGM]B)' | tr -d '()' | head -1)
-                    fi
-                    
-                    if [[ -n "$nvme_reads_converted" ]]; then
-                        echo "│     $(get_label "total_reads"): $nvme_reads_converted"
-                        data_found=true
-                    elif [[ -n "$(echo "$smart_all" | grep -i "data units read")" ]]; then
-                        # Fallback: calculate from raw data units (NVMe spec: 1 data unit = 512 * 1000 bytes = 512KB)
-                        local nvme_reads=$(echo "$smart_all" | grep -i "data units read" | awk '{print $4}' | tr -d '[],' | head -1)
-                        if [[ -n "$nvme_reads" && "$nvme_reads" != "0" ]]; then
-                            # Convert: data_units * 512 * 1000 / 1024^3 for GB, / 1024^4 for TB, / 1024^5 for PB
-                            local nvme_reads_pb=$(echo "scale=2; $nvme_reads * 512 * 1000 / 1024 / 1024 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                            local nvme_reads_tb=$(echo "scale=2; $nvme_reads * 512 * 1000 / 1024 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                            if [[ $(echo "$nvme_reads_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                echo "│     $(get_label "total_reads"): ${nvme_reads_pb} PB"
-                            elif [[ $(echo "$nvme_reads_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                echo "│     $(get_label "total_reads"): ${nvme_reads_tb} TB"
-                            else
-                                local nvme_reads_gb=$(echo "scale=2; $nvme_reads * 512 * 1000 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                                echo "│     $(get_label "total_reads"): ${nvme_reads_gb} GB"
-                            fi
-                            data_found=true
-                        fi
-                    fi
-                    
-                    if [[ -n "$nvme_writes_converted" ]]; then
-                        echo "│     $(get_label "total_writes"): $nvme_writes_converted"
-                        data_found=true
-                    elif [[ -n "$(echo "$smart_all" | grep -i "data units written")" ]]; then
-                        # Fallback: calculate from raw data units (NVMe spec: 1 data unit = 512 * 1000 bytes = 512KB)
-                        local nvme_writes=$(echo "$smart_all" | grep -i "data units written" | awk '{print $4}' | tr -d '[],' | head -1)
-                        if [[ -n "$nvme_writes" && "$nvme_writes" != "0" ]]; then
-                            # Convert: data_units * 512 * 1000 / 1024^3 for GB, / 1024^4 for TB, / 1024^5 for PB
-                            local nvme_writes_pb=$(echo "scale=2; $nvme_writes * 512 * 1000 / 1024 / 1024 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                            local nvme_writes_tb=$(echo "scale=2; $nvme_writes * 512 * 1000 / 1024 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                            if [[ $(echo "$nvme_writes_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                echo "│     $(get_label "total_writes"): ${nvme_writes_pb} PB"
-                            elif [[ $(echo "$nvme_writes_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                echo "│     $(get_label "total_writes"): ${nvme_writes_tb} TB"
-                            else
-                                local nvme_writes_gb=$(echo "scale=2; $nvme_writes * 512 * 1000 / 1024 / 1024 / 1024" | bc -l 2>/dev/null)
-                                echo "│     $(get_label "total_writes"): ${nvme_writes_gb} GB"
-                            fi
-                            data_found=true
-                        fi
-                    fi
-                else
-                    # Method 1: For SATA/HDD drives - use SMART hardware-level data (PRIORITY METHOD)
-                    # Try various SMART attribute patterns for read data (enhanced for more vendors)
-                    local reads_lba=""
-                    # Method 1: Standard naming patterns
-                    reads_lba=$(echo "$smart_data" | grep -E "Total_LBAs_Read|Host_Reads_32MiB" | grep -i read | head -1 | awk '{print $10}')
-                    # Method 2: Attribute ID 241 (most common for read LBAs)
-                    if [[ -z "$reads_lba" ]]; then
-                        reads_lba=$(echo "$smart_data" | grep -E "^[ ]*241[ ]" | awk '{print $10}')
-                    fi
-                    # Method 3: Attribute ID 242 (some vendors reverse 241/242)
-                    if [[ -z "$reads_lba" ]]; then
-                        reads_lba=$(echo "$smart_data" | grep -E "^[ ]*242[ ].*[Rr]ead" | awk '{print $10}')
-                    fi
-                    # Method 4: Alternative IDs for specific vendors
-                    if [[ -z "$reads_lba" ]]; then
-                        reads_lba=$(echo "$smart_data" | grep -E "^[ ]*246[ ]" | awk '{print $10}') # Some Samsung/SSSTC SSDs
-                    fi
-                    # Method 5: Other vendor-specific patterns
-                    if [[ -z "$reads_lba" ]]; then
-                        reads_lba=$(echo "$smart_data" | grep -E "Lifetime_Reads_GiB|Total_Host_Reads|NAND_Reads_GiB" | awk '{print $10}' | head -1)
-                    fi
-                    
-                    # Try various SMART attribute patterns for write data (enhanced for more vendors)
-                    local writes_lba=""
-                    # Method 1: Standard naming patterns
-                    writes_lba=$(echo "$smart_data" | grep -E "Total_LBAs_Written|Host_Writes_32MiB" | grep -i writ | head -1 | awk '{print $10}')
-                    # Method 2: Attribute ID 242 (most common for write LBAs)
-                    if [[ -z "$writes_lba" ]]; then
-                        writes_lba=$(echo "$smart_data" | grep -E "^[ ]*242[ ]" | awk '{print $10}')
-                    fi
-                    # Method 3: Attribute ID 241 (some vendors reverse 241/242)
-                    if [[ -z "$writes_lba" ]]; then
-                        writes_lba=$(echo "$smart_data" | grep -E "^[ ]*241[ ].*[Ww]rit" | awk '{print $10}')
-                    fi
-                    # Method 4: Alternative IDs for specific vendors
-                    if [[ -z "$writes_lba" ]]; then
-                        writes_lba=$(echo "$smart_data" | grep -E "^[ ]*247[ ]" | awk '{print $10}') # Some Intel/Micron SSDs
-                    fi
-                    # Method 5: Other vendor-specific patterns
-                    if [[ -z "$writes_lba" ]]; then
-                        writes_lba=$(echo "$smart_data" | grep -E "Lifetime_Writes_GiB|Total_Host_Writes|NAND_Writes_GiB" | awk '{print $10}' | head -1)
-                    fi
-                    
-                    # Convert LBA and display with enhanced precision for small values
-                    if [[ -n "$reads_lba" && "$reads_lba" != "0" ]] && [[ "$reads_lba" =~ ^[0-9]+$ ]]; then
-                        local reads_mb=$(echo "scale=3; $reads_lba * 512 / 1024 / 1024" | bc -l 2>/dev/null)
-                        local reads_gb=$(echo "scale=3; $reads_mb / 1024" | bc -l 2>/dev/null)
-                        local reads_tb=$(echo "scale=3; $reads_gb / 1024" | bc -l 2>/dev/null)
-                        local reads_pb=$(echo "scale=3; $reads_tb / 1024" | bc -l 2>/dev/null)
-                        
-                        # Choose appropriate unit based on magnitude (including PB)
-                        if [[ $(echo "$reads_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_reads"): ${reads_pb} PB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_reads"): ${reads_pb} PB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$reads_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_reads"): ${reads_tb} TB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_reads"): ${reads_tb} TB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$reads_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_reads"): ${reads_gb} GB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_reads"): ${reads_gb} GB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$reads_mb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_reads"): ${reads_mb} MB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_reads"): ${reads_mb} MB (SMART lifetime)"
-                            fi
-                        else
-                            # For very small values, show in KB
-                            local reads_kb=$(echo "scale=1; $reads_lba * 512 / 1024" | bc -l 2>/dev/null)
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_reads"): ${reads_kb} KB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_reads"): ${reads_kb} KB (SMART lifetime)"
-                            fi
-                        fi
-                        data_found=true
-                    fi
-                    
-                    if [[ -n "$writes_lba" && "$writes_lba" != "0" ]] && [[ "$writes_lba" =~ ^[0-9]+$ ]]; then
-                        local writes_mb=$(echo "scale=3; $writes_lba * 512 / 1024 / 1024" | bc -l 2>/dev/null)
-                        local writes_gb=$(echo "scale=3; $writes_mb / 1024" | bc -l 2>/dev/null)
-                        local writes_tb=$(echo "scale=3; $writes_gb / 1024" | bc -l 2>/dev/null)
-                        local writes_pb=$(echo "scale=3; $writes_tb / 1024" | bc -l 2>/dev/null)
-                        
-                        # Choose appropriate unit based on magnitude (including PB)
-                        if [[ $(echo "$writes_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_writes"): ${writes_pb} PB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_writes"): ${writes_pb} PB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$writes_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_writes"): ${writes_tb} TB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_writes"): ${writes_tb} TB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$writes_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_writes"): ${writes_gb} GB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_writes"): ${writes_gb} GB (SMART lifetime)"
-                            fi
-                        elif [[ $(echo "$writes_mb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_writes"): ${writes_mb} MB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_writes"): ${writes_mb} MB (SMART lifetime)"
-                            fi
-                        else
-                            # For very small values, show in KB
-                            local writes_kb=$(echo "scale=1; $writes_lba * 512 / 1024" | bc -l 2>/dev/null)
-                            if [[ "$LANG_MODE" == "cn" ]]; then
-                                echo "│     $(get_label "total_writes"): ${writes_kb} KB (SMART硬件累计)"
-                            else
-                                echo "│     $(get_label "total_writes"): ${writes_kb} KB (SMART lifetime)"
-                            fi
-                        fi
-                        data_found=true
-                    fi
-                fi
-                
-                # Method 2: SMART attribute variations (MiB, GiB, TB formats)
-                # Method 3: iostat system statistics (fallback - session data only, not lifetime)
-                if [[ "$data_found" == false ]] && command -v iostat >/dev/null 2>&1; then
-                    # Get session I/O statistics from iostat (WARNING: only since last boot)
-                    local iostat_full_output=$(iostat -d "/dev/$disk" 2>/dev/null)
-                    if [[ -n "$iostat_full_output" ]]; then
-                        # Try to get the last data line (skip headers)
-                        local iostat_output=$(echo "$iostat_full_output" | grep "^$disk" | tail -1)
-                        
-                        # Alternative: get last line that contains numbers
-                        if [[ -z "$iostat_output" ]]; then
-                            iostat_output=$(echo "$iostat_full_output" | grep -E '[0-9]+\.[0-9]+.*[0-9]+\.[0-9]+' | tail -1)
-                        fi
-                        
-                        if [[ -n "$iostat_output" ]]; then
-                            # Parse iostat output: Device tps kB_read/s kB_wrtn/s kB_dscd/s kB_read kB_wrtn kB_dscd
-                            local total_read_kb=$(echo "$iostat_output" | awk '{print $6}')
-                            local total_write_kb=$(echo "$iostat_output" | awk '{print $7}')
-                            
-                            # Handle both integer and decimal numbers
-                            if [[ -n "$total_read_kb" && "$total_read_kb" != "0" ]] && [[ "$total_read_kb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-                                # Convert KB to MB/GB/TB/PB
-                                local reads_mb=$(echo "scale=2; $total_read_kb / 1024" | bc -l 2>/dev/null)
-                                local reads_gb=$(echo "scale=2; $reads_mb / 1024" | bc -l 2>/dev/null)
-                                local reads_tb=$(echo "scale=2; $reads_gb / 1024" | bc -l 2>/dev/null)
-                                local reads_pb=$(echo "scale=2; $reads_tb / 1024" | bc -l 2>/dev/null)
-                                
-                                if [[ $(echo "$reads_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_pb} PB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_pb} PB (session only)"
-                                    fi
-                                elif [[ $(echo "$reads_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_tb} TB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_tb} TB (session only)"
-                                    fi
-                                elif [[ $(echo "$reads_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_gb} GB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_gb} GB (session only)"
-                                    fi
-                                else
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_mb} MB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_mb} MB (session only)"
-                                    fi
-                                fi
-                                data_found=true
-                            fi
-                            
-                            if [[ -n "$total_write_kb" && "$total_write_kb" != "0" ]] && [[ "$total_write_kb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-                                # Convert KB to MB/GB/TB/PB
-                                local writes_mb=$(echo "scale=2; $total_write_kb / 1024" | bc -l 2>/dev/null)
-                                local writes_gb=$(echo "scale=2; $writes_mb / 1024" | bc -l 2>/dev/null)
-                                local writes_tb=$(echo "scale=2; $writes_gb / 1024" | bc -l 2>/dev/null)
-                                local writes_pb=$(echo "scale=2; $writes_tb / 1024" | bc -l 2>/dev/null)
-                                
-                                if [[ $(echo "$writes_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_pb} PB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_pb} PB (session only)"
-                                    fi
-                                elif [[ $(echo "$writes_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_tb} TB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_tb} TB (session only)"
-                                    fi
-                                elif [[ $(echo "$writes_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_gb} GB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_gb} GB (session only)"
-                                    fi
-                                else
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_mb} MB (本次开机累计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_mb} MB (session only)"
-                                    fi
-                                fi
-                                data_found=true
-                            fi
-                        fi
-                    fi
-                fi
-                
-                # Method 4: SMART attribute variations (MiB, GiB, TB formats)
-                if [[ "$data_found" == false ]]; then
-                    # Try different attribute patterns for various vendors and formats
-                    local reads_mb=""
-                    local reads_gb=""
-                    local writes_mb=""
-                    local writes_gb=""
-                    
-                    # Look for MiB format
-                    reads_mb=$(echo "$smart_data" | grep -E "Host_Reads_MiB|Lifetime_Reads_MiB|^[ ]*241[ ].*MiB" | awk '{print $10}' | head -1)
-                    writes_mb=$(echo "$smart_data" | grep -E "Host_Writes_MiB|Lifetime_Writes_MiB|^[ ]*242[ ].*MiB" | awk '{print $10}' | head -1)
-                    
-                    # Look for GiB format (standard) - enhanced pattern matching
-                    if [[ -z "$reads_mb" ]]; then
-                        # Try multiple patterns for reads including attribute ID-based matching
-                        reads_gb=$(echo "$smart_data" | grep -E "Host_Reads_GiB|Lifetime_Reads_GiB|Total.*Read.*GiB|^[ ]*242[ ].*Host_Reads_GiB|^[ ]*242[ ].*Reads.*GiB" | awk '{print $10}' | head -1)
-                        if [[ -n "$reads_gb" && "$reads_gb" != "0" && "$reads_gb" != "-" ]]; then
-                            reads_mb=$(echo "scale=0; $reads_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    if [[ -z "$writes_mb" ]]; then
-                        # Try multiple patterns for writes including attribute ID-based matching
-                        writes_gb=$(echo "$smart_data" | grep -E "Host_Writes_GiB|Lifetime_Writes_GiB|Total.*Writ.*GiB|^[ ]*241[ ].*Host_Writes_GiB|^[ ]*241[ ].*Writes.*GiB" | awk '{print $10}' | head -1)
-                        if [[ -n "$writes_gb" && "$writes_gb" != "0" && "$writes_gb" != "-" ]]; then
-                            writes_mb=$(echo "scale=0; $writes_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    
-                    # Look for NAND_Writes_GiB format (SSSTC and other vendors)
-                    if [[ -z "$writes_mb" ]]; then
-                        local nand_writes_gb=$(echo "$smart_data" | grep -E "NAND_Writes_GiB|^[ ]*243[ ]" | awk '{print $10}' | head -1)
-                        if [[ -n "$nand_writes_gb" && "$nand_writes_gb" != "0" ]]; then
-                            writes_mb=$(echo "scale=0; $nand_writes_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    
-                    # Look for NAND_Reads_GiB format (some vendors may have read equivalent)
-                    if [[ -z "$reads_mb" ]]; then
-                        local nand_reads_gb=$(echo "$smart_data" | grep -E "NAND_Reads_GiB|^[ ]*244[ ]" | awk '{print $10}' | head -1)
-                        if [[ -n "$nand_reads_gb" && "$nand_reads_gb" != "0" ]]; then
-                            reads_mb=$(echo "scale=0; $nand_reads_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    
-                    # Look for other vendor-specific GiB formats with enhanced pattern matching
-                    if [[ -z "$reads_mb" ]]; then
-                        # Check for any attribute with "Read" and GiB, including attribute number matching
-                        local generic_reads_gb=$(echo "$smart_data" | grep -i -E "[^_]reads?_gib|reads?.*gib|^[ ]*242[ ].*gib" | awk '{print $10}' | head -1)
-                        if [[ -n "$generic_reads_gb" && "$generic_reads_gb" != "0" && "$generic_reads_gb" != "-" ]]; then
-                            reads_mb=$(echo "scale=0; $generic_reads_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    if [[ -z "$writes_mb" ]]; then
-                        # Check for any attribute with "Write" and GiB, including attribute number matching
-                        local generic_writes_gb=$(echo "$smart_data" | grep -i -E "[^_]writes?_gib|writes?.*gib|^[ ]*241[ ].*gib" | awk '{print $10}' | head -1)
-                        if [[ -n "$generic_writes_gb" && "$generic_writes_gb" != "0" && "$generic_writes_gb" != "-" ]]; then
-                            writes_mb=$(echo "scale=0; $generic_writes_gb * 1024" | bc -l 2>/dev/null)
-                        fi
-                    fi
-                    
-                    if [[ -n "$reads_mb" && "$reads_mb" != "0" ]]; then
-                        local reads_gb=$(echo "scale=2; $reads_mb / 1024" | bc -l 2>/dev/null)
-                        local reads_tb=$(echo "scale=2; $reads_gb / 1024" | bc -l 2>/dev/null)
-                        local reads_pb=$(echo "scale=2; $reads_tb / 1024" | bc -l 2>/dev/null)
-                        if [[ $(echo "$reads_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_reads"): ${reads_pb} PB (SMART GiB)"
-                        elif [[ $(echo "$reads_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_reads"): ${reads_tb} TB (SMART GiB)"
-                        elif [[ $(echo "$reads_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_reads"): ${reads_gb} GB (SMART GiB)"
-                        else
-                            echo "│     $(get_label "total_reads"): ${reads_mb} MB (SMART GiB)"
-                        fi
-                        data_found=true
-                    fi
-                    
-                    if [[ -n "$writes_mb" && "$writes_mb" != "0" ]]; then
-                        local writes_gb=$(echo "scale=2; $writes_mb / 1024" | bc -l 2>/dev/null)
-                        local writes_tb=$(echo "scale=2; $writes_gb / 1024" | bc -l 2>/dev/null)
-                        local writes_pb=$(echo "scale=2; $writes_tb / 1024" | bc -l 2>/dev/null)
-                        if [[ $(echo "$writes_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_writes"): ${writes_pb} PB (SMART GiB)"
-                        elif [[ $(echo "$writes_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_writes"): ${writes_tb} TB (SMART GiB)"
-                        elif [[ $(echo "$writes_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                            echo "│     $(get_label "total_writes"): ${writes_gb} GB (SMART GiB)"
-                        else
-                            echo "│     $(get_label "total_writes"): ${writes_mb} MB (SMART GiB)"
-                        fi
-                        data_found=true
-                    fi
-                fi
-                
-                # Method 5: Try to get stats from /sys filesystem
-                if [[ "$data_found" == false ]]; then
-                    local disk_name=$(basename "$disk")
-                    local read_sectors_file="/sys/block/$disk_name/stat"
-                    if [[ -r "$read_sectors_file" ]]; then
-                        # Format: read_ios read_merges read_sectors read_ticks write_ios write_merges write_sectors write_ticks
-                        local disk_stats=$(cat "$read_sectors_file" 2>/dev/null)
-                        if [[ -n "$disk_stats" ]]; then
-                            local read_sectors=$(echo "$disk_stats" | awk '{print $3}')
-                            local write_sectors=$(echo "$disk_stats" | awk '{print $7}')
-                            
-                            # Enhanced validation - ensure we have valid numbers
-                            if [[ -n "$read_sectors" && "$read_sectors" != "0" ]] && [[ "$read_sectors" =~ ^[0-9]+$ ]]; then
-                                # Convert sectors (512 bytes each) and choose appropriate unit including PB
-                                local reads_mb=$(echo "scale=2; $read_sectors * 512 / 1024 / 1024" | bc -l 2>/dev/null)
-                                local reads_gb=$(echo "scale=2; $reads_mb / 1024" | bc -l 2>/dev/null)
-                                local reads_tb=$(echo "scale=2; $reads_gb / 1024" | bc -l 2>/dev/null)
-                                local reads_pb=$(echo "scale=2; $reads_tb / 1024" | bc -l 2>/dev/null)
-                                
-                                if [[ $(echo "$reads_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_pb} PB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_pb} PB (system stats)"
-                                    fi
-                                elif [[ $(echo "$reads_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_tb} TB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_tb} TB (system stats)"
-                                    fi
-                                elif [[ $(echo "$reads_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_gb} GB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_gb} GB (system stats)"
-                                    fi
-                                else
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_reads"): ${reads_mb} MB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_reads"): ${reads_mb} MB (system stats)"
-                                    fi
-                                fi
-                                data_found=true
-                            fi
-                            
-                            if [[ -n "$write_sectors" && "$write_sectors" != "0" ]] && [[ "$write_sectors" =~ ^[0-9]+$ ]]; then
-                                # Convert sectors (512 bytes each) and choose appropriate unit including PB
-                                local writes_mb=$(echo "scale=2; $write_sectors * 512 / 1024 / 1024" | bc -l 2>/dev/null)
-                                local writes_gb=$(echo "scale=2; $writes_mb / 1024" | bc -l 2>/dev/null)
-                                local writes_tb=$(echo "scale=2; $writes_gb / 1024" | bc -l 2>/dev/null)
-                                local writes_pb=$(echo "scale=2; $writes_tb / 1024" | bc -l 2>/dev/null)
-                                
-                                if [[ $(echo "$writes_pb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_pb} PB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_pb} PB (system stats)"
-                                    fi
-                                elif [[ $(echo "$writes_tb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_tb} TB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_tb} TB (system stats)"
-                                    fi
-                                elif [[ $(echo "$writes_gb > 1" | bc -l 2>/dev/null) -eq 1 ]]; then
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_gb} GB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_gb} GB (system stats)"
-                                    fi
-                                else
-                                    if [[ "$LANG_MODE" == "cn" ]]; then
-                                        echo "│     $(get_label "total_writes"): ${writes_mb} MB (系统统计)"
-                                    else
-                                        echo "│     $(get_label "total_writes"): ${writes_mb} MB (system stats)"
-                                    fi
-                                fi
-                                data_found=true
-                            fi
-                        fi
-                    fi
-                fi
-                
-                # Method 6: Final fallback - show limited SMART info if available
-                if [[ "$data_found" == false ]]; then
-                    # Only show useful SMART attributes that might contain data info
-                    local smart_data_info=$(echo "$smart_all" | grep -E -i "workload|host.*read|host.*writ|data.*read|data.*writ|lifetime.*read|lifetime.*writ" | grep -v -E "command|error|rate|status" | head -2)
-                    if [[ -n "$smart_data_info" ]]; then
-                        if [[ "$LANG_MODE" == "cn" ]]; then
-                            echo "│     $(get_label "no_info") - 可用SMART属性:"
-                        else
-                            echo "│     $(get_label "no_info") - Available SMART attributes:"
-                        fi
-                        echo "$smart_data_info" | while IFS= read -r line; do
-                            # Clean up the line for better display
-                            local clean_line=$(echo "$line" | sed 's/^[[:space:]]*//' | cut -c1-60)
-                            if [[ -n "$clean_line" ]]; then
-                                echo "│       $clean_line"
-                            fi
-                        done
-                    else
-                        if [[ "$LANG_MODE" == "cn" ]]; then
-                            echo "│     $(get_label "no_info") - 此硬盘不支持数据传输统计"
-                        else
-                            echo "│     $(get_label "no_info") - Disk does not support data transfer statistics"
-                        fi
-                    fi
-                fi
-                
-                # SSD wear level (for SSDs)
-                local wear_level=$(echo "$smart_data" | grep -E "Wear_Leveling_Count|177 Wear_Leveling_Count|Percentage Used" | awk '{print $4}' | head -1)
-                if [[ -n "$wear_level" ]]; then
-                    echo "│   $(get_label "wear_level"): ${wear_level}%"
-                fi
-                
-                # Temperature detection with multiple methods
-                local temp=""
-                
-                # Method 1: Traditional SMART temperature (SATA drives)
-                temp=$(echo "$smart_data" | grep -E "Temperature_Celsius|194 Temperature_Celsius" | awk '{print $10}' | head -1)
-                
-                # Method 2: NVMe temperature from smartctl -a output
-                if [[ -z "$temp" ]]; then
-                    temp=$(echo "$smart_all" | grep -E "^Temperature:" | awk '{print $2}' | head -1)
-                fi
-                
-                # Method 3: NVMe temperature sensor
-                if [[ -z "$temp" ]]; then
-                    temp=$(echo "$smart_all" | grep "Temperature Sensor 1:" | awk '{print $3}' | head -1)
-                fi
-                
-                # Method 4: General temperature search
-                if [[ -z "$temp" ]]; then
-                    temp=$(echo "$smart_all" | grep -i temperature | grep -o '[0-9]\+ Celsius' | head -1 | grep -o '[0-9]\+')
-                fi
-                
-                if [[ -n "$temp" ]]; then
-                    echo "│   $(get_label "temperature"): ${temp}°C"
-                else
-                    echo "│   $(get_label "temperature"): $(get_label "no_info")"
-                fi
-                
-                # Health percentage (only for NVMe drives using nvme-cli data)
-                local health_score=""
-                
-                if [[ "$disk" =~ nvme ]]; then
-                    # NVMe specific health calculation using nvme-cli data
-                    local percentage_used=""
-                    local available_spare=""
-                    local critical_warning=""
-                    
-                    # Method 1: Try to get Percentage Used from smartctl with multiple patterns
-                    # Pattern 1: Standard format "Percentage Used: XX%"
-                    percentage_used=$(echo "$smart_all" | grep -i "Percentage Used" | awk '{print $3}' | tr -d '%' | head -1)
-                    
-                    # Pattern 2: Alternative format with colon
-                    if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        percentage_used=$(echo "$smart_all" | grep -i "Percentage Used" | sed 's/.*://g' | grep -o '[0-9]\+' | head -1)
-                    fi
-                    
-                    # Pattern 3: Look for "XX% used" or similar patterns
-                    if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        percentage_used=$(echo "$smart_all" | grep -i "used" | grep -o '[0-9]\+%' | tr -d '%' | head -1)
-                    fi
-                    
-                    # Pattern 4: Check for specific SMART attribute fields (some drives use different field positions)
-                    if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        percentage_used=$(echo "$smart_all" | grep -i "Percentage Used" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+%?$/) {gsub(/%/,"",$i); print $i; exit}}')
-                    fi
-                    
-                    # Method 2: Try nvme command for more accurate data
-                    if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]] && command -v nvme >/dev/null 2>&1; then
-                        local nvme_smart=$(nvme smart-log "/dev/$disk" 2>/dev/null)
-                        if [[ -n "$nvme_smart" ]]; then
-                            # Pattern 1: "Percentage Used : XX%"
-                            percentage_used=$(echo "$nvme_smart" | grep -i "Percentage Used" | awk '{print $4}' | tr -d '%' | head -1)
-                            # Pattern 2: Alternative nvme format
-                            if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]]; then
-                                percentage_used=$(echo "$nvme_smart" | grep -i "Percentage Used" | sed 's/.*://g' | grep -o '[0-9]\+' | head -1)
-                            fi
-                        fi
-                    fi
-                    
-                    # Method 3: Debug output for troubleshooting (show relevant lines)
-                    if [[ -z "$percentage_used" || ! "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        local debug_lines=$(echo "$smart_all" | grep -i -E "percentage|used|worn|wear" | head -3)
-                        if [[ -n "$debug_lines" ]]; then
-                            echo "│   Debug - Related SMART data:"
-                            echo "$debug_lines" | while IFS= read -r line; do
-                                echo "│     $line"
-                            done
-                        fi
-                    fi
-                    
-                    # Get Available Spare percentage with multiple patterns
-                    # Pattern 1: Standard format
-                    available_spare=$(echo "$smart_all" | grep -i "Available Spare" | grep -v "Threshold" | awk '{print $3}' | tr -d '%' | head -1)
-                    
-                    # Pattern 2: Alternative format with colon
-                    if [[ -z "$available_spare" || ! "$available_spare" =~ ^[0-9]+$ ]]; then
-                        available_spare=$(echo "$smart_all" | grep -i "Available Spare" | grep -v "Threshold" | sed 's/.*://g' | grep -o '[0-9]\+' | head -1)
-                    fi
-                    
-                    # Pattern 3: Try different field positions
-                    if [[ -z "$available_spare" || ! "$available_spare" =~ ^[0-9]+$ ]]; then
-                        available_spare=$(echo "$smart_all" | grep -i "Available Spare" | grep -v "Threshold" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+%?$/) {gsub(/%/,"",$i); print $i; exit}}')
-                    fi
-                    
-                    # Pattern 4: Try nvme command
-                    if [[ -z "$available_spare" || ! "$available_spare" =~ ^[0-9]+$ ]] && command -v nvme >/dev/null 2>&1; then
-                        local nvme_spare=$(nvme smart-log "/dev/$disk" 2>/dev/null | grep -i "Available Spare" | grep -v "Threshold")
-                        if [[ -n "$nvme_spare" ]]; then
-                            available_spare=$(echo "$nvme_spare" | awk '{print $4}' | tr -d '%' | head -1)
-                            if [[ -z "$available_spare" || ! "$available_spare" =~ ^[0-9]+$ ]]; then
-                                available_spare=$(echo "$nvme_spare" | sed 's/.*://g' | grep -o '[0-9]\+' | head -1)
-                            fi
-                        fi
-                    fi
-                    
-                    # Get Critical Warning status with multiple patterns
-                    # Pattern 1: Standard format
-                    critical_warning=$(echo "$smart_all" | grep -i "Critical Warning" | awk '{print $3}' | head -1)
-                    
-                    # Pattern 2: Alternative format with colon
-                    if [[ -z "$critical_warning" ]]; then
-                        critical_warning=$(echo "$smart_all" | grep -i "Critical Warning" | sed 's/.*://g' | sed 's/^[[:space:]]*//' | awk '{print $1}' | head -1)
-                    fi
-                    
-                    # Pattern 3: Try nvme command
-                    if [[ -z "$critical_warning" ]] && command -v nvme >/dev/null 2>&1; then
-                        local nvme_warning=$(nvme smart-log "/dev/$disk" 2>/dev/null | grep -i "Critical Warning")
-                        if [[ -n "$nvme_warning" ]]; then
-                            critical_warning=$(echo "$nvme_warning" | awk '{print $4}' | head -1)
-                            if [[ -z "$critical_warning" ]]; then
-                                critical_warning=$(echo "$nvme_warning" | sed 's/.*://g' | sed 's/^[[:space:]]*//' | awk '{print $1}' | head -1)
-                            fi
-                        fi
-                    fi
-                    
-                    # Calculate health score for NVMe only if we have reliable nvme-cli data
-                    if [[ -n "$percentage_used" && "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        # Health = 100 - Percentage Used
-                        health_score=$((100 - percentage_used))
-                        
-                        # Adjust based on Available Spare if available
-                        if [[ -n "$available_spare" && "$available_spare" =~ ^[0-9]+$ ]]; then
-                            if [[ "$available_spare" -lt 10 ]]; then
-                                health_score=$((health_score - 10))  # Penalty for low spare blocks
-                            fi
-                        fi
-                        
-                        # Adjust based on Critical Warning
-                        if [[ -n "$critical_warning" && "$critical_warning" != "0x00" && "$critical_warning" != "0" ]]; then
-                            health_score=$((health_score - 20))  # Penalty for critical warnings
-                        fi
-                        
-                        # Ensure health score is within valid range
-                        if [[ "$health_score" -lt 0 ]]; then health_score=0; fi
-                        if [[ "$health_score" -gt 100 ]]; then health_score=100; fi
-                    else
-                        # Fallback: estimate based on available spare only
-                        if [[ -n "$available_spare" && "$available_spare" =~ ^[0-9]+$ ]]; then
-                            health_score="$available_spare"
-                        else
-                            health_score=""  # No health data available
-                        fi
-                    fi
-                    
-                    # Display additional NVMe health details
-                    if [[ -n "$percentage_used" && "$percentage_used" =~ ^[0-9]+$ ]]; then
-                        echo "│   $(get_label "percentage_used"): ${percentage_used}%"
-                    fi
-                    if [[ -n "$available_spare" && "$available_spare" =~ ^[0-9]+$ ]]; then
-                        echo "│   $(get_label "available_spare"): ${available_spare}%"
-                    fi
-                    if [[ -n "$critical_warning" ]]; then
-                        echo "│   $(get_label "critical_warning"): ${critical_warning}"
-                    fi
-                    
-                    # Only display health status for NVMe drives with valid data
-                    if [[ -n "$health_score" && "$health_score" != "" ]]; then
-                        echo "│   $(get_label "health_status"): ${health_score}%"
-                    fi
-                else
-                    # Skip health calculation for HDD/SATA drives as smartctl calculation is unreliable
-                    # Only show basic SMART status if available
-                    : # No health status display for HDD/SATA drives
-                fi
-            else
-                echo "│   SMART not supported on this device"
+            fi
+
+            # Fallback to text parsing
+            if [[ "$parsed" == false ]]; then
+                parse_smart_text "$disk" || echo "│   SMART: $(get_label "not_detected")"
             fi
         else
-            # Show detailed error message with installation instructions
+            # smartctl not installed
             if [[ "$LANG_MODE" == "cn" ]]; then
-                echo "│   SMART状态: smartctl工具未安装"
-                echo "│   请安装smartmontools软件包来获取SMART信息:"
-                local pkg_manager=$(get_package_manager)
-                case "$pkg_manager" in
-                    "apt")
-                        echo "│     sudo apt-get install smartmontools"
-                        ;;
-                    "dnf"|"yum")
-                        echo "│     sudo $pkg_manager install smartmontools"
-                        ;;
-                    "pacman")
-                        echo "│     sudo pacman -S smartmontools"
-                        ;;
-                    "zypper")
-                        echo "│     sudo zypper install smartmontools"
-                        ;;
-                    "apk")
-                        echo "│     sudo apk add smartmontools"
-                        ;;
-                    *)
-                        echo "│     请使用系统包管理器安装smartmontools"
-                        ;;
-                esac
+                echo "│   SMART状态: smartctl未安装"
             else
-                echo "│   SMART Status: smartctl tool not installed"
-                echo "│   Please install smartmontools package to get SMART information:"
-                local pkg_manager=$(get_package_manager)
-                case "$pkg_manager" in
-                    "apt")
-                        echo "│     sudo apt-get install smartmontools"
-                        ;;
-                    "dnf"|"yum")
-                        echo "│     sudo $pkg_manager install smartmontools"
-                        ;;
-                    "pacman")
-                        echo "│     sudo pacman -S smartmontools"
-                        ;;
-                    "zypper")
-                        echo "│     sudo zypper install smartmontools"
-                        ;;
-                    "apk")
-                        echo "│     sudo apk add smartmontools"
-                        ;;
-                    *)
-                        echo "│     Please use your system's package manager to install smartmontools"
-                        ;;
-                esac
-            fi
-        fi
-        
-        # I/O statistics
-        if command -v iostat >/dev/null 2>&1; then
-            local io_stats=$(iostat -d "$disk" 1 2 2>/dev/null | tail -1)
-            if [[ -n "$io_stats" ]]; then
-                local read_kb=$(echo "$io_stats" | awk '{print $3}')
-                local write_kb=$(echo "$io_stats" | awk '{print $4}')
-                echo "│   Current $(get_label "read_io"): ${read_kb} KB/s"
-                echo "│   Current $(get_label "write_io"): ${write_kb} KB/s"
+                echo "│   SMART Status: smartctl not installed"
             fi
         fi
     done
-    
+
     echo "└$(printf '─%.0s' $(seq 1 50))"
 }
 
