@@ -5,8 +5,21 @@
 # Compatible with Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 # 兼容 Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 
-VERSION="2.3.0"
+VERSION="2.4.0"
 SCRIPT_NAME="Hardware Info Collector"
+
+# Temporary files tracking for cleanup
+TEMP_FILES=()
+
+# Cleanup function for temporary files
+cleanup_temp_files() {
+    for tmp_file in "${TEMP_FILES[@]}"; do
+        [[ -f "$tmp_file" ]] && rm -f "$tmp_file"
+    done
+}
+
+# Set trap to cleanup on exit
+trap cleanup_temp_files EXIT
 
 # Color definitions
 RED='\033[0;31m'
@@ -81,6 +94,7 @@ declare -A LABELS_EN=(
     ["cpu_temperature"]="CPU Temperature"
     ["core_temps"]="Core Temperatures"
     ["cpu_temp_high"]="High Temperature Warning"
+    ["requires_root_sensors"]="Requires root/sensors"
 )
 
 declare -A LABELS_CN=(
@@ -142,6 +156,7 @@ declare -A LABELS_CN=(
     ["cpu_temperature"]="CPU温度"
     ["core_temps"]="核心温度"
     ["cpu_temp_high"]="高温警告"
+    ["requires_root_sensors"]="需要root权限/sensors命令"
 )
 
 # Function to get label based on current language
@@ -690,49 +705,43 @@ get_cpu_temperature() {
 
     # Method 1: Try using sensors command (lm-sensors)
     if command -v sensors >/dev/null 2>&1; then
-        # Try to get CPU temperature from sensors
         local sensors_output=$(sensors 2>/dev/null)
 
-        # Look for Core temperatures (Intel)
-        local core_temps=$(echo "$sensors_output" | grep -E "Core [0-9]+" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -10)
-        if [[ -n "$core_temps" ]]; then
-            temp_found=true
-            # Calculate average temperature
-            local sum=0
-            local count=0
-            while IFS= read -r temp; do
-                local temp_val=$(echo "$temp" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
-                if [[ -n "$temp_val" ]]; then
-                    sum=$(echo "$sum + $temp_val" | bc -l 2>/dev/null || echo "$sum")
-                    count=$((count + 1))
-                    # Track max temperature
-                    if (( $(echo "$temp_val > $max_temp" | bc -l 2>/dev/null || echo 0) )); then
-                        max_temp=$temp_val
-                    fi
+        # Priority 1: Intel CPU - look for "Package id X" (whole CPU package temperature)
+        # Note: may have leading spaces, so don't use ^
+        local pkg_line=$(echo "$sensors_output" | grep -E "Package id [0-9]+:" | head -1)
+        if [[ -n "$pkg_line" ]]; then
+            local temp_part=$(echo "$pkg_line" | sed 's/(.*//')
+            local pkg_temp=$(echo "$temp_part" | grep -oE "[+-]?[0-9]+\.?[0-9]*" | tail -1)
+            if [[ -n "$pkg_temp" ]]; then
+                temp_found=true
+                temp_data="${pkg_temp}°C"
+            fi
+        fi
+
+        # Priority 2: AMD CPU - look for Tctl/Tdie (k10temp driver)
+        if [[ -z "$temp_data" ]]; then
+            local amd_line=$(echo "$sensors_output" | grep -E "Tctl:|Tdie:" | head -1)
+            if [[ -n "$amd_line" ]]; then
+                local temp_part=$(echo "$amd_line" | sed 's/(.*//')
+                local amd_temp=$(echo "$temp_part" | grep -oE "[+-]?[0-9]+\.?[0-9]*" | tail -1)
+                if [[ -n "$amd_temp" ]]; then
+                    temp_found=true
+                    temp_data="${amd_temp}°C"
                 fi
-            done <<< "$core_temps"
-
-            if [[ $count -gt 0 ]]; then
-                local avg_temp=$(echo "scale=1; $sum / $count" | bc -l 2>/dev/null || echo "0")
-                temp_data="Avg: ${avg_temp}°C, Max: ${max_temp}°C (${count} cores)"
             fi
         fi
 
-        # Look for CPU temperature (AMD)
+        # Priority 3: Generic CPU temperature patterns
         if [[ -z "$temp_data" ]]; then
-            local amd_temp=$(echo "$sensors_output" | grep -E "Tctl:|Tdie:|CPU.*:" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -1)
-            if [[ -n "$amd_temp" ]]; then
-                temp_found=true
-                temp_data="$amd_temp"
-            fi
-        fi
-
-        # Look for k10temp or other CPU temps
-        if [[ -z "$temp_data" ]]; then
-            local generic_temp=$(echo "$sensors_output" | grep -iE "cpu.*temp|package.*id" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -1)
-            if [[ -n "$generic_temp" ]]; then
-                temp_found=true
-                temp_data="$generic_temp"
+            local generic_line=$(echo "$sensors_output" | grep -iE "cpu.*temp|cpu:" | head -1)
+            if [[ -n "$generic_line" ]]; then
+                local temp_part=$(echo "$generic_line" | sed 's/(.*//')
+                local generic_temp=$(echo "$temp_part" | grep -oE "[+-]?[0-9]+\.?[0-9]*" | tail -1)
+                if [[ -n "$generic_temp" ]]; then
+                    temp_found=true
+                    temp_data="${generic_temp}°C"
+                fi
             fi
         fi
     fi
@@ -838,8 +847,35 @@ get_cpu_info() {
     print_info "$(get_label "frequency")" "${cpu_freq:+${cpu_freq} MHz}"
     print_info "$(get_label "cache")" "${cpu_cache:-$(get_label "no_info")}"
 
-    # CPU usage
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//' 2>/dev/null)
+    # CPU usage - using /proc/stat for more reliable detection
+    local cpu_usage=""
+    if [[ -r /proc/stat ]]; then
+        # Read CPU stats twice with a short interval
+        local cpu1=($(grep '^cpu ' /proc/stat | awk '{print $2,$3,$4,$5,$6,$7,$8}'))
+        sleep 0.2
+        local cpu2=($(grep '^cpu ' /proc/stat | awk '{print $2,$3,$4,$5,$6,$7,$8}'))
+
+        # Calculate differences
+        local user_diff=$((${cpu2[0]} - ${cpu1[0]}))
+        local nice_diff=$((${cpu2[1]} - ${cpu1[1]}))
+        local system_diff=$((${cpu2[2]} - ${cpu1[2]}))
+        local idle_diff=$((${cpu2[3]} - ${cpu1[3]}))
+        local iowait_diff=$((${cpu2[4]} - ${cpu1[4]}))
+        local irq_diff=$((${cpu2[5]} - ${cpu1[5]}))
+        local softirq_diff=$((${cpu2[6]} - ${cpu1[6]}))
+
+        local total_diff=$((user_diff + nice_diff + system_diff + idle_diff + iowait_diff + irq_diff + softirq_diff))
+        local active_diff=$((total_diff - idle_diff - iowait_diff))
+
+        if [[ $total_diff -gt 0 ]]; then
+            cpu_usage=$(echo "scale=1; $active_diff * 100 / $total_diff" | bc -l 2>/dev/null)
+        fi
+    fi
+
+    # Fallback to top if /proc/stat method fails
+    if [[ -z "$cpu_usage" ]]; then
+        cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//' 2>/dev/null)
+    fi
     print_info "$(get_label "usage")" "${cpu_usage:+${cpu_usage}%}"
 
     # CPU Temperature
@@ -848,15 +884,15 @@ get_cpu_info() {
         # Check if temperature is high (above 80°C is generally considered high)
         local temp_value=$(echo "$cpu_temp" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
         if [[ -n "$temp_value" ]] && (( $(echo "$temp_value > 80" | bc -l 2>/dev/null || echo 0) )); then
-            # High temperature warning with red color
-            print_info "$(get_label "cpu_temperature")" "${RED}${cpu_temp} ⚠${NC}"
+            # High temperature warning - print with color directly
+            printf "│ %-20s: ${RED}%s ⚠${NC}\n" "$(get_label "cpu_temperature")" "$cpu_temp"
         else
             print_info "$(get_label "cpu_temperature")" "$cpu_temp"
         fi
     else
         # If no temperature detected, show message based on permissions
         if [[ $EUID -ne 0 ]]; then
-            print_info "$(get_label "cpu_temperature")" "Requires root/sensors command"
+            print_info "$(get_label "cpu_temperature")" "$(get_label "requires_root_sensors")"
         else
             print_info "$(get_label "cpu_temperature")" "$(get_label "not_detected")"
         fi
@@ -905,6 +941,7 @@ get_ram_info() {
         
         # Parse memory modules using bash processing
         local temp_file=$(mktemp)
+        TEMP_FILES+=("$temp_file")
         dmidecode -t memory 2>/dev/null > "$temp_file"
         
         # Process memory modules
@@ -977,9 +1014,7 @@ get_ram_info() {
             print_table_cell "${part_number:0:20}" $w6
             printf " │\n"
         fi
-        
-        rm -f "$temp_file"
-        
+
         # Print table footer
         echo "└$(printf '─%.0s' $(seq 1 100))┘"
     else
