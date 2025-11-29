@@ -1,52 +1,52 @@
-# 🏥 SICK - Server Info & Check Kit
+#  SICK - Server Info & Check Kit
 
 > **S**erver **I**nfo & **C**heck **K**it - Because knowing your server's health shouldn't make you sick! 😷➡️😎
 
 **🌐 Language / 语言:** [English](README.md) | [中文文档](README_CN.md)
 
-## 🎯 About
+##  About
 
 SICK is a powerful Linux server hardware information collection tool. The project name comes from the acronym **Server Info & Check Kit**, and also cleverly implies turning "sick" (problematic) server information into something "sick" (awesome)!
 
 ### 🤔 Why Called SICK?
 
-- 📊 **S**erver - Hardware servers
-- ℹ️ **I**nfo - Information collection  
-- ✅ **C**heck - Health checking
-- 🛠️ **K**it - Complete toolkit
+-  **S**erver - Hardware servers
+- **I**nfo - Information collection  
+- **C**heck - Health checking
+- **K**it - Complete toolkit
 
 But more importantly, we want to make the "sick" (frustrating) task of server hardware information collection become "sick" (super cool)!
 
-## ✨ Key Features
+##  Key Features
 
-### 🌐 Multilingual Support
+### Multilingual Support
 - 🇺🇸 **English** - Complete English interface
 - 🇨🇳 **Chinese** - Complete Chinese interface
 
-### 🖥️ Comprehensive Hardware Detection
-- **💻 System Info**: Hostname, OS, kernel version, uptime
-- **🧠 CPU Info**: Model, cores, threads, frequency, cache, usage
-- **🎯 Memory Info**: Total capacity, usage + detailed memory module table
-- **💾 Disk Info**: Disk usage + SMART health status + read/write statistics
-- **🌐 Network Info**: Network interfaces + model detection + traffic stats (physical only)
-- **🎮 GPU Info**: NVIDIA/AMD/Intel GPU detection
-- **🔧 RAID Info**: Software/hardware RAID controllers
-- **📋 Motherboard Info**: Vendor, model, BIOS information
+### Comprehensive Hardware Detection
+- **System Info**: Hostname, OS, kernel version, uptime
+- **CPU Info**: Model, cores, threads, frequency, cache, usage
+- **Memory Info**: Total capacity, usage + detailed memory module table
+- **Disk Info**: Disk usage + SMART health status + read/write statistics
+- **Network Info**: Network interfaces + model detection + traffic stats (physical only)
+- **GPU Info**: NVIDIA/AMD/Intel GPU detection
+- **RAID Info**: Software/hardware RAID controllers
+- **Motherboard Info**: Vendor, model, BIOS information
 
-### 📊 Smart Data Presentation
-- **🎨 Colorful Output**: Beautiful terminal display
-- **📋 Table Format**: Neat memory module information tables
-- **📏 Perfect Alignment**: Support for mixed Chinese/English display alignment
-- **💾 Auto Save**: Simultaneously save as plain text report files
+###  Smart Data Presentation
+- **Colorful Output**: Beautiful terminal display
+- **Table Format**: Neat memory module information tables
+- **Perfect Alignment**: Support for mixed Chinese/English display alignment
+- **Auto Save**: Simultaneously save as plain text report files
 
 ### 🔧 Advanced Features
-- **🔍 SMART Detection**: Hard drive health, power-on hours, read/write stats
-- **📈 Real-time Data**: CPU usage, IO statistics, network traffic
-- **🔌 Auto Installation**: Smart detection and installation of required packages
-- **📱 High Compatibility**: Support for mainstream Linux distributions
-- **🚫 Virtual Interface Filtering**: Only shows physical network cards (including InfiniBand)
+- ** SMART Detection**: Hard drive health, power-on hours, read/write stats
+- **Real-time Data**: CPU usage, IO statistics, network traffic
+- **Auto Installation**: Smart detection and installation of required packages
+- **High Compatibility**: Support for mainstream Linux distributions
+- **Virtual Interface Filtering**: Only shows physical network cards (including InfiniBand)
 
-## 🐧 Supported Systems
+## Supported Systems
 
 | Distribution | Package Manager | Test Status |
 |--------------|-----------------|-------------|
@@ -58,20 +58,20 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 | **openSUSE** | zypper | ✅ Fully Supported |
 | **Alpine Linux** | apk | ✅ Fully Supported |
 
-## 🚀 Quick Start
+## Quick Start
 
-### ⚡ One-Click Execution
+### One-Click Execution
 
 ```
 # English
-curl -sL https://sick.onl | bash
+curl -sL https://ba.sh/sick | bash 
 
 # Chinese
-curl -sL https://sick.onl | bash -s -- -cn
+curl -sL https://ba.sh/sick | bash -s -- -cn
 ```
 
 
-### 📋 Sample Output
+###  Sample Output
 
 ```
 
@@ -194,74 +194,26 @@ Report generation completed!
 Generated on: Tue Jul  1 04:15:37 UTC 2025
 ```
 
-## 📊 Output Features
 
-### 🎨 Dual Output
-- **🖥️ Screen Display**: Colorful, beautiful real-time display
-- **📄 File Save**: Plain text format for easy sharing and archiving
-
-### 📁 File Naming Convention
-```
-hardware_report_[hostname]_[timestamp].txt
-Example: hardware_report_web-server01_20250701_143022.txt
-```
-
-## 🔧 Command Options
-
-| Option | Description |
-|--------|-------------|
-| `-cn, --chinese` | Display in Chinese |
-| `-us, --english` | Display in English (default) |
-| `-h, --help` | Show help information |
-| `-v, --version` | Show version information |
-
-## 🛠️ Dependencies
-
-The script will automatically detect and install the following tools:
-
-| Tool | Purpose | Auto Install |
-|------|---------|--------------|
-| `dmidecode` | Read hardware information | ✅ |
-| `lshw` | Hardware listing tool | ✅ |
-| `smartctl` | Disk SMART information | ✅ |
-| `iostat` | IO statistics | ✅ |
-| `bc` | Mathematical calculations | ✅ |
-| `ethtool` | Network card information | ✅ |
-
-## 💡 Usage Tips
-
-### 🔐 Permission Requirements
-```bash
-# Recommended to run with sudo for complete information
-sudo ./hardware_info.sh -cn
-```
-
-### 🔧 Troubleshooting
-If you encounter issues, please check:
-1. Whether you have sudo privileges
-2. Whether the system supports required hardware detection commands
-3. Whether the network is working (for dependency package installation)
-
-
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
+##  Author
 Blog - [猫猫博客](https://catcat.blog)
 Made with ❤️ by Yuri NagaSaki
 
 ---
 
-**Make server checking no longer sick (frustrating), but sick (awesome)!** 🚀 
+**Make server checking no longer sick (frustrating), but sick (awesome)!** 
 
-## 🚀 Sponsored by SharonNetworks
+## Sponsored by SharonNetworks
 
 The construction and release environment of this project is supported by SharonNetworks — specializing in top-tier optimized routes for returning to China in the Asia-Pacific region, offering high bandwidth, low latency direct connections to mainland China, and built-in powerful DDoS cleaning capabilities.
 
 SharonNetworks ensures the smooth operation of your business!
 
-### ✨ Service Advantages
+### Service Advantages
 
 * Asia-Pacific three-network return path optimization with direct connections to mainland China, enabling ultra-fast downloads
 * Ultra-high bandwidth + anti-attack cleaning services to ensure business security and stability
