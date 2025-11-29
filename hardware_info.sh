@@ -78,6 +78,9 @@ declare -A LABELS_EN=(
     ["available_spare"]="Available Spare"
     ["critical_warning"]="Critical Warning"
     ["mac_address"]="MAC Address"
+    ["cpu_temperature"]="CPU Temperature"
+    ["core_temps"]="Core Temperatures"
+    ["cpu_temp_high"]="High Temperature Warning"
 )
 
 declare -A LABELS_CN=(
@@ -136,6 +139,9 @@ declare -A LABELS_CN=(
     ["available_spare"]="可用备用块"
     ["critical_warning"]="关键警告"
     ["mac_address"]="MAC地址"
+    ["cpu_temperature"]="CPU温度"
+    ["core_temps"]="核心温度"
+    ["cpu_temp_high"]="高温警告"
 )
 
 # Function to get label based on current language
@@ -377,7 +383,38 @@ install_packages() {
     else
         echo "  ✓ nvme found"
     fi
-    
+
+    # Check for sensors command (for CPU temperature)
+    if ! command -v sensors >/dev/null 2>&1; then
+        case "$pkg_manager" in
+            apt)
+                packages_needed+=("lm-sensors")
+                echo "  ❌ sensors not found (for CPU temperature)"
+                ;;
+            yum|dnf)
+                packages_needed+=("lm_sensors")
+                echo "  ❌ sensors not found (for CPU temperature)"
+                ;;
+            pacman)
+                packages_needed+=("lm_sensors")
+                echo "  ❌ sensors not found (for CPU temperature)"
+                ;;
+            zypper)
+                packages_needed+=("sensors")
+                echo "  ❌ sensors not found (for CPU temperature)"
+                ;;
+            apk)
+                packages_needed+=("lm-sensors")
+                echo "  ❌ sensors not found (for CPU temperature)"
+                ;;
+            *)
+                echo "  ❌ sensors not found (package name varies by distro)"
+                ;;
+        esac
+    else
+        echo "  ✓ sensors found"
+    fi
+
     # Check for optional but useful commands
     if ! command -v lspci >/dev/null 2>&1; then
         case "$pkg_manager" in
@@ -594,7 +631,21 @@ install_packages() {
             verification_success=false
         fi
     fi
-    
+
+    if [[ " ${packages_needed[*]} " =~ " lm-sensors " ]] || [[ " ${packages_needed[*]} " =~ " lm_sensors " ]] || [[ " ${packages_needed[*]} " =~ " sensors " ]]; then
+        if command -v sensors >/dev/null 2>&1; then
+            echo "  ✓ sensors now available"
+            # Try to detect sensors if just installed
+            if which sensors-detect >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
+                echo "  Detecting sensors..."
+                yes "" | sensors-detect >/dev/null 2>&1 || true
+            fi
+        else
+            echo "  ❌ sensors still not available"
+            verification_success=false
+        fi
+    fi
+
     echo
     
     if [[ "$all_success" == true && "$verification_success" == true ]]; then
@@ -630,26 +681,187 @@ get_system_info() {
     echo "└$(printf '─%.0s' $(seq 1 50))"
 }
 
+# Function to detect CPU temperature
+get_cpu_temperature() {
+    local temp_found=false
+    local cpu_temps=""
+    local max_temp=0
+    local temp_data=""
+
+    # Method 1: Try using sensors command (lm-sensors)
+    if command -v sensors >/dev/null 2>&1; then
+        # Try to get CPU temperature from sensors
+        local sensors_output=$(sensors 2>/dev/null)
+
+        # Look for Core temperatures (Intel)
+        local core_temps=$(echo "$sensors_output" | grep -E "Core [0-9]+" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -10)
+        if [[ -n "$core_temps" ]]; then
+            temp_found=true
+            # Calculate average temperature
+            local sum=0
+            local count=0
+            while IFS= read -r temp; do
+                local temp_val=$(echo "$temp" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
+                if [[ -n "$temp_val" ]]; then
+                    sum=$(echo "$sum + $temp_val" | bc -l 2>/dev/null || echo "$sum")
+                    count=$((count + 1))
+                    # Track max temperature
+                    if (( $(echo "$temp_val > $max_temp" | bc -l 2>/dev/null || echo 0) )); then
+                        max_temp=$temp_val
+                    fi
+                fi
+            done <<< "$core_temps"
+
+            if [[ $count -gt 0 ]]; then
+                local avg_temp=$(echo "scale=1; $sum / $count" | bc -l 2>/dev/null || echo "0")
+                temp_data="Avg: ${avg_temp}°C, Max: ${max_temp}°C (${count} cores)"
+            fi
+        fi
+
+        # Look for CPU temperature (AMD)
+        if [[ -z "$temp_data" ]]; then
+            local amd_temp=$(echo "$sensors_output" | grep -E "Tctl:|Tdie:|CPU.*:" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -1)
+            if [[ -n "$amd_temp" ]]; then
+                temp_found=true
+                temp_data="$amd_temp"
+            fi
+        fi
+
+        # Look for k10temp or other CPU temps
+        if [[ -z "$temp_data" ]]; then
+            local generic_temp=$(echo "$sensors_output" | grep -iE "cpu.*temp|package.*id" | grep -oE "[+-]?[0-9]+\.?[0-9]*°C" | head -1)
+            if [[ -n "$generic_temp" ]]; then
+                temp_found=true
+                temp_data="$generic_temp"
+            fi
+        fi
+    fi
+
+    # Method 2: Check thermal zones in /sys/class/thermal
+    if [[ "$temp_found" == false ]]; then
+        for zone in /sys/class/thermal/thermal_zone*/temp; do
+            if [[ -r "$zone" ]]; then
+                local zone_temp=$(cat "$zone" 2>/dev/null)
+                local zone_type_file="${zone%/temp}/type"
+                local zone_type="unknown"
+
+                if [[ -r "$zone_type_file" ]]; then
+                    zone_type=$(cat "$zone_type_file" 2>/dev/null)
+                fi
+
+                # Check if this is a CPU-related thermal zone
+                if [[ "$zone_type" =~ (cpu|x86_pkg_temp|CPU|Core|Package) ]]; then
+                    if [[ -n "$zone_temp" && "$zone_temp" -gt 0 ]]; then
+                        # Convert millidegree to degree Celsius
+                        local temp_celsius=$(echo "scale=1; $zone_temp / 1000" | bc -l 2>/dev/null)
+                        if [[ -n "$temp_celsius" ]]; then
+                            temp_found=true
+                            temp_data="${temp_celsius}°C (${zone_type})"
+                            break
+                        fi
+                    fi
+                fi
+            fi
+        done
+    fi
+
+    # Method 3: Check hwmon interfaces
+    if [[ "$temp_found" == false ]]; then
+        for hwmon in /sys/class/hwmon/hwmon*/; do
+            if [[ -r "${hwmon}name" ]]; then
+                local hwmon_name=$(cat "${hwmon}name" 2>/dev/null)
+
+                # Check if this is CPU-related
+                if [[ "$hwmon_name" =~ (coretemp|k10temp|k8temp|fam15h_power|cpu) ]]; then
+                    # Look for temperature inputs
+                    for temp_input in "${hwmon}"temp*_input; do
+                        if [[ -r "$temp_input" ]]; then
+                            local temp_val=$(cat "$temp_input" 2>/dev/null)
+                            if [[ -n "$temp_val" && "$temp_val" -gt 0 ]]; then
+                                # Convert millidegree to degree Celsius
+                                local temp_celsius=$(echo "scale=1; $temp_val / 1000" | bc -l 2>/dev/null)
+
+                                # Get label if available
+                                local temp_label_file="${temp_input%_input}_label"
+                                local temp_label=""
+                                if [[ -r "$temp_label_file" ]]; then
+                                    temp_label=$(cat "$temp_label_file" 2>/dev/null)
+                                fi
+
+                                if [[ -n "$temp_celsius" ]]; then
+                                    temp_found=true
+                                    if [[ -n "$temp_label" ]]; then
+                                        temp_data="${temp_celsius}°C (${temp_label})"
+                                    else
+                                        temp_data="${temp_celsius}°C"
+                                    fi
+                                    break 2
+                                fi
+                            fi
+                        fi
+                    done
+                fi
+            fi
+        done
+    fi
+
+    # Method 4: Try using vcgencmd for Raspberry Pi
+    if [[ "$temp_found" == false ]] && command -v vcgencmd >/dev/null 2>&1; then
+        local pi_temp=$(vcgencmd measure_temp 2>/dev/null | grep -oE "[0-9]+\.?[0-9]*")
+        if [[ -n "$pi_temp" ]]; then
+            temp_found=true
+            temp_data="${pi_temp}°C (Raspberry Pi)"
+        fi
+    fi
+
+    # Return the result
+    if [[ "$temp_found" == true ]]; then
+        echo "$temp_data"
+    else
+        echo ""
+    fi
+}
+
 # Function to get CPU information
 get_cpu_info() {
     print_subsection "$(get_label "cpu_info")"
-    
+
     local cpu_model=$(grep "model name" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
     local cpu_cores=$(grep "cpu cores" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
     local cpu_threads=$(grep "processor" /proc/cpuinfo | wc -l)
     local cpu_freq=$(grep "cpu MHz" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
     local cpu_cache=$(grep "cache size" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
-    
+
     print_info "$(get_label "model")" "${cpu_model:-$(get_label "no_info")}"
     print_info "$(get_label "cores")" "${cpu_cores:-$(get_label "no_info")}"
     print_info "$(get_label "threads")" "${cpu_threads:-$(get_label "no_info")}"
     print_info "$(get_label "frequency")" "${cpu_freq:+${cpu_freq} MHz}"
     print_info "$(get_label "cache")" "${cpu_cache:-$(get_label "no_info")}"
-    
+
     # CPU usage
     local cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//' 2>/dev/null)
     print_info "$(get_label "usage")" "${cpu_usage:+${cpu_usage}%}"
-    
+
+    # CPU Temperature
+    local cpu_temp=$(get_cpu_temperature)
+    if [[ -n "$cpu_temp" ]]; then
+        # Check if temperature is high (above 80°C is generally considered high)
+        local temp_value=$(echo "$cpu_temp" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
+        if [[ -n "$temp_value" ]] && (( $(echo "$temp_value > 80" | bc -l 2>/dev/null || echo 0) )); then
+            # High temperature warning with red color
+            print_info "$(get_label "cpu_temperature")" "${RED}${cpu_temp} ⚠${NC}"
+        else
+            print_info "$(get_label "cpu_temperature")" "$cpu_temp"
+        fi
+    else
+        # If no temperature detected, show message based on permissions
+        if [[ $EUID -ne 0 ]]; then
+            print_info "$(get_label "cpu_temperature")" "Requires root/sensors command"
+        else
+            print_info "$(get_label "cpu_temperature")" "$(get_label "not_detected")"
+        fi
+    fi
+
     echo "└$(printf '─%.0s' $(seq 1 50))"
 }
 
