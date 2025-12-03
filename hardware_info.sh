@@ -5,7 +5,7 @@
 # Compatible with Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 # 兼容 Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 
-VERSION="2.4.0"
+VERSION="2.5.0"
 SCRIPT_NAME="Hardware Info Collector"
 
 # Temporary files tracking for cleanup
@@ -1102,6 +1102,305 @@ json_extract_string() {
     echo "$json" | grep -oP "\"$key\"\s*:\s*\"\K[^\"]*" | head -1
 }
 
+# Function to check if a disk is a RAID controller virtual disk
+is_raid_controller_disk() {
+    local disk="$1"
+    local json="$2"
+
+    # Check if SMART is not available (common for RAID controllers)
+    local smart_available=$(echo "$json" | grep -oP '"smart_support"\s*:\s*\{[^}]*"available"\s*:\s*\K(true|false)' | head -1)
+
+    # Check for known RAID controller vendors
+    local scsi_vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+    local scsi_product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+
+    # RAID controller patterns: AVAGO (MegaRAID), LSI, DELL PERC, HP Smart Array, etc.
+    if [[ "$smart_available" == "false" ]]; then
+        case "$scsi_vendor" in
+            AVAGO|LSI|"DELL"|"HP"|"Adaptec"|"3ware")
+                return 0  # Is a RAID controller
+                ;;
+        esac
+        # Also check product name for MegaRAID patterns
+        if [[ "$scsi_product" =~ MR[0-9]|PERC|SmartArray|RAID|Logical ]]; then
+            return 0  # Is a RAID controller
+        fi
+    fi
+
+    return 1  # Not a RAID controller
+}
+
+# Function to get RAID member disks from smartctl --scan
+# Supports: megaraid (LSI/AVAGO), cciss (HP Smart Array), 3ware, areca
+get_raid_member_devices() {
+    local parent_disk="$1"
+    local devices=()
+
+    # Run smartctl --scan and look for RAID devices
+    local scan_output=$(smartctl --scan 2>/dev/null)
+
+    # Extract RAID device entries
+    # Format examples:
+    #   /dev/bus/6 -d megaraid,32 # /dev/bus/6 [megaraid_disk_32], SCSI device
+    #   /dev/sda -d cciss,0 # /dev/sda [cciss_disk_00], SCSI device
+    #   /dev/twa0 -d 3ware,0 # /dev/twa0 [3ware_disk_00], ATA device
+    while IFS= read -r line; do
+        local device=$(echo "$line" | awk '{print $1}')
+        if [[ "$line" =~ megaraid,([0-9]+) ]]; then
+            local raid_id="${BASH_REMATCH[1]}"
+            devices+=("$device:megaraid:$raid_id")
+        elif [[ "$line" =~ cciss,([0-9]+) ]]; then
+            local raid_id="${BASH_REMATCH[1]}"
+            devices+=("$device:cciss:$raid_id")
+        elif [[ "$line" =~ 3ware,([0-9]+) ]]; then
+            local raid_id="${BASH_REMATCH[1]}"
+            devices+=("$device:3ware:$raid_id")
+        elif [[ "$line" =~ areca,([0-9]+) ]]; then
+            local raid_id="${BASH_REMATCH[1]}"
+            devices+=("$device:areca:$raid_id")
+        fi
+    done <<< "$scan_output"
+
+    # Return devices array as newline-separated string
+    printf '%s\n' "${devices[@]}"
+}
+
+# Backward compatibility alias
+get_megaraid_devices() {
+    get_raid_member_devices "$@"
+}
+
+# Function to get SMART JSON for RAID member device
+# Supports: megaraid, cciss, 3ware, areca
+get_smart_json_raid() {
+    local device="$1"
+    local raid_type="$2"
+    local raid_id="$3"
+    local json_output=""
+
+    json_output=$(smartctl -a --json=c -d "$raid_type","$raid_id" "$device" 2>/dev/null)
+
+    if [[ -n "$json_output" ]] && echo "$json_output" | grep -q '"json_format_version"'; then
+        echo "$json_output"
+    else
+        echo ""
+    fi
+}
+
+# Backward compatibility alias
+get_smart_json_megaraid() {
+    local device="$1"
+    local megaraid_id="$2"
+    get_smart_json_raid "$device" "megaraid" "$megaraid_id"
+}
+
+# Function to parse SAS/SCSI/SATA SMART data from JSON (for RAID member disks)
+parse_smart_json_sas() {
+    local json="$1"
+    local disk_label="$2"
+
+    if [[ -z "$json" ]]; then
+        return 1
+    fi
+
+    # Detect if this is a SAS/SCSI or SATA disk
+    local device_type=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"type"\s*:\s*"\K[^"]*' | head -1)
+    local protocol=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"protocol"\s*:\s*"\K[^"]*' | head -1)
+
+    # Extract basic info - try both SAS and SATA formats
+    local vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+    local product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+    local model_name=$(echo "$json" | grep -oP '"model_name"\s*:\s*"\K[^"]*' | head -1)
+    local model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
+    local serial=$(echo "$json" | grep -oP '"serial_number"\s*:\s*"\K[^"]*' | head -1)
+    local capacity_bytes=$(echo "$json" | grep -oP '"user_capacity"\s*:\s*\{[^}]*"bytes"\s*:\s*\K[0-9]+' | head -1)
+
+    # Format capacity
+    local capacity_formatted=""
+    if [[ -n "$capacity_bytes" && "$capacity_bytes" != "0" ]]; then
+        capacity_formatted=$(format_bytes "$capacity_bytes")
+    fi
+
+    # Display disk info
+    if [[ -n "$vendor" && -n "$product" ]]; then
+        echo "│   Model: $vendor $product"
+    elif [[ -n "$model_name" ]]; then
+        echo "│   Model: $model_name"
+    fi
+    if [[ -n "$model_family" ]]; then
+        echo "│   Family: $model_family"
+    fi
+    if [[ -n "$serial" ]]; then
+        echo "│   Serial: $serial"
+    fi
+    if [[ -n "$capacity_formatted" ]]; then
+        echo "│   Capacity: $capacity_formatted"
+    fi
+
+    # SMART status - check for smart_status.passed
+    local smart_passed=$(echo "$json" | grep -oP '"smart_status"\s*:\s*\{[^}]*"passed"\s*:\s*\K(true|false)' | head -1)
+    if [[ -z "$smart_passed" ]]; then
+        # Try alternative method: check scsi_grown_defect_list element count
+        local defect_count=$(echo "$json" | grep -oP '"scsi_grown_defect_list"\s*:\s*\K[0-9]+' | head -1)
+        if [[ -n "$defect_count" && "$defect_count" == "0" ]]; then
+            smart_passed="true"
+        fi
+    fi
+
+    if [[ "$smart_passed" == "true" ]]; then
+        echo "│   $(get_label "smart_status"): PASSED"
+    elif [[ "$smart_passed" == "false" ]]; then
+        echo "│   $(get_label "smart_status"): ${RED}FAILED${NC}"
+    else
+        echo "│   $(get_label "smart_status"): $(get_label "no_info")"
+    fi
+
+    # Temperature
+    local temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{[^}]*"current"\s*:\s*\K[0-9]+' | head -1)
+    if [[ -n "$temperature" && "$temperature" != "0" ]]; then
+        echo "│   $(get_label "temperature"): ${temperature}°C"
+    fi
+
+    # Power on hours - try multiple formats
+    local power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{[^}]*"hours"\s*:\s*\K[0-9]+' | head -1)
+    if [[ -n "$power_on_hours" ]]; then
+        echo "│   $(get_label "power_on_hours"): ${power_on_hours} hours"
+    fi
+
+    # SCSI error counters
+    local read_errors=$(echo "$json" | grep -oP '"read"\s*:\s*\{[^}]*"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    local write_errors=$(echo "$json" | grep -oP '"write"\s*:\s*\{[^}]*"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+
+    if [[ -n "$read_errors" || -n "$write_errors" ]]; then
+        local total_errors=$((${read_errors:-0} + ${write_errors:-0}))
+        if [[ $total_errors -eq 0 ]]; then
+            echo "│   Uncorrected Errors: 0 (Good)"
+        else
+            echo "│   Uncorrected Errors: ${RED}${total_errors}${NC}"
+        fi
+    fi
+
+    # Read/Write processed bytes (from scsi_error_counter_log)
+    local read_gb=$(echo "$json" | grep -oP '"read"\s*:\s*\{[^}]*"gigabytes_processed"\s*:\s*\K[0-9.]+' | head -1)
+    local write_gb=$(echo "$json" | grep -oP '"write"\s*:\s*\{[^}]*"gigabytes_processed"\s*:\s*\K[0-9.]+' | head -1)
+
+    if [[ -n "$read_gb" && "$read_gb" != "0" ]]; then
+        # Convert to integer GB for display
+        local read_int=$(printf "%.0f" "$read_gb" 2>/dev/null || echo "$read_gb")
+        if [[ $read_int -gt 1000 ]]; then
+            local read_tb=$(echo "scale=2; $read_gb / 1000" | bc 2>/dev/null || echo "$read_gb")
+            echo "│   $(get_label "total_reads"): ${read_tb} TB"
+        else
+            echo "│   $(get_label "total_reads"): ${read_int} GB"
+        fi
+    fi
+
+    if [[ -n "$write_gb" && "$write_gb" != "0" ]]; then
+        local write_int=$(printf "%.0f" "$write_gb" 2>/dev/null || echo "$write_gb")
+        if [[ $write_int -gt 1000 ]]; then
+            local write_tb=$(echo "scale=2; $write_gb / 1000" | bc 2>/dev/null || echo "$write_gb")
+            echo "│   $(get_label "total_writes"): ${write_tb} TB"
+        else
+            echo "│   $(get_label "total_writes"): ${write_int} GB"
+        fi
+    fi
+
+    return 0
+}
+
+# Function to display RAID member disks (supports megaraid, cciss, 3ware, areca)
+display_megaraid_disks() {
+    local parent_disk="$1"
+
+    # Get RAID member devices
+    local raid_devs=$(get_raid_member_devices "$parent_disk")
+
+    if [[ -z "$raid_devs" ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            echo "│   阵列成员: 无法检测到阵列成员磁盘"
+            echo "│   → 请尝试: smartctl --scan"
+        else
+            echo "│   RAID Members: Unable to detect member disks"
+            echo "│   → Try: smartctl --scan"
+        fi
+        return 1
+    fi
+
+    echo "│"
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        print_color "$YELLOW" "│   ══ 阵列成员磁盘 ══"
+    else
+        print_color "$YELLOW" "│   ══ RAID Member Disks ══"
+    fi
+
+    local disk_count=0
+    while IFS= read -r entry; do
+        [[ -z "$entry" ]] && continue
+
+        # Parse format: device:raid_type:raid_id
+        local device=$(echo "$entry" | cut -d: -f1)
+        local raid_type=$(echo "$entry" | cut -d: -f2)
+        local raid_id=$(echo "$entry" | cut -d: -f3)
+
+        ((disk_count++))
+        echo "│"
+        print_color "$CYAN" "│   ─── Disk $disk_count ($raid_type,$raid_id) ───"
+
+        # Get SMART data for this RAID member disk
+        local json_data=$(get_smart_json_raid "$device" "$raid_type" "$raid_id")
+
+        if [[ -n "$json_data" ]]; then
+            parse_smart_json_sas "$json_data" "$raid_type,$raid_id"
+        else
+            # Try text-based parsing as fallback
+            local smart_text=$(smartctl -a -d "$raid_type","$raid_id" "$device" 2>/dev/null)
+            if [[ -n "$smart_text" ]]; then
+                # Extract basic info from text output (works for both SAS and SATA)
+                local vendor=$(echo "$smart_text" | grep "^Vendor:" | awk '{print $2}')
+                local product=$(echo "$smart_text" | grep "^Product:" | awk '{print $2}')
+                local model=$(echo "$smart_text" | grep "^Device Model:" | sed 's/^Device Model:\s*//')
+                local serial=$(echo "$smart_text" | grep -E "^Serial [Nn]umber:" | awk '{print $3}')
+                local health=$(echo "$smart_text" | grep -E "SMART (overall-health|Health Status):" | awk -F': ' '{print $2}')
+                local temp=$(echo "$smart_text" | grep -E "Current Drive Temperature:|^Temperature:" | grep -oE '[0-9]+' | head -1)
+                local power_hours=$(echo "$smart_text" | grep -E "Accumulated power on time|Power_On_Hours" | grep -oE '[0-9]+' | head -1)
+
+                # Display model (SAS format: Vendor Product, SATA format: Device Model)
+                if [[ -n "$vendor" && -n "$product" ]]; then
+                    echo "│   Model: $vendor $product"
+                elif [[ -n "$model" ]]; then
+                    echo "│   Model: $model"
+                fi
+                [[ -n "$serial" ]] && echo "│   Serial: $serial"
+
+                if [[ -n "$health" ]]; then
+                    if [[ "$health" == "OK" || "$health" == "PASSED" ]]; then
+                        echo "│   $(get_label "smart_status"): PASSED"
+                    else
+                        echo "│   $(get_label "smart_status"): ${RED}${health}${NC}"
+                    fi
+                fi
+
+                [[ -n "$power_hours" ]] && echo "│   $(get_label "power_on_hours"): ${power_hours} hours"
+                [[ -n "$temp" && "$temp" != "0" ]] && echo "│   $(get_label "temperature"): ${temp}°C"
+            else
+                if [[ "$LANG_MODE" == "cn" ]]; then
+                    echo "│   SMART状态: 无法读取"
+                else
+                    echo "│   SMART Status: Unable to read"
+                fi
+            fi
+        fi
+    done <<< "$raid_devs"
+
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        echo "│   ─── 共检测到 $disk_count 块成员磁盘 ───"
+    else
+        echo "│   ─── Total: $disk_count member disk(s) ───"
+    fi
+
+    return 0
+}
+
 # Function to get SMART data using JSON output (smartctl 7.0+)
 get_smart_json() {
     local disk="$1"
@@ -1397,7 +1696,26 @@ get_disk_info() {
             if [[ "$use_json" == true ]]; then
                 local json_data=$(get_smart_json "$disk")
                 if [[ -n "$json_data" ]]; then
-                    parse_smart_json "$disk" "$json_data" && parsed=true
+                    # Check if this is a RAID controller virtual disk
+                    if is_raid_controller_disk "$disk" "$json_data"; then
+                        # Extract RAID controller info
+                        local scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+                        local scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+
+                        if [[ "$LANG_MODE" == "cn" ]]; then
+                            echo "│   类型: 硬件RAID阵列"
+                            echo "│   控制器: $scsi_vendor $scsi_product"
+                        else
+                            echo "│   Type: Hardware RAID Array"
+                            echo "│   Controller: $scsi_vendor $scsi_product"
+                        fi
+
+                        # Display member disks
+                        display_megaraid_disks "$disk"
+                        parsed=true
+                    else
+                        parse_smart_json "$disk" "$json_data" && parsed=true
+                    fi
                 fi
             fi
 
