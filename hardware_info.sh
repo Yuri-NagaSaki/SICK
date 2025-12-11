@@ -95,6 +95,14 @@ declare -A LABELS_EN=(
     ["core_temps"]="Core Temperatures"
     ["cpu_temp_high"]="High Temperature Warning"
     ["requires_root_sensors"]="Requires root/sensors"
+    ["reallocated_sectors"]="Reallocated Sectors"
+    ["pending_sectors"]="Pending Sectors"
+    ["offline_uncorrectable"]="Offline Uncorrectable"
+    ["reported_uncorrect"]="Reported Uncorrectable"
+    ["uncorrected_errors"]="Uncorrected Errors"
+    ["grown_defects"]="Grown Defect List"
+    ["non_medium_errors"]="Non-medium Errors"
+    ["bad_blocks"]="Bad Blocks"
 )
 
 declare -A LABELS_CN=(
@@ -157,6 +165,14 @@ declare -A LABELS_CN=(
     ["core_temps"]="核心温度"
     ["cpu_temp_high"]="高温警告"
     ["requires_root_sensors"]="需要root权限/sensors命令"
+    ["reallocated_sectors"]="重映射扇区"
+    ["pending_sectors"]="待处理扇区"
+    ["offline_uncorrectable"]="离线不可校正"
+    ["reported_uncorrect"]="报告的不可校正"
+    ["uncorrected_errors"]="未校正错误"
+    ["grown_defects"]="增长缺陷列表"
+    ["non_medium_errors"]="非介质错误"
+    ["bad_blocks"]="坏块统计"
 )
 
 # Function to get label based on current language
@@ -1267,42 +1283,151 @@ parse_smart_json_sas() {
         echo "│   $(get_label "power_on_hours"): ${power_on_hours} hours"
     fi
 
-    # SCSI error counters
-    local read_errors=$(echo "$json" | grep -oP '"read"\s*:\s*\{[^}]*"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
-    local write_errors=$(echo "$json" | grep -oP '"write"\s*:\s*\{[^}]*"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    # ==========================================================================
+    # Bad Blocks / Defect Detection for RAID member disks
+    # ==========================================================================
+    # Check ALL available fields regardless of drive type (SAS or SATA)
+    # ==========================================================================
 
-    if [[ -n "$read_errors" || -n "$write_errors" ]]; then
-        local total_errors=$((${read_errors:-0} + ${write_errors:-0}))
-        if [[ $total_errors -eq 0 ]]; then
-            echo "│   Uncorrected Errors: 0 (Good)"
+    # Initialize all variables
+    local grown_defects=""
+    local read_uncorrected=""
+    local write_uncorrected=""
+    local verify_uncorrected=""
+    local non_medium_errors=""
+    local reallocated_sectors=""
+    local pending_sectors=""
+    local offline_uncorrectable=""
+    local reported_uncorrect=""
+
+    # Try to extract ALL fields using jq if available
+    if command -v jq >/dev/null 2>&1; then
+        # SAS/SCSI style fields
+        grown_defects=$(echo "$json" | jq -r '.scsi_grown_defect_list // empty' 2>/dev/null)
+        read_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.read.total_uncorrected_errors // empty' 2>/dev/null)
+        write_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.write.total_uncorrected_errors // empty' 2>/dev/null)
+        verify_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.verify.total_uncorrected_errors // empty' 2>/dev/null)
+        non_medium_errors=$(echo "$json" | jq -r '.scsi_error_counter_log.non_medium_error_count // empty' 2>/dev/null)
+        
+        # SATA/ATA style fields (SMART attributes)
+        reallocated_sectors=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 5) | .raw.value' 2>/dev/null)
+        pending_sectors=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 197) | .raw.value' 2>/dev/null)
+        offline_uncorrectable=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 198) | .raw.value' 2>/dev/null)
+        reported_uncorrect=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 187) | .raw.value' 2>/dev/null)
+    fi
+
+    # Fallback to grep for SAS/SCSI fields
+    if [[ -z "$grown_defects" || "$grown_defects" == "null" ]]; then
+        grown_defects=$(echo "$json" | grep -oP '"scsi_grown_defect_list"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$read_uncorrected" || "$read_uncorrected" == "null" ]]; then
+        read_uncorrected=$(echo "$json" | grep -A5 '"read"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$write_uncorrected" || "$write_uncorrected" == "null" ]]; then
+        write_uncorrected=$(echo "$json" | grep -A5 '"write"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$verify_uncorrected" || "$verify_uncorrected" == "null" ]]; then
+        verify_uncorrected=$(echo "$json" | grep -A5 '"verify"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$non_medium_errors" || "$non_medium_errors" == "null" ]]; then
+        non_medium_errors=$(echo "$json" | grep -oP '"non_medium_error_count"\s*:\s*\K[0-9]+' | head -1)
+    fi
+
+    # Fallback to grep for SATA/ATA fields
+    if [[ -z "$reallocated_sectors" || "$reallocated_sectors" == "null" ]]; then
+        reallocated_sectors=$(echo "$json" | grep -A20 '"Reallocated_Sector_Ct"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$pending_sectors" || "$pending_sectors" == "null" ]]; then
+        pending_sectors=$(echo "$json" | grep -A20 '"Current_Pending_Sector"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$offline_uncorrectable" || "$offline_uncorrectable" == "null" ]]; then
+        offline_uncorrectable=$(echo "$json" | grep -A20 '"Offline_Uncorrectable"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$reported_uncorrect" || "$reported_uncorrect" == "null" ]]; then
+        reported_uncorrect=$(echo "$json" | grep -A20 '"Reported_Uncorrect"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+
+    # ==========================================================================
+    # Display all available bad block fields
+    # ==========================================================================
+
+    # SAS/SCSI: Grown Defect List
+    if [[ -n "$grown_defects" && "$grown_defects" != "null" ]]; then
+        if [[ "$grown_defects" -gt 0 ]]; then
+            echo -e "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
         else
-            echo "│   Uncorrected Errors: ${RED}${total_errors}${NC}"
+            echo "│   $(get_label "grown_defects"): ${grown_defects}"
         fi
     fi
 
-    # Read/Write processed bytes (from scsi_error_counter_log)
-    local read_gb=$(echo "$json" | grep -oP '"read"\s*:\s*\{[^}]*"gigabytes_processed"\s*:\s*\K[0-9.]+' | head -1)
-    local write_gb=$(echo "$json" | grep -oP '"write"\s*:\s*\{[^}]*"gigabytes_processed"\s*:\s*\K[0-9.]+' | head -1)
+    # SAS/SCSI: Uncorrected Errors (with breakdown)
+    local has_uncorrected=false
+    [[ -n "$read_uncorrected" && "$read_uncorrected" != "null" ]] && has_uncorrected=true
+    [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" ]] && has_uncorrected=true
+    [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" ]] && has_uncorrected=true
 
-    if [[ -n "$read_gb" && "$read_gb" != "0" ]]; then
-        # Convert to integer GB for display
-        local read_int=$(printf "%.0f" "$read_gb" 2>/dev/null || echo "$read_gb")
-        if [[ $read_int -gt 1000 ]]; then
-            local read_tb=$(echo "scale=2; $read_gb / 1000" | bc 2>/dev/null || echo "$read_gb")
-            echo "│   $(get_label "total_reads"): ${read_tb} TB"
+    if [[ "$has_uncorrected" == true ]]; then
+        local total_uncorrected=0
+        [[ -n "$read_uncorrected" && "$read_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + read_uncorrected))
+        [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + write_uncorrected))
+        [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
+
+        if [[ "$total_uncorrected" -gt 0 ]]; then
+            echo -e "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
         else
-            echo "│   $(get_label "total_reads"): ${read_int} GB"
+            echo "│   $(get_label "uncorrected_errors"): 0 (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
         fi
     fi
 
-    if [[ -n "$write_gb" && "$write_gb" != "0" ]]; then
-        local write_int=$(printf "%.0f" "$write_gb" 2>/dev/null || echo "$write_gb")
-        if [[ $write_int -gt 1000 ]]; then
-            local write_tb=$(echo "scale=2; $write_gb / 1000" | bc 2>/dev/null || echo "$write_gb")
-            echo "│   $(get_label "total_writes"): ${write_tb} TB"
+    # SAS/SCSI: Non-medium Errors
+    if [[ -n "$non_medium_errors" && "$non_medium_errors" != "null" && "$non_medium_errors" != "0" ]]; then
+        echo -e "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+    fi
+
+    # SATA/ATA: Reallocated Sectors (ID 5)
+    if [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" ]]; then
+        if [[ "$reallocated_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
         else
-            echo "│   $(get_label "total_writes"): ${write_int} GB"
+            echo "│   $(get_label "reallocated_sectors"): ${reallocated_sectors}"
         fi
+    fi
+
+    # SATA/ATA: Pending Sectors (ID 197)
+    if [[ -n "$pending_sectors" && "$pending_sectors" != "null" ]]; then
+        if [[ "$pending_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
+        else
+            echo "│   $(get_label "pending_sectors"): ${pending_sectors}"
+        fi
+    fi
+
+    # SATA/ATA: Offline Uncorrectable (ID 198)
+    if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" ]]; then
+        if [[ "$offline_uncorrectable" -gt 0 ]]; then
+            echo -e "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
+        else
+            echo "│   $(get_label "offline_uncorrectable"): ${offline_uncorrectable}"
+        fi
+    fi
+
+    # SATA/ATA: Reported Uncorrectable (ID 187)
+    if [[ -n "$reported_uncorrect" && "$reported_uncorrect" != "null" ]]; then
+        if [[ "$reported_uncorrect" -gt 0 ]]; then
+            echo -e "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
+        else
+            echo "│   $(get_label "reported_uncorrect"): ${reported_uncorrect}"
+        fi
+    fi
+
+    # Calculate and display total bad blocks summary (SATA style)
+    local total_bad=0
+    [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" && "$reallocated_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + reallocated_sectors))
+    [[ -n "$pending_sectors" && "$pending_sectors" != "null" && "$pending_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + pending_sectors))
+    [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
+
+    if [[ "$total_bad" -gt 0 ]]; then
+        echo -e "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
     fi
 
     return 0
@@ -1382,6 +1507,100 @@ display_megaraid_disks() {
 
                 [[ -n "$power_hours" ]] && echo "│   $(get_label "power_on_hours"): ${power_hours} hours"
                 [[ -n "$temp" && "$temp" != "0" ]] && echo "│   $(get_label "temperature"): ${temp}°C"
+
+                # ==========================================================================
+                # Bad Blocks Detection for RAID member disks (text fallback)
+                # ==========================================================================
+
+                # Try to extract ALL bad block fields
+                local grown_defects=$(echo "$smart_text" | grep -i "Elements in grown defect list" | grep -oE '[0-9]+' | head -1)
+                local read_uncorrected=$(echo "$smart_text" | grep -A2 "^read:" | grep -oE '[0-9]+$' | tail -1)
+                local write_uncorrected=$(echo "$smart_text" | grep -A2 "^write:" | grep -oE '[0-9]+$' | tail -1)
+                local verify_uncorrected=$(echo "$smart_text" | grep -A2 "^verify:" | grep -oE '[0-9]+$' | tail -1)
+                local non_medium_errors=$(echo "$smart_text" | grep -i "Non-medium error count" | grep -oE '[0-9]+' | head -1)
+                local reallocated_sectors=$(echo "$smart_text" | grep -i "Reallocated_Sector_Ct" | awk '{print $NF}')
+                local pending_sectors=$(echo "$smart_text" | grep -i "Current_Pending_Sector" | awk '{print $NF}')
+                local offline_uncorrectable=$(echo "$smart_text" | grep -i "Offline_Uncorrectable" | awk '{print $NF}')
+                local reported_uncorrect=$(echo "$smart_text" | grep -i "Reported_Uncorrect" | awk '{print $NF}')
+
+                # Display SAS/SCSI: Grown Defect List
+                if [[ -n "$grown_defects" && "$grown_defects" =~ ^[0-9]+$ ]]; then
+                    if [[ "$grown_defects" -gt 0 ]]; then
+                        echo -e "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
+                    else
+                        echo "│   $(get_label "grown_defects"): ${grown_defects}"
+                    fi
+                fi
+
+                # Display SAS/SCSI: Uncorrected Errors
+                local has_uncorrected=false
+                [[ -n "$read_uncorrected" && "$read_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+                [[ -n "$write_uncorrected" && "$write_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+                [[ -n "$verify_uncorrected" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+
+                if [[ "$has_uncorrected" == true ]]; then
+                    local total_uncorrected=0
+                    [[ -n "$read_uncorrected" && "$read_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + read_uncorrected))
+                    [[ -n "$write_uncorrected" && "$write_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + write_uncorrected))
+                    [[ -n "$verify_uncorrected" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
+
+                    if [[ "$total_uncorrected" -gt 0 ]]; then
+                        echo -e "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+                    else
+                        echo "│   $(get_label "uncorrected_errors"): 0 (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+                    fi
+                fi
+
+                # Display SAS/SCSI: Non-medium Errors
+                if [[ -n "$non_medium_errors" && "$non_medium_errors" =~ ^[0-9]+$ && "$non_medium_errors" != "0" ]]; then
+                    echo -e "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+                fi
+
+                # Display SATA/ATA: Reallocated Sectors
+                if [[ -n "$reallocated_sectors" && "$reallocated_sectors" =~ ^[0-9]+$ ]]; then
+                    if [[ "$reallocated_sectors" -gt 0 ]]; then
+                        echo -e "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
+                    else
+                        echo "│   $(get_label "reallocated_sectors"): ${reallocated_sectors}"
+                    fi
+                fi
+
+                # Display SATA/ATA: Pending Sectors
+                if [[ -n "$pending_sectors" && "$pending_sectors" =~ ^[0-9]+$ ]]; then
+                    if [[ "$pending_sectors" -gt 0 ]]; then
+                        echo -e "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
+                    else
+                        echo "│   $(get_label "pending_sectors"): ${pending_sectors}"
+                    fi
+                fi
+
+                # Display SATA/ATA: Offline Uncorrectable
+                if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" =~ ^[0-9]+$ ]]; then
+                    if [[ "$offline_uncorrectable" -gt 0 ]]; then
+                        echo -e "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
+                    else
+                        echo "│   $(get_label "offline_uncorrectable"): ${offline_uncorrectable}"
+                    fi
+                fi
+
+                # Display SATA/ATA: Reported Uncorrectable
+                if [[ -n "$reported_uncorrect" && "$reported_uncorrect" =~ ^[0-9]+$ ]]; then
+                    if [[ "$reported_uncorrect" -gt 0 ]]; then
+                        echo -e "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
+                    else
+                        echo "│   $(get_label "reported_uncorrect"): ${reported_uncorrect}"
+                    fi
+                fi
+
+                # Calculate total bad blocks (SATA style)
+                local total_bad=0
+                [[ -n "$reallocated_sectors" && "$reallocated_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + reallocated_sectors))
+                [[ -n "$pending_sectors" && "$pending_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + pending_sectors))
+                [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
+
+                if [[ "$total_bad" -gt 0 ]]; then
+                    echo -e "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
+                fi
             else
                 if [[ "$LANG_MODE" == "cn" ]]; then
                     echo "│   SMART状态: 无法读取"
@@ -1610,6 +1829,170 @@ parse_smart_json() {
         echo "│   $(get_label "temperature"): ${temperature}°C"
     fi
 
+    # ==========================================================================
+    # Bad Blocks / Defect Detection
+    # ==========================================================================
+    # This section detects and reports disk defects by checking ALL available
+    # fields regardless of the drive protocol. This ensures compatibility with
+    # drives behind RAID controllers or other special configurations.
+    #
+    # SAS/SCSI style fields:
+    #   - scsi_grown_defect_list: Number of defective sectors found and remapped
+    #   - total_uncorrected_errors: Errors that ECC could not correct (read/write/verify)
+    #   - non_medium_error_count: Errors not related to the storage medium
+    #
+    # SATA/ATA style fields (SMART attributes):
+    #   - Reallocated_Sector_Ct (ID 5): Bad sectors remapped to spare area
+    #   - Current_Pending_Sector (ID 197): Sectors waiting to be remapped
+    #   - Offline_Uncorrectable (ID 198): Uncorrectable errors during offline scan
+    #   - Reported_Uncorrect (ID 187): Uncorrectable errors reported to host
+    #
+    # Color coding:
+    #   - Yellow: Warning level (non-zero but recoverable)
+    #   - Red: Critical level (potential data loss or imminent failure)
+    # ==========================================================================
+
+    # Initialize all variables
+    local grown_defects=""
+    local read_uncorrected=""
+    local write_uncorrected=""
+    local verify_uncorrected=""
+    local non_medium_errors=""
+    local reallocated_sectors=""
+    local pending_sectors=""
+    local offline_uncorrectable=""
+    local reported_uncorrect=""
+
+    # Try to extract ALL fields using jq if available
+    if command -v jq >/dev/null 2>&1; then
+        # SAS/SCSI style fields
+        grown_defects=$(echo "$json" | jq -r '.scsi_grown_defect_list // empty' 2>/dev/null)
+        read_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.read.total_uncorrected_errors // empty' 2>/dev/null)
+        write_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.write.total_uncorrected_errors // empty' 2>/dev/null)
+        verify_uncorrected=$(echo "$json" | jq -r '.scsi_error_counter_log.verify.total_uncorrected_errors // empty' 2>/dev/null)
+        non_medium_errors=$(echo "$json" | jq -r '.scsi_error_counter_log.non_medium_error_count // empty' 2>/dev/null)
+        
+        # SATA/ATA style fields (SMART attributes)
+        reallocated_sectors=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 5) | .raw.value' 2>/dev/null)
+        pending_sectors=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 197) | .raw.value' 2>/dev/null)
+        offline_uncorrectable=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 198) | .raw.value' 2>/dev/null)
+        reported_uncorrect=$(echo "$json" | jq -r '.ata_smart_attributes.table[] | select(.id == 187) | .raw.value' 2>/dev/null)
+    fi
+
+    # Fallback to grep for SAS/SCSI fields
+    if [[ -z "$grown_defects" || "$grown_defects" == "null" ]]; then
+        grown_defects=$(echo "$json" | grep -oP '"scsi_grown_defect_list"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$read_uncorrected" || "$read_uncorrected" == "null" ]]; then
+        read_uncorrected=$(echo "$json" | grep -A5 '"read"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$write_uncorrected" || "$write_uncorrected" == "null" ]]; then
+        write_uncorrected=$(echo "$json" | grep -A5 '"write"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$verify_uncorrected" || "$verify_uncorrected" == "null" ]]; then
+        verify_uncorrected=$(echo "$json" | grep -A5 '"verify"' | grep -oP '"total_uncorrected_errors"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$non_medium_errors" || "$non_medium_errors" == "null" ]]; then
+        non_medium_errors=$(echo "$json" | grep -oP '"non_medium_error_count"\s*:\s*\K[0-9]+' | head -1)
+    fi
+
+    # Fallback to grep for SATA/ATA fields
+    if [[ -z "$reallocated_sectors" || "$reallocated_sectors" == "null" ]]; then
+        reallocated_sectors=$(echo "$json" | grep -A20 '"Reallocated_Sector_Ct"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$pending_sectors" || "$pending_sectors" == "null" ]]; then
+        pending_sectors=$(echo "$json" | grep -A20 '"Current_Pending_Sector"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$offline_uncorrectable" || "$offline_uncorrectable" == "null" ]]; then
+        offline_uncorrectable=$(echo "$json" | grep -A20 '"Offline_Uncorrectable"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+    if [[ -z "$reported_uncorrect" || "$reported_uncorrect" == "null" ]]; then
+        reported_uncorrect=$(echo "$json" | grep -A20 '"Reported_Uncorrect"' | grep -oP '"raw"\s*:\s*\{\s*"value"\s*:\s*\K[0-9]+' | head -1)
+    fi
+
+    # ==========================================================================
+    # Display all available fields (if they exist)
+    # ==========================================================================
+
+    # SAS/SCSI: Grown Defect List
+    if [[ -n "$grown_defects" && "$grown_defects" != "null" ]]; then
+        if [[ "$grown_defects" -gt 0 ]]; then
+            echo -e "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
+        else
+            echo "│   $(get_label "grown_defects"): ${grown_defects}"
+        fi
+    fi
+
+    # SAS/SCSI: Uncorrected Errors (with breakdown)
+    local has_uncorrected=false
+    [[ -n "$read_uncorrected" && "$read_uncorrected" != "null" ]] && has_uncorrected=true
+    [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" ]] && has_uncorrected=true
+    [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" ]] && has_uncorrected=true
+
+    if [[ "$has_uncorrected" == true ]]; then
+        local total_uncorrected=0
+        [[ -n "$read_uncorrected" && "$read_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + read_uncorrected))
+        [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + write_uncorrected))
+        [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
+
+        if [[ "$total_uncorrected" -gt 0 ]]; then
+            echo -e "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+        else
+            echo "│   $(get_label "uncorrected_errors"): 0 (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+        fi
+    fi
+
+    # SAS/SCSI: Non-medium Errors
+    if [[ -n "$non_medium_errors" && "$non_medium_errors" != "null" && "$non_medium_errors" != "0" ]]; then
+        echo -e "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+    fi
+
+    # SATA/ATA: Reallocated Sectors (ID 5)
+    if [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" ]]; then
+        if [[ "$reallocated_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
+        else
+            echo "│   $(get_label "reallocated_sectors"): ${reallocated_sectors}"
+        fi
+    fi
+
+    # SATA/ATA: Pending Sectors (ID 197)
+    if [[ -n "$pending_sectors" && "$pending_sectors" != "null" ]]; then
+        if [[ "$pending_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
+        else
+            echo "│   $(get_label "pending_sectors"): ${pending_sectors}"
+        fi
+    fi
+
+    # SATA/ATA: Offline Uncorrectable (ID 198)
+    if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" ]]; then
+        if [[ "$offline_uncorrectable" -gt 0 ]]; then
+            echo -e "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
+        else
+            echo "│   $(get_label "offline_uncorrectable"): ${offline_uncorrectable}"
+        fi
+    fi
+
+    # SATA/ATA: Reported Uncorrectable (ID 187)
+    if [[ -n "$reported_uncorrect" && "$reported_uncorrect" != "null" ]]; then
+        if [[ "$reported_uncorrect" -gt 0 ]]; then
+            echo -e "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
+        else
+            echo "│   $(get_label "reported_uncorrect"): ${reported_uncorrect}"
+        fi
+    fi
+
+    # Calculate and display total bad blocks summary (SATA style)
+    local total_bad=0
+    [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" && "$reallocated_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + reallocated_sectors))
+    [[ -n "$pending_sectors" && "$pending_sectors" != "null" && "$pending_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + pending_sectors))
+    [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
+
+    if [[ "$total_bad" -gt 0 ]]; then
+        echo -e "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
+    fi
+
     return 0
 }
 
@@ -1654,6 +2037,120 @@ parse_smart_text() {
         # Available spare
         local spare=$(echo "$smart_all" | grep -i "Available Spare:" | grep -oE '[0-9]+' | head -1)
         [[ -n "$spare" ]] && echo "│   $(get_label "available_spare"): ${spare}%"
+    fi
+
+    # ==========================================================================
+    # Bad Blocks Detection (Text Parsing Fallback)
+    # ==========================================================================
+    # For older smartctl versions without JSON support
+    # Uses text parsing to extract ALL available fields regardless of drive type
+    # ==========================================================================
+
+    # Initialize all variables
+    local grown_defects=""
+    local read_uncorrected=""
+    local write_uncorrected=""
+    local verify_uncorrected=""
+    local non_medium_errors=""
+    local reallocated_sectors=""
+    local pending_sectors=""
+    local offline_uncorrectable=""
+    local reported_uncorrect=""
+
+    # Try to extract SAS/SCSI style fields
+    grown_defects=$(echo "$smart_all" | grep -i "Elements in grown defect list" | grep -oE '[0-9]+' | head -1)
+    read_uncorrected=$(echo "$smart_all" | grep -A2 "^read:" | grep -oE '[0-9]+$' | tail -1)
+    write_uncorrected=$(echo "$smart_all" | grep -A2 "^write:" | grep -oE '[0-9]+$' | tail -1)
+    verify_uncorrected=$(echo "$smart_all" | grep -A2 "^verify:" | grep -oE '[0-9]+$' | tail -1)
+    non_medium_errors=$(echo "$smart_all" | grep -i "Non-medium error count" | grep -oE '[0-9]+' | head -1)
+
+    # Try to extract SATA/ATA style fields (SMART attributes)
+    reallocated_sectors=$(echo "$smart_all" | grep -i "Reallocated_Sector_Ct" | awk '{print $NF}')
+    pending_sectors=$(echo "$smart_all" | grep -i "Current_Pending_Sector" | awk '{print $NF}')
+    offline_uncorrectable=$(echo "$smart_all" | grep -i "Offline_Uncorrectable" | awk '{print $NF}')
+    reported_uncorrect=$(echo "$smart_all" | grep -i "Reported_Uncorrect" | awk '{print $NF}')
+
+    # ==========================================================================
+    # Display all available fields (if they exist)
+    # ==========================================================================
+
+    # SAS/SCSI: Grown Defect List
+    if [[ -n "$grown_defects" && "$grown_defects" =~ ^[0-9]+$ ]]; then
+        if [[ "$grown_defects" -gt 0 ]]; then
+            echo -e "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
+        else
+            echo "│   $(get_label "grown_defects"): ${grown_defects}"
+        fi
+    fi
+
+    # SAS/SCSI: Uncorrected Errors (with breakdown)
+    local has_uncorrected=false
+    [[ -n "$read_uncorrected" && "$read_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+    [[ -n "$write_uncorrected" && "$write_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+    [[ -n "$verify_uncorrected" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && has_uncorrected=true
+
+    if [[ "$has_uncorrected" == true ]]; then
+        local total_uncorrected=0
+        [[ -n "$read_uncorrected" && "$read_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + read_uncorrected))
+        [[ -n "$write_uncorrected" && "$write_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + write_uncorrected))
+        [[ -n "$verify_uncorrected" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
+
+        if [[ "$total_uncorrected" -gt 0 ]]; then
+            echo -e "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+        else
+            echo "│   $(get_label "uncorrected_errors"): 0 (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+        fi
+    fi
+
+    # SAS/SCSI: Non-medium Errors
+    if [[ -n "$non_medium_errors" && "$non_medium_errors" =~ ^[0-9]+$ && "$non_medium_errors" != "0" ]]; then
+        echo -e "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+    fi
+
+    # SATA/ATA: Reallocated Sectors
+    if [[ -n "$reallocated_sectors" && "$reallocated_sectors" =~ ^[0-9]+$ ]]; then
+        if [[ "$reallocated_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
+        else
+            echo "│   $(get_label "reallocated_sectors"): ${reallocated_sectors}"
+        fi
+    fi
+
+    # SATA/ATA: Pending Sectors
+    if [[ -n "$pending_sectors" && "$pending_sectors" =~ ^[0-9]+$ ]]; then
+        if [[ "$pending_sectors" -gt 0 ]]; then
+            echo -e "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
+        else
+            echo "│   $(get_label "pending_sectors"): ${pending_sectors}"
+        fi
+    fi
+
+    # SATA/ATA: Offline Uncorrectable
+    if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" =~ ^[0-9]+$ ]]; then
+        if [[ "$offline_uncorrectable" -gt 0 ]]; then
+            echo -e "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
+        else
+            echo "│   $(get_label "offline_uncorrectable"): ${offline_uncorrectable}"
+        fi
+    fi
+
+    # SATA/ATA: Reported Uncorrectable
+    if [[ -n "$reported_uncorrect" && "$reported_uncorrect" =~ ^[0-9]+$ ]]; then
+        if [[ "$reported_uncorrect" -gt 0 ]]; then
+            echo -e "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
+        else
+            echo "│   $(get_label "reported_uncorrect"): ${reported_uncorrect}"
+        fi
+    fi
+
+    # Calculate and display total bad blocks (SATA style summary)
+    local total_bad=0
+    [[ -n "$reallocated_sectors" && "$reallocated_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + reallocated_sectors))
+    [[ -n "$pending_sectors" && "$pending_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + pending_sectors))
+    [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
+
+    if [[ "$total_bad" -gt 0 ]]; then
+        echo -e "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
     fi
 
     return 0
