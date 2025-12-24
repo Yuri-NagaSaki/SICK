@@ -1867,6 +1867,11 @@ get_disk_info() {
     echo "│"
     print_color "$GREEN" "│ Physical Disks Details:"
 
+    # Flag to track if RAID member disks have been displayed
+    # This prevents showing the same member disks multiple times
+    # when there are multiple RAID virtual disks from the same controller
+    local raid_members_displayed=false
+
     # Physical disk information with enhanced details
     for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'); do
         echo "│"
@@ -1906,8 +1911,19 @@ get_disk_info() {
                             echo "│   Controller: $scsi_vendor $scsi_product"
                         fi
 
-                        # Display member disks
-                        display_megaraid_disks "$disk"
+                        # Display member disks only once (first RAID virtual disk encountered)
+                        # This prevents showing the same member disks 12 times when there are
+                        # 12 RAID virtual disks from the same controller
+                        if [[ "$raid_members_displayed" == false ]]; then
+                            display_megaraid_disks "$disk"
+                            raid_members_displayed=true
+                        else
+                            if [[ "$LANG_MODE" == "cn" ]]; then
+                                echo "│   (成员磁盘已在上方显示)"
+                            else
+                                echo "│   (Member disks shown above)"
+                            fi
+                        fi
                         parsed=true
                     else
                         parse_smart_json "$disk" "$json_data" && parsed=true
