@@ -1642,6 +1642,7 @@ parse_smart_json() {
     local smart_status=$(echo "$json" | grep -oP '"passed"\s*:\s*\K(true|false)' | head -1)
     local temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{\s*"current"\s*:\s*\K[0-9]+' | head -1)
     local power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{\s*"hours"\s*:\s*\K[0-9]+' | head -1)
+    local model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
 
     # SMART Status
     if [[ "$smart_status" == "true" ]]; then
@@ -1805,14 +1806,29 @@ parse_smart_json() {
 
         # If no I/O stats found at all, show a note with help info
         if [[ "$io_stats_found" == false ]]; then
-            if [[ "$LANG_MODE" == "cn" ]]; then
-                echo "│   读写统计: 此硬盘型号暂不支持"
-                echo "│   → 如需支持请提交: smartctl -a -j /dev/$disk"
-                echo "│   → 反馈地址: https://github.com/Yuri-NagaSaki/SICK/issues"
+            # Check for known drive families that don't report I/O statistics
+            # Toshiba MG series enterprise HDDs don't have ID 241/242 attributes
+            local known_no_io_stats=false
+            if [[ "$model_family" =~ Toshiba\ MG[0-9]+ACA ]]; then
+                known_no_io_stats=true
+            fi
+
+            if [[ "$known_no_io_stats" == true ]]; then
+                if [[ "$LANG_MODE" == "cn" ]]; then
+                    echo "│   读写统计: 此型号硬盘不提供读写统计数据"
+                else
+                    echo "│   I/O Stats: This drive model does not report I/O statistics"
+                fi
             else
-                echo "│   I/O Stats: Not supported for this drive model"
-                echo "│   → To request support: smartctl -a -j /dev/$disk"
-                echo "│   → Report to: https://github.com/Yuri-NagaSaki/SICK/issues"
+                if [[ "$LANG_MODE" == "cn" ]]; then
+                    echo "│   读写统计: 此硬盘型号暂不支持"
+                    echo "│   → 如需支持请提交: smartctl -a -j /dev/$disk"
+                    echo "│   → 反馈地址: https://github.com/Yuri-NagaSaki/SICK/issues"
+                else
+                    echo "│   I/O Stats: Not supported for this drive model"
+                    echo "│   → To request support: smartctl -a -j /dev/$disk"
+                    echo "│   → Report to: https://github.com/Yuri-NagaSaki/SICK/issues"
+                fi
             fi
         fi
     fi
