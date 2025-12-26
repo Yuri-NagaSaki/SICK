@@ -1181,6 +1181,26 @@ get_raid_member_devices() {
     printf '%s\n' "${devices[@]}"
 }
 
+# Function to get unique RAID controller device paths
+# Returns newline-separated list of unique controller devices (e.g., /dev/bus/6, /dev/bus/10)
+get_raid_controller_devices() {
+    local raid_devs=$(get_raid_member_devices "")
+    local controllers=()
+    local seen_controllers=""
+    
+    while IFS= read -r entry; do
+        [[ -z "$entry" ]] && continue
+        local device=$(echo "$entry" | cut -d: -f1)
+        # Check if we've already seen this controller device
+        if [[ ! "$seen_controllers" =~ "$device" ]]; then
+            controllers+=("$device")
+            seen_controllers="$seen_controllers $device"
+        fi
+    done <<< "$raid_devs"
+    
+    printf '%s\n' "${controllers[@]}"
+}
+
 # Backward compatibility alias
 get_megaraid_devices() {
     get_raid_member_devices "$@"
@@ -1484,8 +1504,13 @@ parse_smart_json_sas() {
 }
 
 # Function to display RAID member disks (supports megaraid, cciss, 3ware, areca)
+# Parameters:
+#   $1 - parent_disk (unused, kept for compatibility)
+#   $2 - controller_device (optional): Only show disks from this controller (e.g., /dev/bus/6)
+#                                      If empty, show all RAID member disks
 display_megaraid_disks() {
     local parent_disk="$1"
+    local controller_filter="$2"
 
     # Get RAID member devices
     local raid_devs=$(get_raid_member_devices "$parent_disk")
@@ -1516,6 +1541,11 @@ display_megaraid_disks() {
         local device=$(echo "$entry" | cut -d: -f1)
         local raid_type=$(echo "$entry" | cut -d: -f2)
         local raid_id=$(echo "$entry" | cut -d: -f3)
+
+        # If controller filter is specified, skip devices from other controllers
+        if [[ -n "$controller_filter" && "$device" != "$controller_filter" ]]; then
+            continue
+        fi
 
         ((disk_count++))
         echo "│"
@@ -1872,6 +1902,9 @@ parse_smart_text() {
 }
 
 # Function to get disk information with enhanced SMART data
+# Display structure:
+#   1. First: RAID controllers and their member disks (grouped by controller)
+#   2. Then: Other disks (NVMe, non-RAID SATA/SAS, etc.)
 get_disk_info() {
     print_subsection "$(get_label "disk_info")"
 
@@ -1880,11 +1913,162 @@ get_disk_info() {
         echo "│ $line"
     done
 
+    # Check smartctl version for JSON support (7.0+)
+    local smartctl_available=false
+    local use_json=false
+    if command -v smartctl >/dev/null 2>&1; then
+        smartctl_available=true
+        local smartctl_version=$(smartctl --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+        if [[ -n "$smartctl_version" ]]; then
+            local major_version=$(echo "$smartctl_version" | cut -d. -f1)
+            [[ "$major_version" -ge 7 ]] && use_json=true
+        fi
+    fi
+
+    # ==========================================================================
+    # PART 1: RAID Controllers and Member Disks
+    # ==========================================================================
+    # Get unique RAID controller devices first
+    local controller_devices=""
+    if [[ "$smartctl_available" == true ]]; then
+        controller_devices=$(get_raid_controller_devices)
+    fi
+
+    if [[ -n "$controller_devices" ]]; then
+        echo "│"
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+            print_color "$GREEN" "│ RAID 控制器及成员磁盘"
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        else
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+            print_color "$GREEN" "│ RAID Controllers & Member Disks"
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        fi
+
+        local controller_num=0
+        while IFS= read -r controller_dev; do
+            [[ -z "$controller_dev" ]] && continue
+            ((controller_num++))
+
+            # Try to get controller info from any RAID member
+            local raid_devs=$(get_raid_member_devices "")
+            local controller_vendor=""
+            local controller_product=""
+
+            # Find first device belonging to this controller to get info
+            while IFS= read -r entry; do
+                [[ -z "$entry" ]] && continue
+                local device=$(echo "$entry" | cut -d: -f1)
+                local raid_type=$(echo "$entry" | cut -d: -f2)
+                local raid_id=$(echo "$entry" | cut -d: -f3)
+
+                if [[ "$device" == "$controller_dev" ]]; then
+                    # Get controller info from this device
+                    local json_data=$(get_smart_json_raid "$device" "$raid_type" "$raid_id")
+                    if [[ -n "$json_data" ]]; then
+                        controller_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+                        controller_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+                    fi
+                    break
+                fi
+            done <<< "$raid_devs"
+
+            # Display controller header
+            echo "│"
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                if [[ -n "$controller_vendor" || -n "$controller_product" ]]; then
+                    print_color "$YELLOW" "│ ══ RAID 控制器 $controller_num: $controller_vendor $controller_product ══"
+                else
+                    print_color "$YELLOW" "│ ══ RAID 控制器 $controller_num: $controller_dev ══"
+                fi
+                echo "│   设备路径: $controller_dev"
+            else
+                if [[ -n "$controller_vendor" || -n "$controller_product" ]]; then
+                    print_color "$YELLOW" "│ ══ RAID Controller $controller_num: $controller_vendor $controller_product ══"
+                else
+                    print_color "$YELLOW" "│ ══ RAID Controller $controller_num: $controller_dev ══"
+                fi
+                echo "│   Device Path: $controller_dev"
+            fi
+
+            # Display member disks for this controller
+            display_megaraid_disks "" "$controller_dev"
+
+        done <<< "$controller_devices"
+    fi
+
+    # ==========================================================================
+    # PART 2: System/Virtual Disks (RAID VDs)
+    # ==========================================================================
+    # Collect RAID virtual disk list (for display)
+    local raid_vd_list=""
+    for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]+$'); do
+        if [[ "$smartctl_available" == true && "$use_json" == true ]]; then
+            local json_data=$(get_smart_json "$disk")
+            if [[ -n "$json_data" ]] && is_raid_controller_disk "$disk" "$json_data"; then
+                raid_vd_list="$raid_vd_list $disk"
+            fi
+        fi
+    done
+
+    # Only show this section if there are RAID VDs
+    if [[ -n "$raid_vd_list" ]]; then
+        echo "│"
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+            print_color "$GREEN" "│ RAID 虚拟磁盘 (VD/直通)"
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        else
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+            print_color "$GREEN" "│ RAID Virtual Disks (VD/Passthrough)"
+            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        fi
+
+        for disk in $raid_vd_list; do
+            echo "│"
+            print_color "$CYAN" "│ ─── /dev/$disk ───"
+
+            # Basic disk information
+            local disk_info=$(lsblk -d -n -o SIZE,MODEL,VENDOR "/dev/$disk" 2>/dev/null | sed 's/  */ /g')
+            echo "│   Basic Info: $disk_info"
+
+            local json_data=$(get_smart_json "$disk")
+            local scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+            local scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                echo "│   控制器: $scsi_vendor $scsi_product"
+            else
+                echo "│   Controller: $scsi_vendor $scsi_product"
+            fi
+        done
+    fi
+
+    # ==========================================================================
+    # PART 3: Other Disks (NVMe, non-RAID SATA/SAS, MMC, etc.)
+    # ==========================================================================
     echo "│"
-    print_color "$GREEN" "│ Physical Disks Details:"
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        print_color "$GREEN" "│ 其他磁盘 (NVMe / SATA / SAS)"
+        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+    else
+        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+        print_color "$GREEN" "│ Other Disks (NVMe / SATA / SAS)"
+        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
+    fi
+
+    local other_disk_count=0
 
     # Physical disk information with enhanced details
-    for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'); do
+    for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'); do
+        # Skip RAID virtual disks (already shown in Part 2)
+        if [[ " $raid_vd_list " =~ " $disk " ]]; then
+            continue
+        fi
+
+        ((other_disk_count++))
         echo "│"
         print_color "$CYAN" "│ ═══ /dev/$disk ═══"
 
@@ -1893,41 +2077,13 @@ get_disk_info() {
         echo "│   Basic Info: $disk_info"
 
         # SMART information
-        if command -v smartctl >/dev/null 2>&1; then
-            # Check smartctl version for JSON support (7.0+)
-            local smartctl_version=$(smartctl --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-            local use_json=false
-
-            if [[ -n "$smartctl_version" ]]; then
-                local major_version=$(echo "$smartctl_version" | cut -d. -f1)
-                [[ "$major_version" -ge 7 ]] && use_json=true
-            fi
-
+        if [[ "$smartctl_available" == true ]]; then
             # Try JSON parsing first (more reliable)
             local parsed=false
             if [[ "$use_json" == true ]]; then
                 local json_data=$(get_smart_json "$disk")
                 if [[ -n "$json_data" ]]; then
-                    # Check if this is a RAID controller virtual disk
-                    if is_raid_controller_disk "$disk" "$json_data"; then
-                        # Extract RAID controller info
-                        local scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-                        local scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
-
-                        if [[ "$LANG_MODE" == "cn" ]]; then
-                            echo "│   类型: 硬件RAID阵列"
-                            echo "│   控制器: $scsi_vendor $scsi_product"
-                        else
-                            echo "│   Type: Hardware RAID Array"
-                            echo "│   Controller: $scsi_vendor $scsi_product"
-                        fi
-
-                        # Display member disks
-                        display_megaraid_disks "$disk"
-                        parsed=true
-                    else
-                        parse_smart_json "$disk" "$json_data" && parsed=true
-                    fi
+                    parse_smart_json "$disk" "$json_data" && parsed=true
                 fi
             fi
 
@@ -1944,6 +2100,14 @@ get_disk_info() {
             fi
         fi
     done
+
+    if [[ "$other_disk_count" -eq 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            echo "│   (无其他磁盘)"
+        else
+            echo "│   (No other disks)"
+        fi
+    fi
 
     echo "└$(printf '─%.0s' $(seq 1 50))"
 }
