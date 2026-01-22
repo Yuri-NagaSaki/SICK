@@ -68,6 +68,10 @@ curl -sL https://ba.sh/sick | bash
 
 # Chinese
 curl -sL https://ba.sh/sick | bash -s -- -cn
+
+# Json Output
+
+curl -sL https://ba.sh/sick | bash -s -- --json
 ```
 
 
