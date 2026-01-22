@@ -37,7 +37,7 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 - **Colorful Output**: Beautiful terminal display
 - **Table Format**: Neat memory module information tables
 - **Perfect Alignment**: Support for mixed Chinese/English display alignment
-- **Auto Save**: Simultaneously save as plain text report files
+- **JSON Output**: `--json` prints machine-readable data to stdout
 
 ### 🔧 Advanced Features
 - ** SMART Detection**: Hard drive health, power-on hours, read/write stats
@@ -221,4 +221,3 @@ SharonNetworks ensures the smooth operation of your business!
 * High-defense capabilities and high-speed networks; Hong Kong/Japan/Singapore CDN coming soon
 
 Want to experience the same setup environment? Visit the Sharon official [website](https://sharon.io) or join the [Telegram group](https://t.me/SharonNetwork) to learn more and apply for sponsorship.
-

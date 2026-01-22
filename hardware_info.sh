@@ -59,6 +59,7 @@ NC='\033[0m'
 
 # Default language
 LANG_MODE="en"
+OUTPUT_MODE="text"
 
 # Language definitions
 declare -A LABELS_EN=(
@@ -237,7 +238,8 @@ json_value() {
         printf 'null'
         return
     fi
-    if [[ "$val" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+    # JSON numbers cannot have leading zeros (except "0" or "0.xxx")
+    if [[ "$val" =~ ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$ ]]; then
         printf '%s' "$val"
         return
     fi
@@ -3130,14 +3132,14 @@ Hardware Information Collection Script v$VERSION
 OPTIONS:
     -cn, --chinese     Display output in Chinese
     -us, --english     Display output in English (default)
+    -j, --json         Output JSON to stdout only
     -h, --help         Show this help message
     -v, --version      Show version information
 
 FEATURES:
-    - Automatically saves report to txt file in current directory
-    - File format: hardware_report_[hostname]_[timestamp].txt
     - Supports bilingual output (English/Chinese)
     - Comprehensive hardware detection
+    - JSON output to stdout (no files saved)
 
 Supported Distributions:
     - Debian/Ubuntu/Linux Mint
@@ -3148,9 +3150,10 @@ Supported Distributions:
     - Alpine Linux
 
 Examples:
-    $0                 # Show hardware info in English & save to file
-    $0 -cn             # Show hardware info in Chinese & save to file
-    $0 --chinese       # Show hardware info in Chinese & save to file
+    $0                 # Show hardware info in English
+    $0 -cn             # Show hardware info in Chinese
+    $0 --chinese       # Show hardware info in Chinese
+    $0 --json          # Output JSON to stdout
 
 Note: Run with sudo for complete hardware information access.
 
@@ -3162,9 +3165,8 @@ show_version() {
     echo "$SCRIPT_NAME v$VERSION"
 }
 
-# Function to write JSON report file
-write_json_report() {
-    local json_file="$1"
+# Function to build JSON report string
+build_json_report() {
     local meta_kv=(
         "$(json_kv "version" "$VERSION")"
         "$(json_kv "generated_at" "$(date)")"
@@ -3193,7 +3195,7 @@ write_json_report() {
         "$(json_kv_raw "motherboard" "$(json_obj "${JSON_MOTHERBOARD_KV[@]}")")"
     )
 
-    printf '%s\n' "$(json_obj "${root_kv[@]}")" > "$json_file"
+    printf '%s' "$(json_obj "${root_kv[@]}")"
 }
 
 # Main function
@@ -3207,6 +3209,10 @@ main() {
                 ;;
             -us|--english)
                 LANG_MODE="en"
+                shift
+                ;;
+            -j|--json)
+                OUTPUT_MODE="json"
                 shift
                 ;;
             -h|--help)
@@ -3224,24 +3230,60 @@ main() {
                 ;;
         esac
     done
-    
-    # Generate report filename with timestamp
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
-    local hostname_clean=$(hostname | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g')
-    local report_file="hardware_report_${hostname_clean}_${timestamp}.txt"
-    local report_json_file="hardware_report_${hostname_clean}_${timestamp}.json"
-    
-    # Check if running as root for some commands
+
+    generate_report_text() {
+        # Print title
+        print_header "$(get_label "title")"
+
+        # Collect all hardware information
+        get_system_info
+        get_cpu_info
+        get_ram_info
+        get_disk_info
+        get_raid_info
+        get_network_info
+        get_gpu_info
+        get_motherboard_info
+
+        # Footer
+        echo
+        print_color "$GREEN" "$(get_label "completed")"
+        print_color "$CYAN" "Generated on: $(date)"
+        echo
+    }
+
+    generate_report_json() {
+        json_reset
+        {
+            get_system_info
+            get_cpu_info
+            get_ram_info
+            get_disk_info
+            get_raid_info
+            get_network_info
+            get_gpu_info
+            get_motherboard_info
+        } >/dev/null 2>&1
+        build_json_report
+        echo
+    }
+
+    if [[ "$OUTPUT_MODE" == "json" ]]; then
+        generate_report_json
+        return
+    fi
+
+    # Check if running as root for some commands (text output only)
     if [[ $EUID -ne 0 ]]; then
         print_color "$YELLOW" "Note: Some hardware information requires root privileges."
         print_color "$YELLOW" "Run with sudo for complete information."
         echo
     fi
-    
-    # Install required packages
+
+    # Install required packages (text output only)
     print_color "$BLUE" "$(get_label "generating")"
     echo
-    
+
     if ! install_packages; then
         # Installation failed or incomplete
         if [[ "$LANG_MODE" == "cn" ]]; then
@@ -3256,7 +3298,7 @@ main() {
             echo "2. Manually install missing packages and re-run the script"
         fi
         echo
-        
+
         read -p "Continue anyway? [y/N]: " -r choice
         case "$choice" in
             [Yy]*)
@@ -3277,58 +3319,8 @@ main() {
         esac
         echo
     fi
-    
-    # Generate report and save to file using a function
-    generate_report() {
-        json_reset
 
-        # Print title
-        print_header "$(get_label "title")"
-        
-        # Collect all hardware information
-        get_system_info
-        get_cpu_info
-        get_ram_info
-        get_disk_info
-        get_raid_info
-        get_network_info
-        get_gpu_info
-        get_motherboard_info
-
-        write_json_report "$report_json_file"
-        
-        # Footer
-        echo
-        print_color "$GREEN" "$(get_label "completed")"
-        print_color "$CYAN" "Generated on: $(date)"
-        echo
-    }
-    
-    # Generate report both to screen and file
-    echo "Generating report to screen and file: $report_file"
-    echo
-    
-    # Use tee to output to both screen and file, but strip ANSI color codes from file
-    generate_report | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$report_file")
-    
-    # Final message about saved file
-    echo
-    if [[ "$LANG_MODE" == "cn" ]]; then
-        print_color "$GREEN" "✓ 报告已保存到文件: $report_file"
-        print_color "$CYAN" "文件大小: $(du -h "$report_file" 2>/dev/null | cut -f1 || echo "未知")"
-        print_color "$CYAN" "文件路径: $(pwd)/$report_file"
-        print_color "$GREEN" "✓ JSON 报告已保存到文件: $report_json_file"
-        print_color "$CYAN" "JSON 文件大小: $(du -h "$report_json_file" 2>/dev/null | cut -f1 || echo "未知")"
-        print_color "$CYAN" "JSON 文件路径: $(pwd)/$report_json_file"
-    else
-        print_color "$GREEN" "✓ Report saved to file: $report_file"
-        print_color "$CYAN" "File size: $(du -h "$report_file" 2>/dev/null | cut -f1 || echo "Unknown")"
-        print_color "$CYAN" "File path: $(pwd)/$report_file"
-        print_color "$GREEN" "✓ JSON report saved to file: $report_json_file"
-        print_color "$CYAN" "JSON file size: $(du -h "$report_json_file" 2>/dev/null | cut -f1 || echo "Unknown")"
-        print_color "$CYAN" "JSON file path: $(pwd)/$report_json_file"
-    fi
-    echo
+    generate_report_text
 }
 
 # Run main function
