@@ -11,6 +11,17 @@ SCRIPT_NAME="Hardware Info Collector"
 # Temporary files tracking for cleanup
 TEMP_FILES=()
 
+# Caches to reduce repeated external calls
+SMARTCTL_SCAN_CACHE=""
+SMARTCTL_SCAN_DONE=false
+RAID_MEMBER_CACHE=""
+RAID_MEMBER_CACHE_READY=false
+declare -A SMART_JSON_CACHE
+declare -A SMART_JSON_CACHE_READY
+declare -A SMART_JSON_RAID_CACHE
+declare -A SMART_JSON_RAID_CACHE_READY
+declare -A DISPLAY_WIDTH_CACHE
+
 # Cleanup function for temporary files
 cleanup_temp_files() {
     for tmp_file in "${TEMP_FILES[@]}"; do
@@ -189,7 +200,22 @@ get_label() {
 print_color() {
     local color="$1"
     local text="$2"
-    echo -e "${color}${text}${NC}"
+    printf '%b\n' "${color}${text}${NC}"
+}
+
+# Function to repeat a character N times without external commands
+repeat_char() {
+    local char="$1"
+    local count="$2"
+    local out=""
+
+    if [[ -z "$count" || "$count" -le 0 ]]; then
+        return
+    fi
+
+    printf -v out '%*s' "$count" ''
+    out=${out// /$char}
+    printf '%s' "$out"
 }
 
 # Function to print section header
@@ -199,9 +225,9 @@ print_header() {
     local padding=$(( (width - ${#title}) / 2 ))
     
     echo
-    print_color "$CYAN" "$(printf '═%.0s' $(seq 1 $width))"
+    print_color "$CYAN" "$(repeat_char '═' $width)"
     print_color "$WHITE" "$(printf '%*s%s%*s' $padding '' "$title" $padding '')"
-    print_color "$CYAN" "$(printf '═%.0s' $(seq 1 $width))"
+    print_color "$CYAN" "$(repeat_char '═' $width)"
     echo
 }
 
@@ -209,20 +235,26 @@ print_header() {
 print_subsection() {
     local title="$1"
     print_color "$YELLOW" "┌─ $title"
-    print_color "$YELLOW" "├$(printf '─%.0s' $(seq 1 $((${#title} + 2))))"
+    print_color "$YELLOW" "├$(repeat_char '─' $((${#title} + 2)))"
 }
 
 # Function to calculate display width of string (considering CJK characters)
 get_display_width() {
     local str="$1"
-    
+
+    if [[ ${DISPLAY_WIDTH_CACHE[$str]+_} ]]; then
+        echo "${DISPLAY_WIDTH_CACHE[$str]}"
+        return
+    fi
+
     # Calculate display width for mixed ASCII/CJK strings
     local byte_count=$(echo -n "$str" | wc -c)
     local char_count=$(echo -n "$str" | wc -m)
-    
+    local display_width=""
+
     if [[ $byte_count -eq $char_count ]]; then
         # All ASCII characters, display width = character count
-        echo $char_count
+        display_width=$char_count
     else
         # Mixed or all CJK characters
         # In UTF-8: ASCII=1 byte, CJK=3 bytes
@@ -232,9 +264,14 @@ get_display_width() {
         # Solving: c = (byte_count - char_count) / 2
         # display_width = a*1 + c*2 = char_count + c
         local cjk_chars=$(( (byte_count - char_count) / 2 ))
-        local display_width=$((char_count + cjk_chars))
-        echo $display_width
+        display_width=$((char_count + cjk_chars))
     fi
+
+    if (( ${#str} <= 64 )); then
+        DISPLAY_WIDTH_CACHE[$str]=$display_width
+    fi
+
+    echo "$display_width"
 }
 
 # Function to print info line with proper alignment
@@ -277,7 +314,7 @@ print_table_header() {
     local header="│"
     
     for col in "${cols[@]}"; do
-        line+="$(printf '─%.0s' $(seq 1 18))┬"
+        line+="$(repeat_char '─' 18)┬"
         header+="$(printf " %-16s │" "$col")"
     done
     
@@ -287,7 +324,7 @@ print_table_header() {
     
     line="├"
     for col in "${cols[@]}"; do
-        line+="$(printf '─%.0s' $(seq 1 18))┼"
+        line+="$(repeat_char '─' 18)┼"
     done
     line="${line%┼}┤"
     print_color "$YELLOW" "$line"
@@ -725,7 +762,7 @@ get_system_info() {
     print_info "$(get_label "kernel")" "$(uname -r)"
     print_info "$(get_label "uptime")" "$(uptime -p 2>/dev/null || uptime | cut -d',' -f1 | sed 's/.*up //')"
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to detect CPU temperature
@@ -867,11 +904,17 @@ get_cpu_temperature() {
 get_cpu_info() {
     print_subsection "$(get_label "cpu_info")"
 
-    local cpu_model=$(grep "model name" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
-    local cpu_cores=$(grep "cpu cores" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
-    local cpu_threads=$(grep "processor" /proc/cpuinfo | wc -l)
-    local cpu_freq=$(grep "cpu MHz" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
-    local cpu_cache=$(grep "cache size" /proc/cpuinfo | head -1 | cut -d':' -f2 | sed 's/^ *//')
+    local cpu_model="" cpu_cores="" cpu_threads="" cpu_freq="" cpu_cache=""
+    IFS=$'\t' read -r cpu_model cpu_cores cpu_freq cpu_cache cpu_threads < <(
+        awk -F: '
+            /^model name[[:space:]]*:/ && !model {sub(/^[[:space:]]+/, "", $2); model=$2}
+            /^cpu cores[[:space:]]*:/ && !cores {sub(/^[[:space:]]+/, "", $2); cores=$2}
+            /^cpu MHz[[:space:]]*:/ && !freq {sub(/^[[:space:]]+/, "", $2); freq=$2}
+            /^cache size[[:space:]]*:/ && !cache {sub(/^[[:space:]]+/, "", $2); cache=$2}
+            /^processor[[:space:]]*:/ {threads++}
+            END {print model "\t" cores "\t" freq "\t" cache "\t" threads}
+        ' /proc/cpuinfo 2>/dev/null
+    )
 
     print_info "$(get_label "model")" "${cpu_model:-$(get_label "no_info")}"
     print_info "$(get_label "cores")" "${cpu_cores:-$(get_label "no_info")}"
@@ -883,18 +926,20 @@ get_cpu_info() {
     local cpu_usage=""
     if [[ -r /proc/stat ]]; then
         # Read CPU stats twice with a short interval
-        local cpu1=($(grep '^cpu ' /proc/stat | awk '{print $2,$3,$4,$5,$6,$7,$8}'))
+        local user1="" nice1="" system1="" idle1="" iowait1="" irq1="" softirq1=""
+        local user2="" nice2="" system2="" idle2="" iowait2="" irq2="" softirq2=""
+        read -r _ user1 nice1 system1 idle1 iowait1 irq1 softirq1 _ < /proc/stat
         sleep 0.2
-        local cpu2=($(grep '^cpu ' /proc/stat | awk '{print $2,$3,$4,$5,$6,$7,$8}'))
+        read -r _ user2 nice2 system2 idle2 iowait2 irq2 softirq2 _ < /proc/stat
 
         # Calculate differences
-        local user_diff=$((${cpu2[0]} - ${cpu1[0]}))
-        local nice_diff=$((${cpu2[1]} - ${cpu1[1]}))
-        local system_diff=$((${cpu2[2]} - ${cpu1[2]}))
-        local idle_diff=$((${cpu2[3]} - ${cpu1[3]}))
-        local iowait_diff=$((${cpu2[4]} - ${cpu1[4]}))
-        local irq_diff=$((${cpu2[5]} - ${cpu1[5]}))
-        local softirq_diff=$((${cpu2[6]} - ${cpu1[6]}))
+        local user_diff=$((user2 - user1))
+        local nice_diff=$((nice2 - nice1))
+        local system_diff=$((system2 - system1))
+        local idle_diff=$((idle2 - idle1))
+        local iowait_diff=$((iowait2 - iowait1))
+        local irq_diff=$((irq2 - irq1))
+        local softirq_diff=$((softirq2 - softirq1))
 
         local total_diff=$((user_diff + nice_diff + system_diff + idle_diff + iowait_diff + irq_diff + softirq_diff))
         local active_diff=$((total_diff - idle_diff - iowait_diff))
@@ -930,7 +975,7 @@ get_cpu_info() {
         fi
     fi
 
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to get RAM information
@@ -938,8 +983,14 @@ get_ram_info() {
     print_subsection "$(get_label "ram_info")"
     
     # Memory from /proc/meminfo
-    local mem_total=$(grep MemTotal /proc/meminfo | awk '{printf "%.2f GB", $2/1024/1024}')
-    local mem_available=$(grep MemAvailable /proc/meminfo | awk '{printf "%.2f GB", $2/1024/1024}')
+    local mem_total="" mem_available=""
+    IFS=$'\t' read -r mem_total mem_available < <(
+        awk '
+            /MemTotal/ {total=$2}
+            /MemAvailable/ {avail=$2}
+            END {printf "%.2f GB\t%.2f GB", total/1024/1024, avail/1024/1024}
+        ' /proc/meminfo 2>/dev/null
+    )
     local mem_used=$(free -h | grep Mem | awk '{print $3}')
     
     print_info "$(get_label "total")" "$mem_total"
@@ -955,7 +1006,7 @@ get_ram_info() {
         local w1=8 w2=6 w3=12 w4=12 w5=15 w6=20
         
         # Print enhanced table header with proper alignment
-        echo "├$(printf '─%.0s' $(seq 1 100))┤"
+        echo "├$(repeat_char '─' 100)┤"
         printf "│ "
         print_table_cell "$(get_label "size")" $w1
         printf " │ "
@@ -969,7 +1020,7 @@ get_ram_info() {
         printf " │ "
         print_table_cell "$(get_label "model")" $w6
         printf " │\n"
-        echo "├$(printf '─%.0s' $(seq 1 100))┤"
+        echo "├$(repeat_char '─' 100)┤"
         
         # Parse memory modules using bash processing
         local temp_file=$(mktemp)
@@ -1048,7 +1099,7 @@ get_ram_info() {
         fi
 
         # Print table footer
-        echo "└$(printf '─%.0s' $(seq 1 100))┘"
+        echo "└$(repeat_char '─' 100)┘"
     else
         # Alternative method using /proc/meminfo and lshw
         echo "│   Root privileges required for detailed memory information"
@@ -1068,7 +1119,7 @@ get_ram_info() {
         fi
     fi
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Helper function: Convert bytes to human readable format
@@ -1146,14 +1197,36 @@ is_raid_controller_disk() {
     return 1  # Not a RAID controller
 }
 
+# Cached smartctl --scan output to avoid repeated scans
+get_smartctl_scan() {
+    if [[ "$SMARTCTL_SCAN_DONE" == true ]]; then
+        echo "$SMARTCTL_SCAN_CACHE"
+        return
+    fi
+
+    if command -v smartctl >/dev/null 2>&1; then
+        SMARTCTL_SCAN_CACHE=$(smartctl --scan 2>/dev/null)
+    else
+        SMARTCTL_SCAN_CACHE=""
+    fi
+
+    SMARTCTL_SCAN_DONE=true
+    echo "$SMARTCTL_SCAN_CACHE"
+}
+
 # Function to get RAID member disks from smartctl --scan
 # Supports: megaraid (LSI/AVAGO), cciss (HP Smart Array), 3ware, areca
 get_raid_member_devices() {
     local parent_disk="$1"
     local devices=()
 
-    # Run smartctl --scan and look for RAID devices
-    local scan_output=$(smartctl --scan 2>/dev/null)
+    if [[ "$RAID_MEMBER_CACHE_READY" == true ]]; then
+        [[ -n "$RAID_MEMBER_CACHE" ]] && printf '%s\n' "$RAID_MEMBER_CACHE"
+        return
+    fi
+
+    # Run smartctl --scan and look for RAID devices (cached)
+    local scan_output=$(get_smartctl_scan)
 
     # Extract RAID device entries
     # Format examples:
@@ -1177,8 +1250,11 @@ get_raid_member_devices() {
         fi
     done <<< "$scan_output"
 
+    RAID_MEMBER_CACHE=$(printf '%s\n' "${devices[@]}")
+    RAID_MEMBER_CACHE_READY=true
+
     # Return devices array as newline-separated string
-    printf '%s\n' "${devices[@]}"
+    [[ -n "$RAID_MEMBER_CACHE" ]] && printf '%s\n' "$RAID_MEMBER_CACHE"
 }
 
 # Function to get unique RAID controller device paths
@@ -1213,12 +1289,22 @@ get_smart_json_raid() {
     local raid_type="$2"
     local raid_id="$3"
     local json_output=""
+    local cache_key="${device}|${raid_type}|${raid_id}"
+
+    if [[ "${SMART_JSON_RAID_CACHE_READY[$cache_key]}" == "1" ]]; then
+        echo "${SMART_JSON_RAID_CACHE[$cache_key]}"
+        return
+    fi
 
     json_output=$(smartctl -a --json=c -d "$raid_type","$raid_id" "$device" 2>/dev/null)
 
     if [[ -n "$json_output" ]] && echo "$json_output" | grep -q '"json_format_version"'; then
+        SMART_JSON_RAID_CACHE[$cache_key]="$json_output"
+        SMART_JSON_RAID_CACHE_READY[$cache_key]=1
         echo "$json_output"
     else
+        SMART_JSON_RAID_CACHE[$cache_key]=""
+        SMART_JSON_RAID_CACHE_READY[$cache_key]=1
         echo ""
     fi
 }
@@ -1341,7 +1427,7 @@ detect_bad_blocks() {
     # SAS/SCSI: Grown Defect List
     if [[ -n "$grown_defects" && "$grown_defects" != "null" && "$grown_defects" =~ ^[0-9]+$ ]]; then
         if [[ "$grown_defects" -gt 0 ]]; then
-            echo -e "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
+            printf '%b\n' "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
         else
             echo "│   $(get_label "grown_defects"): ${grown_defects}"
         fi
@@ -1360,7 +1446,7 @@ detect_bad_blocks() {
         [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
 
         if [[ "$total_uncorrected" -gt 0 ]]; then
-            echo -e "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
+            printf '%b\n' "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
         else
             echo "│   $(get_label "uncorrected_errors"): 0 (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
         fi
@@ -1368,13 +1454,13 @@ detect_bad_blocks() {
 
     # SAS/SCSI: Non-medium Errors
     if [[ -n "$non_medium_errors" && "$non_medium_errors" != "null" && "$non_medium_errors" =~ ^[0-9]+$ && "$non_medium_errors" != "0" ]]; then
-        echo -e "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+        printf '%b\n' "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
     fi
 
     # SATA/ATA: Reallocated Sectors (ID 5)
     if [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" && "$reallocated_sectors" =~ ^[0-9]+$ ]]; then
         if [[ "$reallocated_sectors" -gt 0 ]]; then
-            echo -e "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
+            printf '%b\n' "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
         else
             echo "│   $(get_label "reallocated_sectors"): ${reallocated_sectors}"
         fi
@@ -1383,7 +1469,7 @@ detect_bad_blocks() {
     # SATA/ATA: Pending Sectors (ID 197)
     if [[ -n "$pending_sectors" && "$pending_sectors" != "null" && "$pending_sectors" =~ ^[0-9]+$ ]]; then
         if [[ "$pending_sectors" -gt 0 ]]; then
-            echo -e "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
+            printf '%b\n' "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
         else
             echo "│   $(get_label "pending_sectors"): ${pending_sectors}"
         fi
@@ -1392,7 +1478,7 @@ detect_bad_blocks() {
     # SATA/ATA: Offline Uncorrectable (ID 198)
     if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]]; then
         if [[ "$offline_uncorrectable" -gt 0 ]]; then
-            echo -e "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
+            printf '%b\n' "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
         else
             echo "│   $(get_label "offline_uncorrectable"): ${offline_uncorrectable}"
         fi
@@ -1401,7 +1487,7 @@ detect_bad_blocks() {
     # SATA/ATA: Reported Uncorrectable (ID 187)
     if [[ -n "$reported_uncorrect" && "$reported_uncorrect" != "null" && "$reported_uncorrect" =~ ^[0-9]+$ ]]; then
         if [[ "$reported_uncorrect" -gt 0 ]]; then
-            echo -e "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
+            printf '%b\n' "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
         else
             echo "│   $(get_label "reported_uncorrect"): ${reported_uncorrect}"
         fi
@@ -1414,7 +1500,7 @@ detect_bad_blocks() {
     [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
 
     if [[ "$total_bad" -gt 0 ]]; then
-        echo -e "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
+        printf '%b\n' "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
     fi
 
     return 0
@@ -1618,13 +1704,22 @@ get_smart_json() {
     local disk="$1"
     local json_output=""
 
+    if [[ "${SMART_JSON_CACHE_READY[$disk]}" == "1" ]]; then
+        echo "${SMART_JSON_CACHE[$disk]}"
+        return
+    fi
+
     # Try to get JSON output from smartctl
     json_output=$(smartctl -a --json=c "/dev/$disk" 2>/dev/null)
 
     # Check if JSON output is valid
     if [[ -n "$json_output" ]] && echo "$json_output" | grep -q '"json_format_version"'; then
+        SMART_JSON_CACHE[$disk]="$json_output"
+        SMART_JSON_CACHE_READY[$disk]=1
         echo "$json_output"
     else
+        SMART_JSON_CACHE[$disk]=""
+        SMART_JSON_CACHE_READY[$disk]=1
         echo ""
     fi
 }
@@ -1925,6 +2020,14 @@ get_disk_info() {
         fi
     fi
 
+    # Cache disk names to avoid repeated lsblk calls
+    local disk_names=()
+    if command -v lsblk >/dev/null 2>&1; then
+        while IFS= read -r disk; do
+            [[ -n "$disk" ]] && disk_names+=("$disk")
+        done < <(lsblk -d -n -o NAME 2>/dev/null)
+    fi
+
     # ==========================================================================
     # PART 1: RAID Controllers and Member Disks
     # ==========================================================================
@@ -2003,7 +2106,10 @@ get_disk_info() {
     # ==========================================================================
     # Collect RAID virtual disk list (for display)
     local raid_vd_list=""
-    for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]+$'); do
+    for disk in "${disk_names[@]}"; do
+        if [[ ! "$disk" =~ ^[sv]d[a-z]+$ ]]; then
+            continue
+        fi
         if [[ "$smartctl_available" == true && "$use_json" == true ]]; then
             local json_data=$(get_smart_json "$disk")
             if [[ -n "$json_data" ]] && is_raid_controller_disk "$disk" "$json_data"; then
@@ -2060,9 +2166,13 @@ get_disk_info() {
     fi
 
     local other_disk_count=0
+    local other_disk_regex='^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'
 
     # Physical disk information with enhanced details
-    for disk in $(lsblk -d -n -o NAME | grep -E '^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'); do
+    for disk in "${disk_names[@]}"; do
+        if [[ ! "$disk" =~ $other_disk_regex ]]; then
+            continue
+        fi
         # Skip RAID virtual disks (already shown in Part 2)
         if [[ " $raid_vd_list " =~ " $disk " ]]; then
             continue
@@ -2109,7 +2219,7 @@ get_disk_info() {
         fi
     fi
 
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to get RAID information
@@ -2146,7 +2256,7 @@ get_raid_info() {
         print_info "$(get_label "status")" "$(get_label "not_detected")"
     fi
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to mask IP addresses for privacy
@@ -2240,7 +2350,7 @@ mask_mac_address() {
             local len=${#mac}
             local half=$((len/2))
             local first_half="${mac:0:$half}"
-            local masked_half=$(printf "X%.0s" $(seq 1 $((len-half))))
+            local masked_half=$(repeat_char 'X' $((len-half)))
             echo "${first_half}${masked_half}"
         else
             # Return as-is if it doesn't look like a MAC address
@@ -2295,9 +2405,69 @@ is_physical_interface() {
 # Function to get enhanced network information
 get_network_info() {
     print_subsection "$(get_label "network_info")"
-    
+
+    local -a interfaces=()
+    declare -A iface_status
+    declare -A iface_ipv4
+    declare -A iface_ipv6
+    declare -A iface_mac
+
+    if command -v ip >/dev/null 2>&1; then
+        # Cache interface list, status, and MAC addresses
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local tmp="${line#*: }"
+            local ifname="${tmp%%:*}"
+            local state="Unknown"
+            local mac=""
+            local parts=()
+
+            interfaces+=("$ifname")
+
+            read -r -a parts <<< "$line"
+            local idx=0
+            while (( idx < ${#parts[@]} )); do
+                case "${parts[$idx]}" in
+                    state)
+                        state="${parts[$((idx + 1))]}"
+                        ;;
+                    link/ether)
+                        mac="${parts[$((idx + 1))]}"
+                        ;;
+                esac
+                ((idx++))
+            done
+
+            iface_status[$ifname]="$state"
+            [[ -n "$mac" ]] && iface_mac[$ifname]="$mac"
+        done < <(ip -o link show 2>/dev/null)
+
+        # Cache IP addresses
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local parts=()
+            read -r -a parts <<< "$line"
+            local ifname="${parts[1]}"
+            local family="${parts[2]}"
+            local addr="${parts[3]}"
+
+            if [[ "$family" == "inet" ]]; then
+                [[ -z "${iface_ipv4[$ifname]}" ]] && iface_ipv4[$ifname]="$addr"
+            elif [[ "$family" == "inet6" ]]; then
+                [[ -z "${iface_ipv6[$ifname]}" ]] && iface_ipv6[$ifname]="$addr"
+            fi
+        done < <(ip -o addr show 2>/dev/null)
+    fi
+
+    if [[ ${#interfaces[@]} -eq 0 ]]; then
+        for path in /sys/class/net/*; do
+            [[ ! -e "$path" ]] && break
+            interfaces+=("${path##*/}")
+        done
+    fi
+
     # Network interfaces with enhanced information (physical only)
-    for interface in $(ip link show 2>/dev/null | grep -E '^[0-9]+:' | cut -d':' -f2 | sed 's/^ *//' | grep -v lo); do
+    for interface in "${interfaces[@]}"; do
         # Skip virtual interfaces
         if ! is_physical_interface "$interface"; then
             continue
@@ -2353,13 +2523,20 @@ get_network_info() {
             fi
         fi
         
-        # Interface status
-        local status=$(ip link show "$interface" 2>/dev/null | grep -o "state [A-Z]*" | cut -d' ' -f2)
+        # Interface status (cached)
+        local status="${iface_status[$interface]}"
+        if [[ -z "$status" ]]; then
+            local operstate_file="/sys/class/net/$interface/operstate"
+            if [[ -r "$operstate_file" ]]; then
+                local operstate=$(<"$operstate_file")
+                status="${operstate^^}"
+            fi
+        fi
         echo "│   $(get_label "status"): ${status:-"Unknown"}"
         
         # IP addresses (with privacy masking)
-        local ipv4=$(ip addr show "$interface" 2>/dev/null | grep "inet " | head -1 | awk '{print $2}')
-        local ipv6=$(ip addr show "$interface" 2>/dev/null | grep "inet6" | head -1 | awk '{print $2}')
+        local ipv4="${iface_ipv4[$interface]}"
+        local ipv6="${iface_ipv6[$interface]}"
         
         if [[ -n "$ipv4" ]]; then
             local masked_ipv4=$(mask_ip_address "$ipv4")
@@ -2371,7 +2548,11 @@ get_network_info() {
         fi
         
         # MAC address (with privacy masking)
-        local mac=$(ip link show "$interface" 2>/dev/null | grep "link/ether" | awk '{print $2}')
+        local mac="${iface_mac[$interface]}"
+        if [[ -z "$mac" ]]; then
+            local mac_file="/sys/class/net/$interface/address"
+            [[ -r "$mac_file" ]] && mac=$(<"$mac_file")
+        fi
         if [[ -n "$mac" ]]; then
             local masked_mac=$(mask_mac_address "$mac")
             echo "│   $(get_label "mac_address"): $masked_mac"
@@ -2461,7 +2642,7 @@ get_network_info() {
         fi
     done
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to get GPU information
@@ -2532,7 +2713,7 @@ get_gpu_info() {
         print_info "$(get_label "status")" "$(get_label "not_detected")"
     fi
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 # Function to get motherboard information
@@ -2555,7 +2736,7 @@ get_motherboard_info() {
         print_info "$(get_label "status")" "$(get_label "no_info") (dmidecode required)"
     fi
     
-    echo "└$(printf '─%.0s' $(seq 1 50))"
+    echo "└$(repeat_char '─' 50)"
 }
 
 
