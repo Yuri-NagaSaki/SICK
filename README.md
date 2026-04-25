@@ -65,18 +65,22 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 
 ```
 # English
-curl -sL https://ba.sh/sick | bash 
+curl -sL https://ba.sh/sick | bash
 
 # Chinese
 curl -sL https://ba.sh/sick | bash -s -- -cn
 
-# Json Output
+# Text output with local disk I/O tests
+curl -sL https://ba.sh/sick | bash -s -- --io-test
 
+# JSON output
 curl -sL https://ba.sh/sick | bash -s -- --json
 
 # JSON with local disk write tests
 curl -sL https://ba.sh/sick | bash -s -- --json --io-test
 ```
+
+When passing options through `curl | bash`, use `bash -s -- <options>` (for example `bash -s -- --io-test`).
 
 
 ###  Sample Output

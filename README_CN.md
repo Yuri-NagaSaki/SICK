@@ -70,9 +70,17 @@ curl -sL https://ba.sh/sick | bash
 # 中文
 curl -sL https://ba.sh/sick | bash -s -- -cn
 
+# 文本输出并测试本地磁盘 I/O
+curl -sL https://ba.sh/sick | bash -s -- --io-test
+
+# JSON 输出
+curl -sL https://ba.sh/sick | bash -s -- --json
+
 # JSON 输出并测试本地磁盘写入
 curl -sL https://ba.sh/sick | bash -s -- --json --io-test
 ```
+
+通过 `curl | bash` 传参时需要使用 `bash -s -- <参数>`，例如 `bash -s -- --io-test`。
 
 
 ### 示例输出
