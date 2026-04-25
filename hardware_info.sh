@@ -5,7 +5,7 @@
 # Compatible with Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 # 兼容 Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora/Alpine Linux
 
-VERSION="2.5.0"
+VERSION="2.6.0"
 SCRIPT_NAME="Hardware Info Collector"
 
 # Temporary files tracking for cleanup
@@ -34,6 +34,8 @@ JSON_RAID_CONTROLLERS=()
 JSON_NETWORK=()
 JSON_GPU=()
 JSON_MOTHERBOARD_KV=()
+JSON_IO_KV=()
+JSON_IO_MOUNTS=()
 JSON_DISK_SMART_KV=()
 DISK_JSON_EXTRA=()
 
@@ -60,6 +62,8 @@ NC='\033[0m'
 # Default language
 LANG_MODE="en"
 OUTPUT_MODE="text"
+RUN_IO_TEST=false
+IO_TEST_SIZE_MB=16
 
 # Language definitions
 declare -A LABELS_EN=(
@@ -72,6 +76,7 @@ declare -A LABELS_EN=(
     ["network_info"]="Network Interface Information"
     ["gpu_info"]="Graphics Card Information"
     ["motherboard_info"]="Motherboard Information"
+    ["io_info"]="Disk I/O Capability"
     ["hostname"]="Hostname"
     ["os"]="Operating System"
     ["kernel"]="Kernel Version"
@@ -130,6 +135,12 @@ declare -A LABELS_EN=(
     ["grown_defects"]="Grown Defect List"
     ["non_medium_errors"]="Non-medium Errors"
     ["bad_blocks"]="Bad Blocks"
+    ["fio_status"]="fio Status"
+    ["write_test"]="Write Test"
+    ["mount_point"]="Mount Point"
+    ["filesystem"]="Filesystem"
+    ["local_disk"]="Local Disk"
+    ["writable"]="Writable"
 )
 
 declare -A LABELS_CN=(
@@ -142,6 +153,7 @@ declare -A LABELS_CN=(
     ["network_info"]="网卡信息"
     ["gpu_info"]="显卡信息"
     ["motherboard_info"]="主板信息"
+    ["io_info"]="磁盘 I/O 能力"
     ["hostname"]="主机名"
     ["os"]="操作系统"
     ["kernel"]="内核版本"
@@ -200,6 +212,12 @@ declare -A LABELS_CN=(
     ["grown_defects"]="增长缺陷列表"
     ["non_medium_errors"]="非介质错误"
     ["bad_blocks"]="坏块统计"
+    ["fio_status"]="fio 状态"
+    ["write_test"]="写入测试"
+    ["mount_point"]="挂载点"
+    ["filesystem"]="文件系统"
+    ["local_disk"]="本地磁盘"
+    ["writable"]="可写"
 )
 
 # Function to get label based on current language
@@ -303,6 +321,8 @@ json_reset() {
     JSON_NETWORK=()
     JSON_GPU=()
     JSON_MOTHERBOARD_KV=()
+    JSON_IO_KV=()
+    JSON_IO_MOUNTS=()
     JSON_DISK_SMART_KV=()
     DISK_JSON_EXTRA=()
 }
@@ -486,11 +506,38 @@ print_table_row() {
     echo "$row"
 }
 
+# Function to read a value from /etc/os-release without sourcing executable shell
+get_os_release_value() {
+    local key="$1"
+    local line=""
+    local value=""
+
+    [[ -r /etc/os-release ]] || return 1
+
+    while IFS= read -r line; do
+        [[ "$line" == "$key="* ]] || continue
+        value="${line#*=}"
+        case "$value" in
+            \"*\")
+                value="${value#\"}"
+                value="${value%\"}"
+                ;;
+            \'*\')
+                value="${value#\'}"
+                value="${value%\'}"
+                ;;
+        esac
+        printf '%s\n' "$value"
+        return 0
+    done < /etc/os-release
+
+    return 1
+}
+
 # Function to detect distribution
 detect_distro() {
     if [[ -f /etc/os-release ]]; then
-        . /etc/os-release
-        echo "$ID"
+        get_os_release_value "ID" || echo "unknown"
     elif [[ -f /etc/redhat-release ]]; then
         echo "centos"
     elif [[ -f /etc/debian_version ]]; then
@@ -690,28 +737,28 @@ install_packages() {
         return 1
     fi
     
-    local install_cmd=""
-    local update_cmd=""
+    local install_cmd=()
+    local update_cmd=()
     
     case "$pkg_manager" in
         "apt")
-            update_cmd="sudo apt-get update"
-            install_cmd="sudo apt-get install -y"
+            update_cmd=(sudo apt-get update)
+            install_cmd=(sudo apt-get install -y)
             ;;
         "dnf")
-            install_cmd="sudo dnf install -y"
+            install_cmd=(sudo dnf install -y)
             ;;
         "yum")
-            install_cmd="sudo yum install -y"
+            install_cmd=(sudo yum install -y)
             ;;
         "pacman")
-            install_cmd="sudo pacman -S --noconfirm"
+            install_cmd=(sudo pacman -S --noconfirm)
             ;;
         "zypper")
-            install_cmd="sudo zypper install -y"
+            install_cmd=(sudo zypper install -y)
             ;;
         "apk")
-            install_cmd="sudo apk add"
+            install_cmd=(sudo apk add)
             ;;
         "unknown")
             if [[ "$LANG_MODE" == "cn" ]]; then
@@ -726,19 +773,23 @@ install_packages() {
     
     if [[ $EUID -eq 0 ]]; then
         # Running as root, remove sudo from commands
-        update_cmd="${update_cmd#sudo }"
-        install_cmd="${install_cmd#sudo }"
+        if [[ ${#update_cmd[@]} -gt 0 && "${update_cmd[0]}" == "sudo" ]]; then
+            update_cmd=("${update_cmd[@]:1}")
+        fi
+        if [[ ${#install_cmd[@]} -gt 0 && "${install_cmd[0]}" == "sudo" ]]; then
+            install_cmd=("${install_cmd[@]:1}")
+        fi
     fi
-    
+
     # Update package list for apt-based systems
-    if [[ -n "$update_cmd" ]]; then
+    if [[ ${#update_cmd[@]} -gt 0 ]]; then
         if [[ "$LANG_MODE" == "cn" ]]; then
             echo "正在更新软件包列表..."
         else
             echo "Updating package list..."
         fi
         
-        if ! eval "$update_cmd" >/dev/null 2>&1; then
+        if ! "${update_cmd[@]}" >/dev/null 2>&1; then
             if [[ "$LANG_MODE" == "cn" ]]; then
                 echo "⚠️  警告: 软件包列表更新失败，继续安装..."
             else
@@ -758,7 +809,7 @@ install_packages() {
     
     for package in "${packages_needed[@]}"; do
         echo "  Installing $package..."
-        if eval "$install_cmd $package" >/dev/null 2>&1; then
+        if "${install_cmd[@]}" "$package" >/dev/null 2>&1; then
             echo "  ✓ $package installed successfully"
             packages_installed+=("$package")
         else
@@ -864,7 +915,7 @@ install_packages() {
         if command -v sensors >/dev/null 2>&1; then
             echo "  ✓ sensors now available"
             # Try to detect sensors if just installed
-            if which sensors-detect >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
+            if command -v sensors-detect >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
                 echo "  Detecting sensors..."
                 yes "" | sensors-detect >/dev/null 2>&1 || true
             fi
@@ -907,7 +958,7 @@ get_system_info() {
     local uptime_val=""
 
     hostname_val=$(hostname)
-    os_val=$(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d'"' -f2)
+    os_val=$(get_os_release_value "PRETTY_NAME" 2>/dev/null)
     [[ -z "$os_val" ]] && os_val="$(get_label "no_info")"
     kernel_val=$(uname -r)
     uptime_val=$(uptime -p 2>/dev/null || uptime | cut -d',' -f1 | sed 's/.*up //')
@@ -991,7 +1042,7 @@ get_cpu_temperature() {
 
                 # Check if this is a CPU-related thermal zone
                 if [[ "$zone_type" =~ (cpu|x86_pkg_temp|CPU|Core|Package) ]]; then
-                    if [[ -n "$zone_temp" && "$zone_temp" -gt 0 ]]; then
+                    if [[ "$zone_temp" =~ ^[0-9]+$ && "$zone_temp" -gt 0 ]]; then
                         # Convert millidegree to degree Celsius
                         local temp_celsius=$(echo "scale=1; $zone_temp / 1000" | bc -l 2>/dev/null)
                         if [[ -n "$temp_celsius" ]]; then
@@ -1017,7 +1068,7 @@ get_cpu_temperature() {
                     for temp_input in "${hwmon}"temp*_input; do
                         if [[ -r "$temp_input" ]]; then
                             local temp_val=$(cat "$temp_input" 2>/dev/null)
-                            if [[ -n "$temp_val" && "$temp_val" -gt 0 ]]; then
+                            if [[ "$temp_val" =~ ^[0-9]+$ && "$temp_val" -gt 0 ]]; then
                                 # Convert millidegree to degree Celsius
                                 local temp_celsius=$(echo "scale=1; $temp_val / 1000" | bc -l 2>/dev/null)
 
@@ -1308,7 +1359,15 @@ get_ram_info() {
         echo "│   Root privileges required for detailed memory information"
         if command -v lshw >/dev/null 2>&1; then
             echo "│   Alternative detection using lshw:"
-            sudo lshw -c memory 2>/dev/null | grep -A5 -B1 "bank\|slot\|DIMM" | grep -E "description:|size:|clock:" | while IFS= read -r line; do
+            local lshw_output=""
+            if [[ $EUID -eq 0 ]]; then
+                lshw_output=$(lshw -c memory 2>/dev/null)
+            elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+                lshw_output=$(sudo -n lshw -c memory 2>/dev/null)
+            else
+                lshw_output=$(lshw -c memory 2>/dev/null)
+            fi
+            echo "$lshw_output" | grep -A5 -B1 "bank\|slot\|DIMM" | grep -E "description:|size:|clock:" | while IFS= read -r line; do
                 echo "│   $line"
             done
         fi
@@ -1372,17 +1431,32 @@ json_extract_string() {
     echo "$json" | grep -oP "\"$key\"\s*:\s*\"\K[^\"]*" | head -1
 }
 
+# Helper function: Query smartctl JSON with jq when available
+json_query() {
+    local filter="$1"
+    local json="$2"
+    local result=""
+
+    command -v jq >/dev/null 2>&1 || return 1
+    result=$(jq -r "($filter) | if . == null then empty else . end" 2>/dev/null <<< "$json") || return 1
+    [[ -z "$result" || "$result" == "null" ]] && return 1
+    printf '%s\n' "$result"
+}
+
 # Function to check if a disk is a RAID controller virtual disk
 is_raid_controller_disk() {
     local disk="$1"
     local json="$2"
 
     # Check if SMART is not available (common for RAID controllers)
-    local smart_available=$(echo "$json" | grep -oP '"smart_support"\s*:\s*\{[^}]*"available"\s*:\s*\K(true|false)' | head -1)
+    local smart_available=$(json_query '.smart_support.available' "$json" || true)
+    [[ -z "$smart_available" ]] && smart_available=$(echo "$json" | grep -oP '"smart_support"\s*:\s*\{[^}]*"available"\s*:\s*\K(true|false)' | head -1)
 
     # Check for known RAID controller vendors
-    local scsi_vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-    local scsi_product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+    local scsi_vendor=$(json_query '.scsi_vendor' "$json" || true)
+    local scsi_product=$(json_query '.scsi_product' "$json" || true)
+    [[ -z "$scsi_vendor" ]] && scsi_vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$scsi_product" ]] && scsi_product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
 
     # RAID controller patterns: AVAGO (MegaRAID), LSI, DELL PERC, HP Smart Array, etc.
     if [[ "$smart_available" == "false" ]]; then
@@ -1465,15 +1539,15 @@ get_raid_member_devices() {
 get_raid_controller_devices() {
     local raid_devs=$(get_raid_member_devices "")
     local controllers=()
-    local seen_controllers=""
+    local -A seen_controllers=()
     
     while IFS= read -r entry; do
         [[ -z "$entry" ]] && continue
         local device=$(echo "$entry" | cut -d: -f1)
         # Check if we've already seen this controller device
-        if [[ ! "$seen_controllers" =~ "$device" ]]; then
+        if [[ -z "${seen_controllers[$device]+x}" ]]; then
             controllers+=("$device")
-            seen_controllers="$seen_controllers $device"
+            seen_controllers[$device]=1
         fi
     done <<< "$raid_devs"
     
@@ -1629,6 +1703,7 @@ detect_bad_blocks() {
 
     # SAS/SCSI: Grown Defect List
     if [[ -n "$grown_defects" && "$grown_defects" != "null" && "$grown_defects" =~ ^[0-9]+$ ]]; then
+        disk_smart_add "grown_defects" "$grown_defects"
         if [[ "$grown_defects" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "grown_defects"): ${YELLOW}${grown_defects}${NC}"
         else
@@ -1648,6 +1723,11 @@ detect_bad_blocks() {
         [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" && "$write_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + write_uncorrected))
         [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && total_uncorrected=$((total_uncorrected + verify_uncorrected))
 
+        [[ -n "$read_uncorrected" && "$read_uncorrected" != "null" && "$read_uncorrected" =~ ^[0-9]+$ ]] && disk_smart_add "read_uncorrected_errors" "$read_uncorrected"
+        [[ -n "$write_uncorrected" && "$write_uncorrected" != "null" && "$write_uncorrected" =~ ^[0-9]+$ ]] && disk_smart_add "write_uncorrected_errors" "$write_uncorrected"
+        [[ -n "$verify_uncorrected" && "$verify_uncorrected" != "null" && "$verify_uncorrected" =~ ^[0-9]+$ ]] && disk_smart_add "verify_uncorrected_errors" "$verify_uncorrected"
+        disk_smart_add "uncorrected_errors" "$total_uncorrected"
+
         if [[ "$total_uncorrected" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "uncorrected_errors"): ${RED}${total_uncorrected}${NC} (R:${read_uncorrected:-0}/W:${write_uncorrected:-0}/V:${verify_uncorrected:-0})"
         else
@@ -1656,12 +1736,19 @@ detect_bad_blocks() {
     fi
 
     # SAS/SCSI: Non-medium Errors
-    if [[ -n "$non_medium_errors" && "$non_medium_errors" != "null" && "$non_medium_errors" =~ ^[0-9]+$ && "$non_medium_errors" != "0" ]]; then
-        printf '%b\n' "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+    if [[ -n "$non_medium_errors" && "$non_medium_errors" != "null" && "$non_medium_errors" =~ ^[0-9]+$ ]]; then
+        disk_smart_add "non_medium_errors" "$non_medium_errors"
+        if [[ "$non_medium_errors" != "0" ]]; then
+            printf '%b\n' "│   $(get_label "non_medium_errors"): ${YELLOW}${non_medium_errors}${NC}"
+        fi
     fi
+
+    local has_bad_blocks_metric=false
 
     # SATA/ATA: Reallocated Sectors (ID 5)
     if [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" && "$reallocated_sectors" =~ ^[0-9]+$ ]]; then
+        has_bad_blocks_metric=true
+        disk_smart_add "reallocated_sectors" "$reallocated_sectors"
         if [[ "$reallocated_sectors" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "reallocated_sectors"): ${YELLOW}${reallocated_sectors}${NC}"
         else
@@ -1671,6 +1758,8 @@ detect_bad_blocks() {
 
     # SATA/ATA: Pending Sectors (ID 197)
     if [[ -n "$pending_sectors" && "$pending_sectors" != "null" && "$pending_sectors" =~ ^[0-9]+$ ]]; then
+        has_bad_blocks_metric=true
+        disk_smart_add "pending_sectors" "$pending_sectors"
         if [[ "$pending_sectors" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "pending_sectors"): ${YELLOW}${pending_sectors}${NC}"
         else
@@ -1680,6 +1769,8 @@ detect_bad_blocks() {
 
     # SATA/ATA: Offline Uncorrectable (ID 198)
     if [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]]; then
+        has_bad_blocks_metric=true
+        disk_smart_add "offline_uncorrectable" "$offline_uncorrectable"
         if [[ "$offline_uncorrectable" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "offline_uncorrectable"): ${YELLOW}${offline_uncorrectable}${NC}"
         else
@@ -1689,6 +1780,7 @@ detect_bad_blocks() {
 
     # SATA/ATA: Reported Uncorrectable (ID 187)
     if [[ -n "$reported_uncorrect" && "$reported_uncorrect" != "null" && "$reported_uncorrect" =~ ^[0-9]+$ ]]; then
+        disk_smart_add "reported_uncorrect" "$reported_uncorrect"
         if [[ "$reported_uncorrect" -gt 0 ]]; then
             printf '%b\n' "│   $(get_label "reported_uncorrect"): ${RED}${reported_uncorrect}${NC}"
         else
@@ -1701,6 +1793,10 @@ detect_bad_blocks() {
     [[ -n "$reallocated_sectors" && "$reallocated_sectors" != "null" && "$reallocated_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + reallocated_sectors))
     [[ -n "$pending_sectors" && "$pending_sectors" != "null" && "$pending_sectors" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + pending_sectors))
     [[ -n "$offline_uncorrectable" && "$offline_uncorrectable" != "null" && "$offline_uncorrectable" =~ ^[0-9]+$ ]] && total_bad=$((total_bad + offline_uncorrectable))
+
+    if [[ "$has_bad_blocks_metric" == true ]]; then
+        disk_smart_add "bad_blocks" "$total_bad"
+    fi
 
     if [[ "$total_bad" -gt 0 ]]; then
         printf '%b\n' "│   $(get_label "bad_blocks"): ${RED}${total_bad}${NC}"
@@ -1719,16 +1815,24 @@ parse_smart_json_sas() {
     fi
 
     # Detect if this is a SAS/SCSI or SATA disk
-    local device_type=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"type"\s*:\s*"\K[^"]*' | head -1)
-    local protocol=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"protocol"\s*:\s*"\K[^"]*' | head -1)
+    local device_type=$(json_query '.device.type' "$json" || true)
+    local protocol=$(json_query '.device.protocol' "$json" || true)
+    [[ -z "$device_type" ]] && device_type=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"type"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$protocol" ]] && protocol=$(echo "$json" | grep -oP '"device"\s*:\s*\{[^}]*"protocol"\s*:\s*"\K[^"]*' | head -1)
 
     # Extract basic info - try both SAS and SATA formats
-    local vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-    local product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
-    local model_name=$(echo "$json" | grep -oP '"model_name"\s*:\s*"\K[^"]*' | head -1)
-    local model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
-    local serial=$(echo "$json" | grep -oP '"serial_number"\s*:\s*"\K[^"]*' | head -1)
-    local capacity_bytes=$(echo "$json" | grep -oP '"user_capacity"\s*:\s*\{[^}]*"bytes"\s*:\s*\K[0-9]+' | head -1)
+    local vendor=$(json_query '.scsi_vendor' "$json" || true)
+    local product=$(json_query '.scsi_product' "$json" || true)
+    local model_name=$(json_query '.model_name' "$json" || true)
+    local model_family=$(json_query '.model_family' "$json" || true)
+    local serial=$(json_query '.serial_number' "$json" || true)
+    local capacity_bytes=$(json_query '.user_capacity.bytes' "$json" || true)
+    [[ -z "$vendor" ]] && vendor=$(echo "$json" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$product" ]] && product=$(echo "$json" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$model_name" ]] && model_name=$(echo "$json" | grep -oP '"model_name"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$model_family" ]] && model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$serial" ]] && serial=$(echo "$json" | grep -oP '"serial_number"\s*:\s*"\K[^"]*' | head -1)
+    [[ -z "$capacity_bytes" ]] && capacity_bytes=$(echo "$json" | grep -oP '"user_capacity"\s*:\s*\{[^}]*"bytes"\s*:\s*\K[0-9]+' | head -1)
 
     # Format capacity
     local capacity_formatted=""
@@ -1758,10 +1862,12 @@ parse_smart_json_sas() {
     fi
 
     # SMART status - check for smart_status.passed
-    local smart_passed=$(echo "$json" | grep -oP '"smart_status"\s*:\s*\{[^}]*"passed"\s*:\s*\K(true|false)' | head -1)
+    local smart_passed=$(json_query '.smart_status.passed' "$json" || true)
+    [[ -z "$smart_passed" ]] && smart_passed=$(echo "$json" | grep -oP '"smart_status"\s*:\s*\{[^}]*"passed"\s*:\s*\K(true|false)' | head -1)
     if [[ -z "$smart_passed" ]]; then
         # Try alternative method: check scsi_grown_defect_list element count
-        local defect_count=$(echo "$json" | grep -oP '"scsi_grown_defect_list"\s*:\s*\K[0-9]+' | head -1)
+        local defect_count=$(json_query '.scsi_grown_defect_list' "$json" || true)
+        [[ -z "$defect_count" ]] && defect_count=$(echo "$json" | grep -oP '"scsi_grown_defect_list"\s*:\s*\K[0-9]+' | head -1)
         if [[ -n "$defect_count" && "$defect_count" == "0" ]]; then
             smart_passed="true"
         fi
@@ -1778,14 +1884,16 @@ parse_smart_json_sas() {
     fi
 
     # Temperature
-    local temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{[^}]*"current"\s*:\s*\K[0-9]+' | head -1)
+    local temperature=$(json_query '.temperature.current' "$json" || true)
+    [[ -z "$temperature" ]] && temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{[^}]*"current"\s*:\s*\K[0-9]+' | head -1)
     if [[ -n "$temperature" && "$temperature" != "0" ]]; then
         echo "│   $(get_label "temperature"): ${temperature}°C"
         disk_smart_add "temperature" "${temperature}°C"
     fi
 
     # Power on hours - try multiple formats
-    local power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{[^}]*"hours"\s*:\s*\K[0-9]+' | head -1)
+    local power_on_hours=$(json_query '.power_on_time.hours' "$json" || true)
+    [[ -z "$power_on_hours" ]] && power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{[^}]*"hours"\s*:\s*\K[0-9]+' | head -1)
     if [[ -n "$power_on_hours" ]]; then
         echo "│   $(get_label "power_on_hours"): ${power_on_hours} hours"
         disk_smart_add "power_on_hours" "$power_on_hours"
@@ -1967,10 +2075,14 @@ parse_smart_json() {
     fi
 
     # Extract common fields
-    local smart_status=$(echo "$json" | grep -oP '"passed"\s*:\s*\K(true|false)' | head -1)
-    local temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{\s*"current"\s*:\s*\K[0-9]+' | head -1)
-    local power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{\s*"hours"\s*:\s*\K[0-9]+' | head -1)
-    local model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
+    local smart_status=$(json_query '.smart_status.passed' "$json" || true)
+    local temperature=$(json_query '.temperature.current' "$json" || true)
+    local power_on_hours=$(json_query '.power_on_time.hours' "$json" || true)
+    local model_family=$(json_query '.model_family' "$json" || true)
+    [[ -z "$smart_status" ]] && smart_status=$(echo "$json" | grep -oP '"passed"\s*:\s*\K(true|false)' | head -1)
+    [[ -z "$temperature" ]] && temperature=$(echo "$json" | grep -oP '"temperature"\s*:\s*\{\s*"current"\s*:\s*\K[0-9]+' | head -1)
+    [[ -z "$power_on_hours" ]] && power_on_hours=$(echo "$json" | grep -oP '"power_on_time"\s*:\s*\{\s*"hours"\s*:\s*\K[0-9]+' | head -1)
+    [[ -z "$model_family" ]] && model_family=$(echo "$json" | grep -oP '"model_family"\s*:\s*"\K[^"]*' | head -1)
 
     # SMART Status
     if [[ "$smart_status" == "true" ]]; then
@@ -1992,8 +2104,10 @@ parse_smart_json() {
     # Data transfer - check if NVMe
     if [[ "$disk" =~ nvme ]]; then
         # NVMe: data_units_read/written (each unit = 512 * 1000 bytes)
-        local data_units_read=$(echo "$json" | grep -oP '"data_units_read"\s*:\s*\K[0-9]+' | head -1)
-        local data_units_written=$(echo "$json" | grep -oP '"data_units_written"\s*:\s*\K[0-9]+' | head -1)
+        local data_units_read=$(json_query '.nvme_smart_health_information_log.data_units_read // .data_units_read' "$json" || true)
+        local data_units_written=$(json_query '.nvme_smart_health_information_log.data_units_written // .data_units_written' "$json" || true)
+        [[ -z "$data_units_read" ]] && data_units_read=$(echo "$json" | grep -oP '"data_units_read"\s*:\s*\K[0-9]+' | head -1)
+        [[ -z "$data_units_written" ]] && data_units_written=$(echo "$json" | grep -oP '"data_units_written"\s*:\s*\K[0-9]+' | head -1)
 
         if [[ -n "$data_units_read" && "$data_units_read" != "0" ]]; then
             local bytes_read=$((data_units_read * 512000))
@@ -2014,9 +2128,12 @@ parse_smart_json() {
         fi
 
         # NVMe health info
-        local percentage_used=$(echo "$json" | grep -oP '"percentage_used"\s*:\s*\K[0-9]+' | head -1)
-        local available_spare=$(echo "$json" | grep -oP '"available_spare"\s*:\s*\K[0-9]+' | head -1)
-        local critical_warning=$(echo "$json" | grep -oP '"critical_warning"\s*:\s*\K[0-9]+' | head -1)
+        local percentage_used=$(json_query '.nvme_smart_health_information_log.percentage_used // .percentage_used' "$json" || true)
+        local available_spare=$(json_query '.nvme_smart_health_information_log.available_spare // .available_spare' "$json" || true)
+        local critical_warning=$(json_query '.nvme_smart_health_information_log.critical_warning // .critical_warning' "$json" || true)
+        [[ -z "$percentage_used" ]] && percentage_used=$(echo "$json" | grep -oP '"percentage_used"\s*:\s*\K[0-9]+' | head -1)
+        [[ -z "$available_spare" ]] && available_spare=$(echo "$json" | grep -oP '"available_spare"\s*:\s*\K[0-9]+' | head -1)
+        [[ -z "$critical_warning" ]] && critical_warning=$(echo "$json" | grep -oP '"critical_warning"\s*:\s*\K[0-9]+' | head -1)
 
         if [[ -n "$percentage_used" ]]; then
             echo "│   $(get_label "percentage_used"): ${percentage_used}%"
@@ -2345,8 +2462,10 @@ get_disk_info() {
                     # Get controller info from this device
                     local json_data=$(get_smart_json_raid "$device" "$raid_type" "$raid_id")
                     if [[ -n "$json_data" ]]; then
-                        controller_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-                        controller_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+                        controller_vendor=$(json_query '.scsi_vendor' "$json_data" || true)
+                        controller_product=$(json_query '.scsi_product' "$json_data" || true)
+                        [[ -z "$controller_vendor" ]] && controller_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+                        [[ -z "$controller_product" ]] && controller_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
                     fi
                     break
                 fi
@@ -2422,8 +2541,10 @@ get_disk_info() {
             echo "│   Basic Info: $disk_info"
 
             local json_data=$(get_smart_json "$disk")
-            local scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-            local scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
+            local scsi_vendor=$(json_query '.scsi_vendor' "$json_data" || true)
+            local scsi_product=$(json_query '.scsi_product' "$json_data" || true)
+            [[ -z "$scsi_vendor" ]] && scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
+            [[ -z "$scsi_product" ]] && scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
 
             if [[ "$LANG_MODE" == "cn" ]]; then
                 echo "│   控制器: $scsi_vendor $scsi_product"
@@ -2510,6 +2631,218 @@ get_disk_info() {
         else
             echo "│   (No other disks)"
         fi
+    fi
+
+    echo "└$(repeat_char '─' 50)"
+}
+
+# Function to check whether fio is the benchmark tool
+is_fio_benchmark_available() {
+    command -v fio >/dev/null 2>&1 || return 1
+    fio --version 2>/dev/null | grep -qi '^fio-'
+}
+
+# Function to determine whether a mount is backed by a local disk-like source
+is_local_disk_mount() {
+    local source="$1"
+    local fstype="$2"
+
+    case "$fstype" in
+        proc|sysfs|tmpfs|devtmpfs|devpts|cgroup*|pstore|securityfs|debugfs|tracefs|configfs|mqueue|hugetlbfs|bpf|fusectl|overlay|squashfs|autofs|nfs|nfs4|cifs|smb3|sshfs|fuse.sshfs|9p)
+            return 1
+            ;;
+    esac
+
+    case "$source" in
+        /dev/*|UUID=*|LABEL=*|PARTUUID=*|ZFS=*|rpool/*|tank/*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+# Function to run a quick fio write benchmark on a mount point
+run_fio_write_test() {
+    local mount_point="$1"
+    local test_file=""
+    local fio_json=""
+    local bw_bytes=""
+    local bw_display=""
+    local iops=""
+
+    test_file=$(mktemp "${mount_point%/}/.sick-fio.XXXXXX" 2>/dev/null) || {
+        echo "failed|fio|||mktemp failed"
+        return
+    }
+    TEMP_FILES+=("$test_file")
+    rm -f "$test_file"
+
+    fio_json=$(fio --name=sick-write --filename="$test_file" --rw=write --bs=1M --size="${IO_TEST_SIZE_MB}M" --iodepth=1 --numjobs=1 --direct=0 --ioengine=sync --group_reporting --output-format=json 2>/dev/null)
+    local rc=$?
+    rm -f "$test_file"
+
+    if [[ $rc -ne 0 || -z "$fio_json" ]]; then
+        echo "failed|fio|||fio failed"
+        return
+    fi
+
+    bw_bytes=$(json_query '.jobs[0].write.bw_bytes' "$fio_json" || true)
+    iops=$(json_query '.jobs[0].write.iops' "$fio_json" || true)
+    if [[ "$bw_bytes" =~ ^[0-9]+$ ]]; then
+        bw_display="$(format_bytes "$bw_bytes")/s"
+    fi
+
+    echo "passed|fio|$bw_display|$iops|"
+}
+
+# Function to run a quick fallback write test when fio is unavailable
+run_dd_write_test() {
+    local mount_point="$1"
+    local test_file=""
+    local start_ns=""
+    local end_ns=""
+    local elapsed_ms=""
+    local bytes=$((IO_TEST_SIZE_MB * 1024 * 1024))
+    local bw_bytes=""
+    local bw_display=""
+
+    test_file=$(mktemp "${mount_point%/}/.sick-dd.XXXXXX" 2>/dev/null) || {
+        echo "failed|dd|||mktemp failed"
+        return
+    }
+    TEMP_FILES+=("$test_file")
+
+    start_ns=$(date +%s%N)
+    if ! dd if=/dev/zero of="$test_file" bs=1M count="$IO_TEST_SIZE_MB" conv=fdatasync status=none 2>/dev/null; then
+        rm -f "$test_file"
+        echo "failed|dd|||write failed"
+        return
+    fi
+    end_ns=$(date +%s%N)
+    rm -f "$test_file"
+
+    if [[ "$start_ns" =~ ^[0-9]+$ && "$end_ns" =~ ^[0-9]+$ && "$end_ns" -gt "$start_ns" ]]; then
+        elapsed_ms=$(((end_ns - start_ns) / 1000000))
+        if [[ "$elapsed_ms" -gt 0 ]]; then
+            bw_bytes=$((bytes * 1000 / elapsed_ms))
+            bw_display="$(format_bytes "$bw_bytes")/s"
+        fi
+    fi
+
+    echo "passed|dd|$bw_display||"
+}
+
+# Function to get mounted disk I/O capability and optional write-test results
+get_io_info() {
+    print_subsection "$(get_label "io_info")"
+
+    JSON_IO_KV=()
+    JSON_IO_MOUNTS=()
+
+    local fio_available="No"
+    local write_tests_enabled="No"
+    local mount_entries=""
+    local mount_count=0
+
+    if is_fio_benchmark_available; then
+        fio_available="Yes"
+    fi
+    [[ "$RUN_IO_TEST" == true ]] && write_tests_enabled="Yes"
+
+    print_info "$(get_label "fio_status")" "$fio_available"
+    print_info "$(get_label "write_test")" "$write_tests_enabled"
+
+    JSON_IO_KV=(
+        "$(json_kv "fio_available" "$fio_available")"
+        "$(json_kv "write_tests_enabled" "$write_tests_enabled")"
+        "$(json_kv "test_size_mb" "$IO_TEST_SIZE_MB")"
+    )
+
+    if command -v findmnt >/dev/null 2>&1; then
+        mount_entries=$(findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS 2>/dev/null)
+    else
+        mount_entries=$(awk '{print $2 " " $1 " " $3 " " $4}' /proc/mounts 2>/dev/null)
+    fi
+
+    while read -r mount_point source fstype options; do
+        [[ -z "$mount_point" || -z "$source" || -z "$fstype" ]] && continue
+        is_local_disk_mount "$source" "$fstype" || continue
+
+        local local_disk="Yes"
+        local option_writable="Yes"
+        local permission_writable="No"
+        local writable="No"
+        local target_type="other"
+        local test_status="not_run"
+        local test_tool=""
+        local test_bw=""
+        local test_iops=""
+        local test_error=""
+
+        ((mount_count++))
+
+        if [[ -d "$mount_point" ]]; then
+            target_type="directory"
+        elif [[ -f "$mount_point" ]]; then
+            target_type="file"
+        fi
+
+        if [[ ",$options," == *,ro,* ]]; then
+            option_writable="No"
+        fi
+        if [[ -w "$mount_point" ]]; then
+            permission_writable="Yes"
+        fi
+        if [[ "$option_writable" == "Yes" && "$permission_writable" == "Yes" ]]; then
+            writable="Yes"
+        fi
+
+        if [[ "$RUN_IO_TEST" == true ]]; then
+            if [[ "$target_type" != "directory" ]]; then
+                test_status="skipped_not_directory"
+            elif [[ "$writable" != "Yes" ]]; then
+                test_status="skipped_not_writable"
+            elif [[ "$fio_available" == "Yes" ]]; then
+                IFS='|' read -r test_status test_tool test_bw test_iops test_error < <(run_fio_write_test "$mount_point")
+            else
+                IFS='|' read -r test_status test_tool test_bw test_iops test_error < <(run_dd_write_test "$mount_point")
+            fi
+        fi
+
+        echo "│"
+        print_color "$CYAN" "│ ═══ $mount_point ═══"
+        echo "│   Source: $source"
+        echo "│   $(get_label "filesystem"): $fstype"
+        echo "│   Target Type: $target_type"
+        echo "│   $(get_label "local_disk"): $local_disk"
+        echo "│   $(get_label "writable"): $writable"
+        if [[ "$RUN_IO_TEST" == true ]]; then
+            echo "│   $(get_label "write_test"): $test_status${test_tool:+ ($test_tool)}"
+            [[ -n "$test_bw" ]] && echo "│   Write BW: $test_bw"
+            [[ -n "$test_iops" ]] && echo "│   Write IOPS: $test_iops"
+            [[ -n "$test_error" ]] && echo "│   Error: $test_error"
+        fi
+
+        local mount_kv=(
+            "$(json_kv "mount_point" "$mount_point")"
+            "$(json_kv "source" "$source")"
+            "$(json_kv "filesystem" "$fstype")"
+            "$(json_kv "options" "$options")"
+            "$(json_kv "target_type" "$target_type")"
+            "$(json_kv "local_disk" "$local_disk")"
+            "$(json_kv "writable" "$writable")"
+            "$(json_kv "write_test_status" "$test_status")"
+        )
+        [[ -n "$test_tool" ]] && mount_kv+=("$(json_kv "write_test_tool" "$test_tool")")
+        [[ -n "$test_bw" ]] && mount_kv+=("$(json_kv "write_bandwidth" "$test_bw")")
+        [[ -n "$test_iops" ]] && mount_kv+=("$(json_kv "write_iops" "$test_iops")")
+        [[ -n "$test_error" ]] && mount_kv+=("$(json_kv "write_error" "$test_error")")
+        JSON_IO_MOUNTS+=("$(json_obj "${mount_kv[@]}")")
+    done <<< "$mount_entries"
+
+    if [[ "$mount_count" -eq 0 ]]; then
+        print_info "$(get_label "status")" "$(get_label "not_detected")"
     fi
 
     echo "└$(repeat_char '─' 50)"
@@ -3133,12 +3466,16 @@ OPTIONS:
     -cn, --chinese     Display output in Chinese
     -us, --english     Display output in English (default)
     -j, --json         Output JSON to stdout only
+    --io-test          Run a quick write test on writable local mounts
+    --io-test-size MB  Set write-test size in MiB (default: $IO_TEST_SIZE_MB)
     -h, --help         Show this help message
     -v, --version      Show version information
 
 FEATURES:
     - Supports bilingual output (English/Chinese)
     - Comprehensive hardware detection
+    - Mounted local disk writability detection
+    - Optional fio write benchmarks via --io-test
     - JSON output to stdout (no files saved)
 
 Supported Distributions:
@@ -3154,6 +3491,7 @@ Examples:
     $0 -cn             # Show hardware info in Chinese
     $0 --chinese       # Show hardware info in Chinese
     $0 --json          # Output JSON to stdout
+    $0 --json --io-test # Include local mount write-test results
 
 Note: Run with sudo for complete hardware information access.
 
@@ -3183,12 +3521,16 @@ build_json_report() {
         "$(json_kv_raw "controllers" "$(json_array "${JSON_RAID_CONTROLLERS[@]}")")"
     )
 
+    local io_kv=("${JSON_IO_KV[@]}")
+    io_kv+=("$(json_kv_raw "mounts" "$(json_array "${JSON_IO_MOUNTS[@]}")")")
+
     local root_kv=(
         "$(json_kv_raw "meta" "$(json_obj "${meta_kv[@]}")")"
         "$(json_kv_raw "system" "$(json_obj "${JSON_SYSTEM_KV[@]}")")"
         "$(json_kv_raw "cpu" "$(json_obj "${JSON_CPU_KV[@]}")")"
         "$(json_kv_raw "memory" "$(json_obj "${memory_kv[@]}")")"
         "$(json_kv_raw "disks" "$(json_array "${JSON_DISKS[@]}")")"
+        "$(json_kv_raw "io" "$(json_obj "${io_kv[@]}")")"
         "$(json_kv_raw "raid" "$(json_obj "${raid_kv[@]}")")"
         "$(json_kv_raw "network" "$(json_array "${JSON_NETWORK[@]}")")"
         "$(json_kv_raw "gpu" "$(json_array "${JSON_GPU[@]}")")"
@@ -3215,6 +3557,18 @@ main() {
                 OUTPUT_MODE="json"
                 shift
                 ;;
+            --io-test)
+                RUN_IO_TEST=true
+                shift
+                ;;
+            --io-test-size)
+                if [[ -z "${2:-}" || ! "$2" =~ ^[0-9]+$ || "$2" -lt 1 ]]; then
+                    echo "Invalid --io-test-size value: ${2:-}"
+                    exit 1
+                fi
+                IO_TEST_SIZE_MB="$2"
+                shift 2
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -3240,6 +3594,7 @@ main() {
         get_cpu_info
         get_ram_info
         get_disk_info
+        get_io_info
         get_raid_info
         get_network_info
         get_gpu_info
@@ -3259,6 +3614,7 @@ main() {
             get_cpu_info
             get_ram_info
             get_disk_info
+            get_io_info
             get_raid_info
             get_network_info
             get_gpu_info
