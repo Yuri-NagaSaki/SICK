@@ -41,7 +41,7 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 
 ### 🔧 Advanced Features
 - **SMART Detection**: Hard drive health, power-on hours, read/write stats, bad blocks and defect counters
-- **Disk I/O Capability**: Local mount writability checks + optional `fio` write tests
+- **Disk I/O Capability**: Local mount writability checks + optional `fio` 4k/64k/512k/1m read-write tables
 - **Real-time Data**: CPU usage, IO statistics, network traffic
 - **Auto Installation**: Smart detection and installation of required packages
 - **High Compatibility**: Support for mainstream Linux distributions

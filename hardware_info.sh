@@ -650,6 +650,15 @@ install_packages() {
         echo "  ✓ jq found"
     fi
 
+    if [[ "$RUN_IO_TEST" == true ]]; then
+        if ! is_fio_benchmark_available; then
+            packages_needed+=("fio")
+            echo "  ❌ fio not found (for disk I/O benchmark)"
+        else
+            echo "  ✓ fio found"
+        fi
+    fi
+
     # Check for sensors command (for CPU temperature)
     if ! command -v sensors >/dev/null 2>&1; then
         case "$pkg_manager" in
@@ -907,6 +916,15 @@ install_packages() {
             echo "  ✓ jq now available"
         else
             echo "  ❌ jq still not available"
+            verification_success=false
+        fi
+    fi
+
+    if [[ " ${packages_needed[*]} " =~ " fio " ]]; then
+        if is_fio_benchmark_available; then
+            echo "  ✓ fio now available"
+        else
+            echo "  ❌ fio still not available"
             verification_success=false
         fi
     fi
@@ -2642,6 +2660,20 @@ is_fio_benchmark_available() {
     fio --version 2>/dev/null | grep -qi '^fio-'
 }
 
+# Function to format IOPS with compact units
+format_iops() {
+    local iops="$1"
+    awk -v n="${iops:-0}" 'BEGIN {
+        if (n >= 1000000) {
+            printf "%.1fm", n / 1000000
+        } else if (n >= 1000) {
+            printf "%.1fk", n / 1000
+        } else {
+            printf "%.0f", n
+        }
+    }'
+}
+
 # Function to determine whether a mount is backed by a local disk-like source
 is_local_disk_mount() {
     local source="$1"
@@ -2662,38 +2694,65 @@ is_local_disk_mount() {
     return 1
 }
 
-# Function to run a quick fio write benchmark on a mount point
-run_fio_write_test() {
+# Function to run a fio read/write benchmark for one block size
+run_fio_rw_benchmark() {
     local mount_point="$1"
+    local block_size="$2"
     local test_file=""
     local fio_json=""
-    local bw_bytes=""
-    local bw_display=""
-    local iops=""
+    local read_bw_bytes=""
+    local write_bw_bytes=""
+    local total_bw_bytes=""
+    local read_iops=""
+    local write_iops=""
+    local total_iops=""
+    local read_bw_display=""
+    local write_bw_display=""
+    local total_bw_display=""
+    local read_iops_display=""
+    local write_iops_display=""
+    local total_iops_display=""
 
-    test_file=$(mktemp "${mount_point%/}/.sick-fio.XXXXXX" 2>/dev/null) || {
-        echo "failed|fio|||mktemp failed"
+    test_file=$(mktemp "${mount_point%/}/.sick-fio-${block_size}.XXXXXX" 2>/dev/null) || {
+        echo "failed|$block_size|||||||||mktemp failed"
         return
     }
     TEMP_FILES+=("$test_file")
     rm -f "$test_file"
 
-    fio_json=$(fio --name=sick-write --filename="$test_file" --rw=write --bs=1M --size="${IO_TEST_SIZE_MB}M" --iodepth=1 --numjobs=1 --direct=0 --ioengine=sync --group_reporting --output-format=json 2>/dev/null)
+    fio_json=$(fio --name="sick-rw-${block_size}" --filename="$test_file" --rw=readwrite --rwmixread=50 --bs="$block_size" --size="${IO_TEST_SIZE_MB}M" --iodepth=16 --numjobs=1 --direct=1 --ioengine=libaio --group_reporting --output-format=json 2>/dev/null)
     local rc=$?
+    if [[ $rc -ne 0 || -z "$fio_json" ]]; then
+        fio_json=$(fio --name="sick-rw-${block_size}" --filename="$test_file" --rw=readwrite --rwmixread=50 --bs="$block_size" --size="${IO_TEST_SIZE_MB}M" --iodepth=1 --numjobs=1 --direct=0 --ioengine=sync --group_reporting --output-format=json 2>/dev/null)
+        rc=$?
+    fi
     rm -f "$test_file"
 
     if [[ $rc -ne 0 || -z "$fio_json" ]]; then
-        echo "failed|fio|||fio failed"
+        echo "failed|$block_size|||||||||fio failed"
         return
     fi
 
-    bw_bytes=$(json_query '.jobs[0].write.bw_bytes' "$fio_json" || true)
-    iops=$(json_query '.jobs[0].write.iops' "$fio_json" || true)
-    if [[ "$bw_bytes" =~ ^[0-9]+$ ]]; then
-        bw_display="$(format_bytes "$bw_bytes")/s"
+    read_bw_bytes=$(json_query '.jobs[0].read.bw_bytes' "$fio_json" || true)
+    write_bw_bytes=$(json_query '.jobs[0].write.bw_bytes' "$fio_json" || true)
+    read_iops=$(json_query '.jobs[0].read.iops' "$fio_json" || true)
+    write_iops=$(json_query '.jobs[0].write.iops' "$fio_json" || true)
+
+    if [[ ! "$read_bw_bytes" =~ ^[0-9]+$ || ! "$write_bw_bytes" =~ ^[0-9]+$ ]]; then
+        echo "failed|$block_size|||||||||fio parse failed"
+        return
     fi
 
-    echo "passed|fio|$bw_display|$iops|"
+    total_bw_bytes=$((read_bw_bytes + write_bw_bytes))
+    total_iops=$(awk -v r="${read_iops:-0}" -v w="${write_iops:-0}" 'BEGIN { printf "%.1f", r + w }')
+    read_bw_display="$(format_bytes "$read_bw_bytes")/s"
+    write_bw_display="$(format_bytes "$write_bw_bytes")/s"
+    total_bw_display="$(format_bytes "$total_bw_bytes")/s"
+    read_iops_display="$(format_iops "$read_iops")"
+    write_iops_display="$(format_iops "$write_iops")"
+    total_iops_display="$(format_iops "$total_iops")"
+
+    echo "passed|$block_size|$read_bw_display|$read_iops_display|$write_bw_display|$write_iops_display|$total_bw_display|$total_iops_display|$read_bw_bytes|$write_bw_bytes|$total_bw_bytes|$read_iops|$write_iops|$total_iops|"
 }
 
 # Function to run a quick fallback write test when fio is unavailable
@@ -2731,6 +2790,27 @@ run_dd_write_test() {
     fi
 
     echo "passed|dd|$bw_display||"
+}
+
+# Function to print fio benchmark rows as two side-by-side block-size tables
+print_io_benchmark_pair() {
+    local left_row="$1"
+    local right_row="$2"
+    local l_status="" l_bs="" l_read_bw="" l_read_iops="" l_write_bw="" l_write_iops="" l_total_bw="" l_total_iops=""
+    local r_status="" r_bs="" r_read_bw="" r_read_iops="" r_write_bw="" r_write_iops="" r_total_bw="" r_total_iops=""
+
+    IFS='|' read -r l_status l_bs l_read_bw l_read_iops l_write_bw l_write_iops l_total_bw l_total_iops _ <<< "$left_row"
+    IFS='|' read -r r_status r_bs r_read_bw r_read_iops r_write_bw r_write_iops r_total_bw r_total_iops _ <<< "$right_row"
+
+    if [[ "$l_status" != "passed" || "$r_status" != "passed" ]]; then
+        return
+    fi
+
+    printf "│   %-10s | %-24s | %-24s\n" "Block Size" "$l_bs (IOPS)" "$r_bs (IOPS)"
+    printf "│   %-10s | %-24s | %-24s\n" "------" "--- ----" "--- ----"
+    printf "│   %-10s | %-24s | %-24s\n" "Read" "$l_read_bw ($l_read_iops)" "$r_read_bw ($r_read_iops)"
+    printf "│   %-10s | %-24s | %-24s\n" "Write" "$l_write_bw ($l_write_iops)" "$r_write_bw ($r_write_iops)"
+    printf "│   %-10s | %-24s | %-24s\n" "Total" "$l_total_bw ($l_total_iops)" "$r_total_bw ($r_total_iops)"
 }
 
 # Function to get mounted disk I/O capability and optional write-test results
@@ -2779,6 +2859,8 @@ get_io_info() {
         local test_bw=""
         local test_iops=""
         local test_error=""
+        local benchmark_rows=()
+        local benchmark_json=()
 
         ((mount_count++))
 
@@ -2804,7 +2886,40 @@ get_io_info() {
             elif [[ "$writable" != "Yes" ]]; then
                 test_status="skipped_not_writable"
             elif [[ "$fio_available" == "Yes" ]]; then
-                IFS='|' read -r test_status test_tool test_bw test_iops test_error < <(run_fio_write_test "$mount_point")
+                test_status="passed"
+                test_tool="fio"
+                for block_size in 4k 64k 512k 1m; do
+                    local bench_row=""
+                    local b_status="" b_bs="" b_read_bw="" b_read_iops="" b_write_bw="" b_write_iops="" b_total_bw="" b_total_iops=""
+                    local b_read_bw_bytes="" b_write_bw_bytes="" b_total_bw_bytes="" b_read_iops_raw="" b_write_iops_raw="" b_total_iops_raw="" b_error=""
+
+                    bench_row=$(run_fio_rw_benchmark "$mount_point" "$block_size")
+                    benchmark_rows+=("$bench_row")
+                    IFS='|' read -r b_status b_bs b_read_bw b_read_iops b_write_bw b_write_iops b_total_bw b_total_iops b_read_bw_bytes b_write_bw_bytes b_total_bw_bytes b_read_iops_raw b_write_iops_raw b_total_iops_raw b_error <<< "$bench_row"
+
+                    if [[ "$b_status" != "passed" ]]; then
+                        test_status="failed"
+                        test_error="${b_error:-fio failed}"
+                        continue
+                    fi
+
+                    local bench_kv=(
+                        "$(json_kv "block_size" "$b_bs")"
+                        "$(json_kv "read_bw" "$b_read_bw")"
+                        "$(json_kv "read_iops" "$b_read_iops")"
+                        "$(json_kv "write_bw" "$b_write_bw")"
+                        "$(json_kv "write_iops" "$b_write_iops")"
+                        "$(json_kv "total_bw" "$b_total_bw")"
+                        "$(json_kv "total_iops" "$b_total_iops")"
+                        "$(json_kv "read_bw_bytes" "$b_read_bw_bytes")"
+                        "$(json_kv "write_bw_bytes" "$b_write_bw_bytes")"
+                        "$(json_kv "total_bw_bytes" "$b_total_bw_bytes")"
+                        "$(json_kv "read_iops_raw" "$b_read_iops_raw")"
+                        "$(json_kv "write_iops_raw" "$b_write_iops_raw")"
+                        "$(json_kv "total_iops_raw" "$b_total_iops_raw")"
+                    )
+                    benchmark_json+=("$(json_obj "${bench_kv[@]}")")
+                done
             else
                 IFS='|' read -r test_status test_tool test_bw test_iops test_error < <(run_dd_write_test "$mount_point")
             fi
@@ -2819,8 +2934,14 @@ get_io_info() {
         echo "│   $(get_label "writable"): $writable"
         if [[ "$RUN_IO_TEST" == true ]]; then
             echo "│   $(get_label "write_test"): $test_status${test_tool:+ ($test_tool)}"
-            [[ -n "$test_bw" ]] && echo "│   Write BW: $test_bw"
-            [[ -n "$test_iops" ]] && echo "│   Write IOPS: $test_iops"
+            if [[ "$test_tool" == "fio" && ${#benchmark_rows[@]} -eq 4 ]]; then
+                print_io_benchmark_pair "${benchmark_rows[0]}" "${benchmark_rows[1]}"
+                echo "│"
+                print_io_benchmark_pair "${benchmark_rows[2]}" "${benchmark_rows[3]}"
+            else
+                [[ -n "$test_bw" ]] && echo "│   Write BW: $test_bw"
+                [[ -n "$test_iops" ]] && echo "│   Write IOPS: $test_iops"
+            fi
             [[ -n "$test_error" ]] && echo "│   Error: $test_error"
         fi
 
@@ -2838,6 +2959,9 @@ get_io_info() {
         [[ -n "$test_bw" ]] && mount_kv+=("$(json_kv "write_bandwidth" "$test_bw")")
         [[ -n "$test_iops" ]] && mount_kv+=("$(json_kv "write_iops" "$test_iops")")
         [[ -n "$test_error" ]] && mount_kv+=("$(json_kv "write_error" "$test_error")")
+        if [[ ${#benchmark_json[@]} -gt 0 ]]; then
+            mount_kv+=("$(json_kv_raw "benchmarks" "$(json_array "${benchmark_json[@]}")")")
+        fi
         JSON_IO_MOUNTS+=("$(json_obj "${mount_kv[@]}")")
     done <<< "$mount_entries"
 
