@@ -2813,6 +2813,38 @@ print_io_benchmark_pair() {
     printf "│   %-10s | %-24s | %-24s\n" "Total" "$l_total_bw ($l_total_iops)" "$r_total_bw ($r_total_iops)"
 }
 
+# Function to fit a string into a fixed-width ASCII table cell
+fit_cell() {
+    local value="$1"
+    local width="$2"
+
+    if (( ${#value} > width )); then
+        printf '%s' "${value:0:$((width - 2))}.."
+    else
+        printf '%s' "$value"
+    fi
+}
+
+print_io_mount_table_header() {
+    printf "│ %-18s | %-18s | %-8s | %-10s | %-8s\n" "Mount Point" "Source" "FS" "Type" "Writable"
+    printf "│ %-18s | %-18s | %-8s | %-10s | %-8s\n" "------------------" "------------------" "--------" "----------" "--------"
+}
+
+print_io_mount_table_row() {
+    local mount_point="$1"
+    local source="$2"
+    local fstype="$3"
+    local target_type="$4"
+    local writable="$5"
+
+    printf "│ %-18s | %-18s | %-8s | %-10s | %-8s\n" \
+        "$(fit_cell "$mount_point" 18)" \
+        "$(fit_cell "$source" 18)" \
+        "$(fit_cell "$fstype" 8)" \
+        "$(fit_cell "$target_type" 10)" \
+        "$(fit_cell "$writable" 8)"
+}
+
 # Function to get mounted disk I/O capability and optional write-test results
 get_io_info() {
     print_subsection "$(get_label "io_info")"
@@ -2822,6 +2854,8 @@ get_io_info() {
 
     local fio_available="No"
     local write_tests_enabled="No"
+    local fio_status_display=""
+    local write_test_display=""
     local mount_entries=""
     local mount_count=0
 
@@ -2830,8 +2864,22 @@ get_io_info() {
     fi
     [[ "$RUN_IO_TEST" == true ]] && write_tests_enabled="Yes"
 
-    print_info "$(get_label "fio_status")" "$fio_available"
-    print_info "$(get_label "write_test")" "$write_tests_enabled"
+    if [[ "$fio_available" == "Yes" ]]; then
+        fio_status_display="Available"
+    elif [[ "$RUN_IO_TEST" == true ]]; then
+        fio_status_display="Not installed (dd fallback)"
+    else
+        fio_status_display="Not installed (use --io-test to install/test)"
+    fi
+
+    if [[ "$RUN_IO_TEST" == true ]]; then
+        write_test_display="Enabled"
+    else
+        write_test_display="Disabled (use --io-test)"
+    fi
+
+    print_info "$(get_label "fio_status")" "$fio_status_display"
+    print_info "$(get_label "write_test")" "$write_test_display"
 
     JSON_IO_KV=(
         "$(json_kv "fio_available" "$fio_available")"
@@ -2843,6 +2891,11 @@ get_io_info() {
         mount_entries=$(findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS 2>/dev/null)
     else
         mount_entries=$(awk '{print $2 " " $1 " " $3 " " $4}' /proc/mounts 2>/dev/null)
+    fi
+
+    if [[ "$RUN_IO_TEST" != true ]]; then
+        echo "│"
+        print_io_mount_table_header
     fi
 
     while read -r mount_point source fstype options; do
@@ -2925,14 +2978,16 @@ get_io_info() {
             fi
         fi
 
-        echo "│"
-        print_color "$CYAN" "│ ═══ $mount_point ═══"
-        echo "│   Source: $source"
-        echo "│   $(get_label "filesystem"): $fstype"
-        echo "│   Target Type: $target_type"
-        echo "│   $(get_label "local_disk"): $local_disk"
-        echo "│   $(get_label "writable"): $writable"
-        if [[ "$RUN_IO_TEST" == true ]]; then
+        if [[ "$RUN_IO_TEST" != true ]]; then
+            print_io_mount_table_row "$mount_point" "$source" "$fstype" "$target_type" "$writable"
+        else
+            echo "│"
+            print_color "$CYAN" "│ ═══ $mount_point ═══"
+            echo "│   Source: $source"
+            echo "│   $(get_label "filesystem"): $fstype"
+            echo "│   Target Type: $target_type"
+            echo "│   $(get_label "local_disk"): $local_disk"
+            echo "│   $(get_label "writable"): $writable"
             echo "│   $(get_label "write_test"): $test_status${test_tool:+ ($test_tool)}"
             if [[ "$test_tool" == "fio" && ${#benchmark_rows[@]} -eq 4 ]]; then
                 print_io_benchmark_pair "${benchmark_rows[0]}" "${benchmark_rows[1]}"
