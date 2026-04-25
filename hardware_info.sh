@@ -136,7 +136,7 @@ declare -A LABELS_EN=(
     ["non_medium_errors"]="Non-medium Errors"
     ["bad_blocks"]="Bad Blocks"
     ["fio_status"]="fio Status"
-    ["write_test"]="Write Test"
+    ["write_test"]="Read/Write Test"
     ["mount_point"]="Mount Point"
     ["filesystem"]="Filesystem"
     ["local_disk"]="Local Disk"
@@ -213,7 +213,7 @@ declare -A LABELS_CN=(
     ["non_medium_errors"]="非介质错误"
     ["bad_blocks"]="坏块统计"
     ["fio_status"]="fio 状态"
-    ["write_test"]="写入测试"
+    ["write_test"]="读写测试"
     ["mount_point"]="挂载点"
     ["filesystem"]="文件系统"
     ["local_disk"]="本地磁盘"
@@ -398,8 +398,13 @@ print_header() {
 # Function to print sub-section
 print_subsection() {
     local title="$1"
-    print_color "$YELLOW" "┌─ $title"
-    print_color "$YELLOW" "├$(repeat_char '─' $((${#title} + 2)))"
+    local width=50
+    local title_width=$(get_display_width "$title")
+    local fill=$((width - title_width - 4))
+
+    [[ "$fill" -lt 1 ]] && fill=1
+    print_color "$YELLOW" "┌─ $title $(repeat_char '─' "$fill")"
+    print_color "$YELLOW" "├$(repeat_char '─' "$width")"
 }
 
 # Function to calculate display width of string (considering CJK characters)
@@ -2674,6 +2679,41 @@ format_iops() {
     }'
 }
 
+block_size_to_bytes() {
+    local block_size="$1"
+    local number="${block_size%[kKmM]}"
+    local suffix="${block_size:${#number}}"
+
+    [[ "$number" =~ ^[0-9]+$ ]] || return 1
+    case "$suffix" in
+        k|K)
+            echo $((number * 1024))
+            ;;
+        m|M)
+            echo $((number * 1024 * 1024))
+            ;;
+        "")
+            echo "$number"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+format_benchmark_bw() {
+    local bytes="$1"
+    local elapsed_ms="$2"
+    local bw_bytes=""
+
+    if [[ "$bytes" =~ ^[0-9]+$ && "$elapsed_ms" =~ ^[0-9]+$ && "$elapsed_ms" -gt 0 ]]; then
+        bw_bytes=$((bytes * 1000 / elapsed_ms))
+        printf '%s|%s' "$bw_bytes" "$(format_bytes "$bw_bytes")/s"
+    else
+        printf '|'
+    fi
+}
+
 # Function to determine whether a mount is backed by a local disk-like source
 is_local_disk_mount() {
     local source="$1"
@@ -2792,6 +2832,82 @@ run_dd_write_test() {
     echo "passed|dd|$bw_display||"
 }
 
+# Function to run a dd read/write fallback benchmark for one block size
+run_dd_rw_benchmark() {
+    local mount_point="$1"
+    local block_size="$2"
+    local test_file=""
+    local block_bytes=""
+    local dd_block_size="${block_size^^}"
+    local total_bytes=$((IO_TEST_SIZE_MB * 1024 * 1024))
+    local count=""
+    local start_ns="" end_ns="" write_ms="" read_ms=""
+    local write_bw_bytes="" write_bw_display=""
+    local read_bw_bytes="" read_bw_display=""
+    local total_bw_bytes="" total_bw_display=""
+    local read_iops="" write_iops="" total_iops=""
+    local read_iops_display="" write_iops_display="" total_iops_display=""
+
+    block_bytes=$(block_size_to_bytes "$block_size") || {
+        echo "failed|$block_size|||||||||invalid block size"
+        return
+    }
+    [[ "$block_bytes" -gt 0 ]] || {
+        echo "failed|$block_size|||||||||invalid block size"
+        return
+    }
+
+    count=$((total_bytes / block_bytes))
+    [[ "$count" -lt 1 ]] && count=1
+    total_bytes=$((count * block_bytes))
+
+    test_file=$(mktemp "${mount_point%/}/.sick-dd-${block_size}.XXXXXX" 2>/dev/null) || {
+        echo "failed|$block_size|||||||||mktemp failed"
+        return
+    }
+    TEMP_FILES+=("$test_file")
+
+    start_ns=$(date +%s%N)
+    if ! dd if=/dev/zero of="$test_file" bs="$dd_block_size" count="$count" conv=fdatasync status=none 2>/dev/null; then
+        rm -f "$test_file"
+        echo "failed|$block_size|||||||||write failed"
+        return
+    fi
+    end_ns=$(date +%s%N)
+    write_ms=$(((end_ns - start_ns) / 1000000))
+    [[ "$write_ms" -lt 1 ]] && write_ms=1
+
+    start_ns=$(date +%s%N)
+    if ! dd if="$test_file" of=/dev/null bs="$dd_block_size" status=none 2>/dev/null; then
+        rm -f "$test_file"
+        echo "failed|$block_size|||||||||read failed"
+        return
+    fi
+    end_ns=$(date +%s%N)
+    read_ms=$(((end_ns - start_ns) / 1000000))
+    [[ "$read_ms" -lt 1 ]] && read_ms=1
+    rm -f "$test_file"
+
+    IFS='|' read -r write_bw_bytes write_bw_display < <(format_benchmark_bw "$total_bytes" "$write_ms")
+    IFS='|' read -r read_bw_bytes read_bw_display < <(format_benchmark_bw "$total_bytes" "$read_ms")
+
+    if [[ ! "$read_bw_bytes" =~ ^[0-9]+$ || ! "$write_bw_bytes" =~ ^[0-9]+$ ]]; then
+        echo "failed|$block_size|||||||||timing failed"
+        return
+    fi
+
+    total_bw_bytes=$((read_bw_bytes + write_bw_bytes))
+    total_bw_display="$(format_bytes "$total_bw_bytes")/s"
+    read_iops=$(awk -v b="$read_bw_bytes" -v bs="$block_bytes" 'BEGIN { printf "%.1f", b / bs }')
+    write_iops=$(awk -v b="$write_bw_bytes" -v bs="$block_bytes" 'BEGIN { printf "%.1f", b / bs }')
+    total_iops=$(awk -v r="$read_iops" -v w="$write_iops" 'BEGIN { printf "%.1f", r + w }')
+    read_iops_display="$(format_iops "$read_iops")"
+    write_iops_display="$(format_iops "$write_iops")"
+    total_iops_display="$(format_iops "$total_iops")"
+
+    echo "passed|$block_size|$read_bw_display|$read_iops_display|$write_bw_display|$write_iops_display|$total_bw_display|$total_iops_display|$read_bw_bytes|$write_bw_bytes|$total_bw_bytes|$read_iops|$write_iops|$total_iops|"
+}
+
 # Function to print fio benchmark rows as two side-by-side block-size tables
 print_io_benchmark_pair() {
     local left_row="$1"
@@ -2845,7 +2961,7 @@ print_io_mount_table_row() {
         "$(fit_cell "$writable" 8)"
 }
 
-# Function to get mounted disk I/O capability and optional write-test results
+# Function to get mounted disk I/O capability and optional read/write-test results
 get_io_info() {
     print_subsection "$(get_label "io_info")"
 
@@ -2974,7 +3090,40 @@ get_io_info() {
                     benchmark_json+=("$(json_obj "${bench_kv[@]}")")
                 done
             else
-                IFS='|' read -r test_status test_tool test_bw test_iops test_error < <(run_dd_write_test "$mount_point")
+                test_status="passed"
+                test_tool="dd"
+                for block_size in 4k 64k 512k 1m; do
+                    local bench_row=""
+                    local b_status="" b_bs="" b_read_bw="" b_read_iops="" b_write_bw="" b_write_iops="" b_total_bw="" b_total_iops=""
+                    local b_read_bw_bytes="" b_write_bw_bytes="" b_total_bw_bytes="" b_read_iops_raw="" b_write_iops_raw="" b_total_iops_raw="" b_error=""
+
+                    bench_row=$(run_dd_rw_benchmark "$mount_point" "$block_size")
+                    benchmark_rows+=("$bench_row")
+                    IFS='|' read -r b_status b_bs b_read_bw b_read_iops b_write_bw b_write_iops b_total_bw b_total_iops b_read_bw_bytes b_write_bw_bytes b_total_bw_bytes b_read_iops_raw b_write_iops_raw b_total_iops_raw b_error <<< "$bench_row"
+
+                    if [[ "$b_status" != "passed" ]]; then
+                        test_status="failed"
+                        test_error="${b_error:-dd failed}"
+                        continue
+                    fi
+
+                    local bench_kv=(
+                        "$(json_kv "block_size" "$b_bs")"
+                        "$(json_kv "read_bw" "$b_read_bw")"
+                        "$(json_kv "read_iops" "$b_read_iops")"
+                        "$(json_kv "write_bw" "$b_write_bw")"
+                        "$(json_kv "write_iops" "$b_write_iops")"
+                        "$(json_kv "total_bw" "$b_total_bw")"
+                        "$(json_kv "total_iops" "$b_total_iops")"
+                        "$(json_kv "read_bw_bytes" "$b_read_bw_bytes")"
+                        "$(json_kv "write_bw_bytes" "$b_write_bw_bytes")"
+                        "$(json_kv "total_bw_bytes" "$b_total_bw_bytes")"
+                        "$(json_kv "read_iops_raw" "$b_read_iops_raw")"
+                        "$(json_kv "write_iops_raw" "$b_write_iops_raw")"
+                        "$(json_kv "total_iops_raw" "$b_total_iops_raw")"
+                    )
+                    benchmark_json+=("$(json_obj "${bench_kv[@]}")")
+                done
             fi
         fi
 
@@ -2989,7 +3138,7 @@ get_io_info() {
             echo "│   $(get_label "local_disk"): $local_disk"
             echo "│   $(get_label "writable"): $writable"
             echo "│   $(get_label "write_test"): $test_status${test_tool:+ ($test_tool)}"
-            if [[ "$test_tool" == "fio" && ${#benchmark_rows[@]} -eq 4 ]]; then
+            if [[ ( "$test_tool" == "fio" || "$test_tool" == "dd" ) && ${#benchmark_rows[@]} -eq 4 ]]; then
                 print_io_benchmark_pair "${benchmark_rows[0]}" "${benchmark_rows[1]}"
                 echo "│"
                 print_io_benchmark_pair "${benchmark_rows[2]}" "${benchmark_rows[3]}"
@@ -3632,7 +3781,47 @@ get_motherboard_info() {
     echo "└$(repeat_char '─' 50)"
 }
 
+print_report_overview() {
+    local section_title="Report Overview"
+    local version_name="Version"
+    local mode_name="Mode"
+    local io_benchmark_name="I/O Benchmark"
+    local io_method_name="I/O Method"
+    local privacy_name="Privacy"
+    local mode_label="Text"
+    local io_status="Disabled (use --io-test)"
+    local io_method="fio read/write benchmark; dd read/write fallback"
+    local privacy_status="IP/MAC masked"
 
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        section_title="报告概览"
+        version_name="版本"
+        mode_name="模式"
+        io_benchmark_name="I/O 基准"
+        io_method_name="I/O 方法"
+        privacy_name="隐私"
+        mode_label="文本"
+        io_status="未启用（使用 --io-test）"
+        io_method="fio 读写基准；dd 读写兜底"
+        privacy_status="IP/MAC 已脱敏"
+    fi
+
+    if [[ "$RUN_IO_TEST" == true ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            io_status="已启用（${IO_TEST_SIZE_MB} MiB/块大小）"
+        else
+            io_status="Enabled (${IO_TEST_SIZE_MB} MiB/block size)"
+        fi
+    fi
+
+    print_subsection "$section_title"
+    print_info "$version_name" "$VERSION"
+    print_info "$mode_name" "$mode_label"
+    print_info "$io_benchmark_name" "$io_status"
+    print_info "$io_method_name" "$io_method"
+    print_info "$privacy_name" "$privacy_status"
+    echo "└$(repeat_char '─' 50)"
+}
 
 # Function to show usage
 show_usage() {
@@ -3645,8 +3834,8 @@ OPTIONS:
     -cn, --chinese     Display output in Chinese
     -us, --english     Display output in English (default)
     -j, --json         Output JSON to stdout only
-    --io-test          Run a quick write test on writable local mounts
-    --io-test-size MB  Set write-test size in MiB (default: $IO_TEST_SIZE_MB)
+    --io-test          Run read/write I/O tests on writable local mounts
+    --io-test-size MB  Set read/write test size in MiB (default: $IO_TEST_SIZE_MB)
     -h, --help         Show this help message
     -v, --version      Show version information
 
@@ -3654,7 +3843,7 @@ FEATURES:
     - Supports bilingual output (English/Chinese)
     - Comprehensive hardware detection
     - Mounted local disk writability detection
-    - Optional fio write benchmarks via --io-test
+    - Optional fio read/write benchmarks via --io-test
     - JSON output to stdout (no files saved)
 
 Supported Distributions:
@@ -3670,7 +3859,8 @@ Examples:
     $0 -cn             # Show hardware info in Chinese
     $0 --chinese       # Show hardware info in Chinese
     $0 --json          # Output JSON to stdout
-    $0 --json --io-test # Include local mount write-test results
+    $0 --io-test       # Show terminal read/write benchmark tables
+    $0 --json --io-test # Include local mount read/write benchmark results
 
 Note: Run with sudo for complete hardware information access.
 
@@ -3767,6 +3957,7 @@ main() {
     generate_report_text() {
         # Print title
         print_header "$(get_label "title")"
+        print_report_overview
 
         # Collect all hardware information
         get_system_info

@@ -76,7 +76,7 @@ curl -sL https://ba.sh/sick | bash -s -- --io-test
 # JSON 输出
 curl -sL https://ba.sh/sick | bash -s -- --json
 
-# JSON 输出并测试本地磁盘写入
+# JSON 输出并测试本地磁盘读写
 curl -sL https://ba.sh/sick | bash -s -- --json --io-test
 ```
 
