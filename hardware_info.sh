@@ -53,6 +53,7 @@ RAM_MODULE_ROWS=()
 RAM_FALLBACK_LINES=()
 RAM_HAS_DETAILED_MODULES=false
 RAM_FIELD_SEP=$'\034'
+FIELD_SEP=$'\034'
 
 # JSON report data containers
 JSON_SYSTEM_KV=()
@@ -1975,6 +1976,58 @@ pcie_speed_rank() {
     printf -v "$out_var" '%s' "$rank"
 }
 
+compact_pci_name() {
+    local out_var="$1"
+    local name="$2"
+
+    name="${name#PCI bridge: }"
+    name="${name#Non-Volatile memory controller: }"
+    name="${name#Serial Attached SCSI controller: }"
+    name="${name#SATA controller: }"
+    name="${name#SCSI storage controller: }"
+    name="${name#Ethernet controller: }"
+    name="${name#VGA compatible controller: }"
+    name="${name//Intel Corporation /Intel }"
+    name="${name//Broadcom Inc. and subsidiaries /Broadcom }"
+    name="${name//Samsung Electronics Co Ltd /Samsung }"
+    name="${name//Marvell Technology Group Ltd. /Marvell }"
+    name="${name//PCI Express/PCIe}"
+    name="${name//PCI-Express/PCIe}"
+    name="${name//Xeon E7 v2\/Xeon E5 v2\/Core i7/Xeon E5 v2}"
+
+    printf -v "$out_var" '%s' "$name"
+}
+
+pcie_record_degraded_link() {
+    local slot="$1"
+    local current="$2"
+    local capability="$3"
+    local name="$4"
+    local compact_name=""
+
+    compact_pci_name compact_name "$name"
+    PCIE_DEGRADED_ROWS+=("${slot}${FIELD_SEP}${current}${FIELD_SEP}${capability}${FIELD_SEP}${compact_name}")
+}
+
+render_pcie_summary() {
+    if [[ "$PCIE_DEGRADED_COUNT" -gt 0 ]]; then
+        print_wrapped_line "│ Summary             : " "${PCIE_DEGRADED_COUNT} degraded active PCIe link(s); verify slot wiring, card generation, riser/backplane, or BIOS lane settings" "│                       " "$YELLOW"
+        print_color "$YELLOW" "│ Attention:"
+        local row="" slot="" current="" capability="" name=""
+        for row in "${PCIE_DEGRADED_ROWS[@]}"; do
+            IFS="$FIELD_SEP" read -r slot current capability name <<< "$row"
+            printf '%b\n' "│   ${YELLOW}WARN${NC} ${slot}  current ${current:-?}  cap ${capability:-?}"
+            [[ -n "$name" ]] && print_wrapped_line "│        " "$name" "│        "
+        done
+    else
+        print_info "$(get_label "status")" "No degraded active links"
+    fi
+
+    print_info "PCIe Links" "$PCIE_LINK_COUNT"
+    print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
+    print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
+}
+
 process_pcie_link_block() {
     local block="$1"
     local first_line="" slot="" name="" lnkcap="" lnksta=""
@@ -2016,12 +2069,7 @@ process_pcie_link_block() {
     [[ "$status" == "INACTIVE" ]] && ((PCIE_INACTIVE_COUNT++))
 
     if [[ "$status" == "DEGRADED" ]]; then
-        if [[ "$PCIE_DEGRADED_PRINTED" != true ]]; then
-            print_color "$YELLOW" "│ Degraded PCIe Links:"
-            PCIE_DEGRADED_PRINTED=true
-        fi
-        printf '%b\n' "│   ${slot}: ${sta_speed:-?}/${sta_width:-?} (cap ${cap_speed:-?}/${cap_width:-?}) ${status_color}${status}${NC}"
-        print_wrapped_line "│     " "$name" "│       "
+        pcie_record_degraded_link "$slot" "${sta_speed:-?}/${sta_width:-?}" "${cap_speed:-?}/${cap_width:-?}" "$name"
     fi
 
     if [[ "$COLLECT_JSON" == true ]]; then
@@ -2101,12 +2149,7 @@ process_pcie_sysfs_link() {
     [[ "$status" == "INACTIVE" ]] && ((PCIE_INACTIVE_COUNT++))
 
     if [[ "$status" == "DEGRADED" ]]; then
-        if [[ "$PCIE_DEGRADED_PRINTED" != true ]]; then
-            print_color "$YELLOW" "│ Degraded PCIe Links:"
-            PCIE_DEGRADED_PRINTED=true
-        fi
-        printf '%b\n' "│   ${slot}: ${sta_speed:-?}/${sta_width:-?} (cap ${cap_speed:-?}/${cap_width:-?}) ${status_color}${status}${NC}"
-        [[ -n "$name" ]] && print_wrapped_line "│     " "$name" "│       "
+        pcie_record_degraded_link "$slot" "${sta_speed:-?}/${sta_width:-?}" "${cap_speed:-?}/${cap_width:-?}" "$name"
     fi
 
     if [[ "$COLLECT_JSON" == true ]]; then
@@ -2130,7 +2173,7 @@ get_pcie_link_info() {
     PCIE_LINK_COUNT=0
     PCIE_DEGRADED_COUNT=0
     PCIE_INACTIVE_COUNT=0
-    PCIE_DEGRADED_PRINTED=false
+    PCIE_DEGRADED_ROWS=()
 
     if compgen -G "/sys/bus/pci/devices/*/current_link_speed" >/dev/null 2>&1; then
         local devdir=""
@@ -2142,12 +2185,7 @@ get_pcie_link_info() {
         done
 
         if [[ "$PCIE_LINK_COUNT" -gt 0 ]]; then
-            print_info "PCIe Links" "$PCIE_LINK_COUNT"
-            print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
-            print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
-            if [[ "$PCIE_DEGRADED_COUNT" -eq 0 ]]; then
-                print_info "$(get_label "status")" "No degraded active links"
-            fi
+            render_pcie_summary
             echo "└$(repeat_char '─' 50)"
             return
         fi
@@ -2177,12 +2215,7 @@ get_pcie_link_info() {
     done <<< "$pci_verbose"
     process_pcie_link_block "$block"
 
-    print_info "PCIe Links" "$PCIE_LINK_COUNT"
-    print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
-    print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
-    if [[ "$PCIE_DEGRADED_COUNT" -eq 0 ]]; then
-        print_info "$(get_label "status")" "No degraded active links"
-    fi
+    render_pcie_summary
     echo "└$(repeat_char '─' 50)"
 }
 
@@ -2359,6 +2392,7 @@ get_storage_stack_info() {
     if command -v lsblk >/dev/null 2>&1; then
         local line="" name="" type="" size="" fstype="" mountpoint="" pkname="" block_kv=()
         local disk_count=0 part_count=0 raid_count=0 lvm_count=0 other_block_count=0
+        local raid0_count=0
         local physical_lines=()
         local raid_lines=()
         declare -A seen_physical_lines=()
@@ -2401,6 +2435,7 @@ get_storage_stack_info() {
                     if [[ -z "${seen_raid_lines[$name]+x}" ]]; then
                         seen_raid_lines[$name]=1
                         ((raid_count++))
+                        [[ "$type" == "raid0" ]] && ((raid0_count++))
                         raid_lines+=("${name:-?} ${type:-?} ${size:-?} fs=${fstype:-none}")
                     fi
                     ;;
@@ -2417,14 +2452,22 @@ get_storage_stack_info() {
             found=true
         done < <(lsblk -P -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT,PKNAME 2>/dev/null)
 
-        print_info "Block Summary" "disk=$disk_count part=$part_count raid=$raid_count lvm=$lvm_count"
+        print_info "Summary" "$disk_count disk(s), $raid_count RAID device(s), $lvm_count LVM volume(s)"
+        [[ "$raid0_count" -gt 0 ]] && print_wrapped_line "│ Warning             : " "$raid0_count RAID0 device(s) detected; RAID0 has no redundancy and any member failure can break the array" "│                       " "$YELLOW"
         if [[ ${#physical_lines[@]} -gt 0 ]]; then
-            echo "│   Physical: ${physical_lines[*]}"
+            print_wrapped_line "│ Physical Disks      : " "${physical_lines[*]}" "│                       "
         fi
         if [[ ${#raid_lines[@]} -gt 0 ]]; then
             local raid_line=""
+            print_color "$GREEN" "│ RAID Devices:"
             for raid_line in "${raid_lines[@]}"; do
-                echo "│   RAID: $raid_line"
+                local raid_name="" raid_type="" raid_size="" raid_fs="" raid_status="OK" raid_color="$GREEN"
+                read -r raid_name raid_type raid_size raid_fs <<< "$raid_line"
+                if [[ "$raid_type" == "raid0" ]]; then
+                    raid_status="WARN"
+                    raid_color="$YELLOW"
+                fi
+                printf '%b\n' "│   ${raid_color}${raid_status}${NC} ${raid_name}  ${raid_type}  ${raid_size}  ${raid_fs}"
             done
         fi
     fi
@@ -2452,11 +2495,10 @@ get_storage_stack_info() {
             found=true
         done < <(findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS 2>/dev/null)
         if [[ ${#mount_lines[@]} -gt 0 ]]; then
-            echo "│"
             print_color "$GREEN" "│ Key Mounts:"
             local mount_line=""
             for mount_line in "${mount_lines[@]}"; do
-                echo "│   $mount_line"
+                print_wrapped_line "│   " "$mount_line" "│     "
             done
         fi
     fi
@@ -2469,11 +2511,10 @@ get_storage_stack_info() {
             while IFS= read -r lvm_line; do
                 [[ -z "$lvm_line" ]] && continue
                 if [[ "$lvm_printed" == false ]]; then
-                    echo "│"
                     print_color "$GREEN" "│ LVM:"
                     lvm_printed=true
                 fi
-                echo "│   PV $lvm_line"
+                print_wrapped_line "│   " "PV $lvm_line" "│     "
                 [[ "$COLLECT_JSON" == true ]] && JSON_STORAGE_LVM+=("PV $lvm_line")
                 found=true
             done < <(pvs --noheadings -o pv_name,vg_name,pv_size,pv_free 2>/dev/null | sed 's/^ *//')
@@ -2482,11 +2523,10 @@ get_storage_stack_info() {
             while IFS= read -r lvm_line; do
                 [[ -z "$lvm_line" ]] && continue
                 if [[ "$lvm_printed" == false ]]; then
-                    echo "│"
                     print_color "$GREEN" "│ LVM:"
                     lvm_printed=true
                 fi
-                echo "│   VG $lvm_line"
+                print_wrapped_line "│   " "VG $lvm_line" "│     "
                 [[ "$COLLECT_JSON" == true ]] && JSON_STORAGE_LVM+=("VG $lvm_line")
                 found=true
             done < <(vgs --noheadings -o vg_name,vg_size,vg_free,lv_count 2>/dev/null | sed 's/^ *//')
@@ -2501,7 +2541,6 @@ get_storage_stack_info() {
         fi
         if [[ "$lv_count" -gt 0 ]]; then
             if [[ "$lvm_printed" == false ]]; then
-                echo "│"
                 print_color "$GREEN" "│ LVM:"
                 lvm_printed=true
             fi
@@ -4394,15 +4433,27 @@ get_raid_info() {
         if [[ -n "$md_info" ]]; then
             echo "│ Software RAID:"
             while IFS= read -r line; do
-                local raid_line_color=""
+                local raid_line_color="" raid_state="OK" md_name="" md_status="" md_level="" members="" member_count=0
                 if [[ "$line" =~ faulty|degraded|inactive|failed ]]; then
                     raid_line_color="$RED"
+                    raid_state="FAIL"
                 elif [[ "$line" =~ raid0 ]]; then
                     raid_line_color="$YELLOW"
+                    raid_state="WARN"
                 elif [[ "$line" =~ active ]]; then
                     raid_line_color="$GREEN"
                 fi
-                print_wrapped_line "│   " "$line" "│     " "$raid_line_color"
+                if [[ "$line" =~ ^(md[0-9]+)[[:space:]]+:[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*(.*)$ ]]; then
+                    md_name="${BASH_REMATCH[1]}"
+                    md_status="${BASH_REMATCH[2]}"
+                    md_level="${BASH_REMATCH[3]}"
+                    members="${BASH_REMATCH[4]}"
+                    member_count=$(grep -o '\[[0-9]\+\]' <<< "$members" | wc -l)
+                    printf '%b\n' "│   ${raid_line_color}${raid_state}${NC} ${md_name}  ${md_level}  ${md_status}  members=${member_count}"
+                    [[ "$md_level" == "raid0" ]] && print_wrapped_line "│        " "no redundancy; any member failure can break this array" "│        " "$YELLOW"
+                else
+                    print_wrapped_line "│   " "$line" "│     " "$raid_line_color"
+                fi
                 JSON_RAID_SW+=("$line")
             done <<< "$md_info"
             raid_found=true
@@ -4413,12 +4464,13 @@ get_raid_info() {
         local mdadm_scan=""
         mdadm_scan=$(run_limited 5 mdadm --detail --scan 2>/dev/null || true)
         if [[ -n "$mdadm_scan" ]]; then
-            print_color "$GREEN" "│ mdadm Detail Scan:"
+            local mdadm_count=0
             while IFS= read -r line; do
                 [[ -z "$line" ]] && continue
-                print_wrapped_line "│   " "$line" "│     "
+                ((mdadm_count++))
                 JSON_RAID_SW+=("mdadm: $line")
             done <<< "$mdadm_scan"
+            print_info "Array IDs" "$mdadm_count stored in JSON"
             raid_found=true
         fi
     fi
@@ -4437,11 +4489,13 @@ get_raid_info() {
                 fi
                 JSON_RAID_HW+=("$line")
             done <<< "$raid_controllers"
-            print_info "Storage Controllers" "$hw_count"
+            print_info "Controllers" "$hw_count total, ${#important_hw[@]} RAID/HBA/SAS"
             if [[ ${#important_hw[@]} -gt 0 ]]; then
                 print_color "$GREEN" "│ RAID/HBA Controllers:"
                 for line in "${important_hw[@]}"; do
-                    print_wrapped_line "│   " "$line" "│     "
+                    local slot="${line%% *}" compact_name=""
+                    compact_pci_name compact_name "${line#* }"
+                    print_wrapped_line "│   " "HBA $slot  $compact_name" "│     "
                 done
             fi
             raid_found=true
