@@ -3956,15 +3956,40 @@ disk_summary_from_fields() {
 }
 
 print_disk_summary_header() {
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
+
     if [[ "$LANG_MODE" == "cn" ]]; then
-        print_color "$WHITE" "│ 磁盘摘要（状态 / 设备 / 温度 / 通电 / 型号容量）"
+        print_color "$WHITE" "│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）"
+        echo "├$(repeat_char '─' "$table_width")┤"
+        printf "│ "
+        print_fixed_cell "设备" "$w_device"; printf " │ "
+        print_fixed_cell "基本信息" "$w_basic"; printf " │ "
+        print_fixed_cell "SMART" "$w_smart"; printf " │ "
+        print_fixed_cell "通电" "$w_hours"; printf " │ "
+        print_fixed_cell "温度" "$w_temp"; printf " │ "
+        print_fixed_cell "坏块" "$w_bad"; printf " │ "
+        print_fixed_cell "备注" "$w_note"; printf " │\n"
+        echo "├$(repeat_char '─' "$table_width")┤"
     else
-        print_color "$WHITE" "│ Disk Summary (state / device / temp / hours / model)"
+        print_color "$WHITE" "│ Disk Summary (defects=reallocated/pending/offline)"
+        echo "├$(repeat_char '─' "$table_width")┤"
+        printf "│ "
+        print_fixed_cell "Device" "$w_device"; printf " │ "
+        print_fixed_cell "Basic Info" "$w_basic"; printf " │ "
+        print_fixed_cell "SMART" "$w_smart"; printf " │ "
+        print_fixed_cell "Hours" "$w_hours"; printf " │ "
+        print_fixed_cell "Temp" "$w_temp"; printf " │ "
+        print_fixed_cell "Defects" "$w_bad"; printf " │ "
+        print_fixed_cell "Notes" "$w_note"; printf " │\n"
+        echo "├$(repeat_char '─' "$table_width")┤"
     fi
 }
 
 print_disk_summary_footer() {
-    :
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
+    echo "└$(repeat_char '─' "$table_width")┘"
 }
 
 disk_summary_smart_color() {
@@ -4030,53 +4055,22 @@ disk_summary_note_color() {
 print_disk_summary_row() {
     local disk="$1"
     local basic_info="$2"
-    local w_state=5 w_device=12 w_temp=6 w_hours=8 w_basic=36
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
     local smart_color="" temp_color="" bad_color="" note_color=""
-    local state="" state_color="" basic_cell="" details=()
 
     smart_color="$(disk_summary_smart_color)"
     temp_color="$(disk_summary_temp_color)"
     bad_color="$(disk_summary_bad_color)"
     note_color="$(disk_summary_note_color)"
 
-    case "$DISK_SUMMARY_SMART" in
-        PASS|PASSED|OK)
-            state="OK"
-            state_color="$GREEN"
-            ;;
-        FAIL|FAILED)
-            state="FAIL"
-            state_color="$RED"
-            ;;
-        -|"")
-            state="INFO"
-            state_color="$YELLOW"
-            ;;
-        *)
-            state="$DISK_SUMMARY_SMART"
-            state_color="$smart_color"
-            ;;
-    esac
-
-    if [[ -n "$bad_color" && "$bad_color" == "$RED" && "$state" == "OK" ]]; then
-        state="WARN"
-        state_color="$YELLOW"
-    fi
-
-    fit_display_to basic_cell "$basic_info" "$w_basic"
-
-    printf "│   "
-    print_colored_fixed_cell "$state" "$w_state" "$state_color"; printf " "
-    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " "
-    print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " "
-    print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " "
-    printf '%s\n' "$basic_cell"
-
-    [[ -n "$DISK_SUMMARY_BAD" && "$DISK_SUMMARY_BAD" != "-" ]] && details+=("defects=$DISK_SUMMARY_BAD")
-    [[ -n "$DISK_SUMMARY_NOTE" && "$DISK_SUMMARY_NOTE" != "-" ]] && details+=("$DISK_SUMMARY_NOTE")
-    if [[ ${#details[@]} -gt 0 ]]; then
-        print_wrapped_line "│         " "${details[*]}" "│         " "$note_color"
-    fi
+    printf "│ "
+    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " │ "
+    print_fixed_cell "$basic_info" "$w_basic"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_SMART" "$w_smart" "$smart_color"; printf " │ "
+    print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_BAD" "$w_bad" "$bad_color"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_NOTE" "$w_note" "$note_color"; printf " │\n"
 }
 
 # Function to get disk information with enhanced SMART data
