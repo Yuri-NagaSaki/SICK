@@ -542,6 +542,91 @@ print_info() {
     printf "│ %s%*s: %s\n" "$label" $padding "" "$value"
 }
 
+print_wrapped_line() {
+    [[ "$QUIET_MODE" == true ]] && return
+    local prefix="$1"
+    local text="${2:-}"
+    local cont_prefix="${3:-$prefix}"
+    local color="${4:-}"
+    local max_width="${5:-78}"
+    local current_prefix="$prefix"
+    local available=0
+    local chunk="" candidate="" rest="" cut=0
+
+    [[ -z "$text" ]] && text="-"
+
+    while [[ -n "$text" ]]; do
+        get_display_width "$current_prefix"
+        available=$((max_width - DISPLAY_WIDTH_RESULT))
+        [[ "$available" -lt 10 ]] && available=10
+
+        get_display_width "$text"
+        if [[ "$DISPLAY_WIDTH_RESULT" -le "$available" ]]; then
+            if [[ -n "$color" ]]; then
+                printf '%s%b%s%b\n' "$current_prefix" "$color" "$text" "$NC"
+            else
+                printf '%s%s\n' "$current_prefix" "$text"
+            fi
+            break
+        fi
+
+        cut="$available"
+        [[ "$cut" -gt "${#text}" ]] && cut="${#text}"
+        chunk="${text:0:$cut}"
+        while true; do
+            get_display_width "$chunk"
+            [[ "$DISPLAY_WIDTH_RESULT" -le "$available" || "$cut" -le 1 ]] && break
+            cut=$((cut - 1))
+            chunk="${text:0:$cut}"
+        done
+
+        candidate="${chunk% *}"
+        if [[ "$candidate" != "$chunk" && ${#candidate} -ge 16 ]]; then
+            chunk="$candidate"
+            cut="${#chunk}"
+        fi
+
+        rest="${text:$cut}"
+        rest="${rest#"${rest%%[![:space:]]*}"}"
+        if [[ -n "$rest" && ${#rest} -lt 8 && "$chunk" == *" "* ]]; then
+            candidate="${chunk% *}"
+            if [[ "$candidate" != "$chunk" && ${#candidate} -ge 16 ]]; then
+                chunk="$candidate"
+                cut="${#chunk}"
+            fi
+        fi
+
+        if [[ -n "$color" ]]; then
+            printf '%s%b%s%b\n' "$current_prefix" "$color" "$chunk" "$NC"
+        else
+            printf '%s%s\n' "$current_prefix" "$chunk"
+        fi
+
+        rest="${text:$cut}"
+        rest="${rest#"${rest%%[![:space:]]*}"}"
+        text="$rest"
+        current_prefix="$cont_prefix"
+    done
+}
+
+print_detail_line() {
+    local label="$1"
+    local value="$2"
+    local color="${3:-}"
+    local label_width=12
+    local prefix=""
+    local cont_prefix=""
+    local label_pad=0
+
+    get_display_width "$label"
+    label_pad=$((label_width - DISPLAY_WIDTH_RESULT))
+    [[ "$label_pad" -lt 0 ]] && label_pad=0
+
+    printf -v prefix '│   %s%*s: ' "$label" "$label_pad" ''
+    printf -v cont_prefix '│   %*s  ' "$label_width" ''
+    print_wrapped_line "$prefix" "$value" "$cont_prefix" "$color"
+}
+
 # Function to print table cell with proper alignment
 print_table_cell() {
     [[ "$QUIET_MODE" == true ]] && return
@@ -1932,12 +2017,11 @@ process_pcie_link_block() {
 
     if [[ "$status" == "DEGRADED" ]]; then
         if [[ "$PCIE_DEGRADED_PRINTED" != true ]]; then
-            echo "│"
             print_color "$YELLOW" "│ Degraded PCIe Links:"
             PCIE_DEGRADED_PRINTED=true
         fi
         printf '%b\n' "│   ${slot}: ${sta_speed:-?}/${sta_width:-?} (cap ${cap_speed:-?}/${cap_width:-?}) ${status_color}${status}${NC}"
-        echo "│     $name"
+        print_wrapped_line "│     " "$name" "│       "
     fi
 
     if [[ "$COLLECT_JSON" == true ]]; then
@@ -2018,12 +2102,11 @@ process_pcie_sysfs_link() {
 
     if [[ "$status" == "DEGRADED" ]]; then
         if [[ "$PCIE_DEGRADED_PRINTED" != true ]]; then
-            echo "│"
             print_color "$YELLOW" "│ Degraded PCIe Links:"
             PCIE_DEGRADED_PRINTED=true
         fi
         printf '%b\n' "│   ${slot}: ${sta_speed:-?}/${sta_width:-?} (cap ${cap_speed:-?}/${cap_width:-?}) ${status_color}${status}${NC}"
-        [[ -n "$name" ]] && echo "│     $name"
+        [[ -n "$name" ]] && print_wrapped_line "│     " "$name" "│       "
     fi
 
     if [[ "$COLLECT_JSON" == true ]]; then
@@ -2059,7 +2142,6 @@ get_pcie_link_info() {
         done
 
         if [[ "$PCIE_LINK_COUNT" -gt 0 ]]; then
-            echo "│"
             print_info "PCIe Links" "$PCIE_LINK_COUNT"
             print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
             print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
@@ -2095,7 +2177,6 @@ get_pcie_link_info() {
     done <<< "$pci_verbose"
     process_pcie_link_block "$block"
 
-    echo "│"
     print_info "PCIe Links" "$PCIE_LINK_COUNT"
     print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
     print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
@@ -3875,40 +3956,15 @@ disk_summary_from_fields() {
 }
 
 print_disk_summary_header() {
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
-    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
-
     if [[ "$LANG_MODE" == "cn" ]]; then
-        print_color "$WHITE" "│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）"
-        echo "├$(repeat_char '─' "$table_width")┤"
-        printf "│ "
-        print_fixed_cell "设备" "$w_device"; printf " │ "
-        print_fixed_cell "基本信息" "$w_basic"; printf " │ "
-        print_fixed_cell "SMART" "$w_smart"; printf " │ "
-        print_fixed_cell "通电" "$w_hours"; printf " │ "
-        print_fixed_cell "温度" "$w_temp"; printf " │ "
-        print_fixed_cell "坏块" "$w_bad"; printf " │ "
-        print_fixed_cell "备注" "$w_note"; printf " │\n"
-        echo "├$(repeat_char '─' "$table_width")┤"
+        print_color "$WHITE" "│ 磁盘摘要（状态 / 设备 / 温度 / 通电 / 型号容量）"
     else
-        print_color "$WHITE" "│ Disk Summary (defects=reallocated/pending/offline)"
-        echo "├$(repeat_char '─' "$table_width")┤"
-        printf "│ "
-        print_fixed_cell "Device" "$w_device"; printf " │ "
-        print_fixed_cell "Basic Info" "$w_basic"; printf " │ "
-        print_fixed_cell "SMART" "$w_smart"; printf " │ "
-        print_fixed_cell "Hours" "$w_hours"; printf " │ "
-        print_fixed_cell "Temp" "$w_temp"; printf " │ "
-        print_fixed_cell "Defects" "$w_bad"; printf " │ "
-        print_fixed_cell "Notes" "$w_note"; printf " │\n"
-        echo "├$(repeat_char '─' "$table_width")┤"
+        print_color "$WHITE" "│ Disk Summary (state / device / temp / hours / model)"
     fi
 }
 
 print_disk_summary_footer() {
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
-    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
-    echo "└$(repeat_char '─' "$table_width")┘"
+    :
 }
 
 disk_summary_smart_color() {
@@ -3974,22 +4030,53 @@ disk_summary_note_color() {
 print_disk_summary_row() {
     local disk="$1"
     local basic_info="$2"
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local w_state=5 w_device=12 w_temp=6 w_hours=8 w_basic=36
     local smart_color="" temp_color="" bad_color="" note_color=""
+    local state="" state_color="" basic_cell="" details=()
 
     smart_color="$(disk_summary_smart_color)"
     temp_color="$(disk_summary_temp_color)"
     bad_color="$(disk_summary_bad_color)"
     note_color="$(disk_summary_note_color)"
 
-    printf "│ "
-    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " │ "
-    print_fixed_cell "$basic_info" "$w_basic"; printf " │ "
-    print_colored_fixed_cell "$DISK_SUMMARY_SMART" "$w_smart" "$smart_color"; printf " │ "
-    print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " │ "
-    print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " │ "
-    print_colored_fixed_cell "$DISK_SUMMARY_BAD" "$w_bad" "$bad_color"; printf " │ "
-    print_colored_fixed_cell "$DISK_SUMMARY_NOTE" "$w_note" "$note_color"; printf " │\n"
+    case "$DISK_SUMMARY_SMART" in
+        PASS|PASSED|OK)
+            state="OK"
+            state_color="$GREEN"
+            ;;
+        FAIL|FAILED)
+            state="FAIL"
+            state_color="$RED"
+            ;;
+        -|"")
+            state="INFO"
+            state_color="$YELLOW"
+            ;;
+        *)
+            state="$DISK_SUMMARY_SMART"
+            state_color="$smart_color"
+            ;;
+    esac
+
+    if [[ -n "$bad_color" && "$bad_color" == "$RED" && "$state" == "OK" ]]; then
+        state="WARN"
+        state_color="$YELLOW"
+    fi
+
+    fit_display_to basic_cell "$basic_info" "$w_basic"
+
+    printf "│   "
+    print_colored_fixed_cell "$state" "$w_state" "$state_color"; printf " "
+    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " "
+    print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " "
+    print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " "
+    printf '%s\n' "$basic_cell"
+
+    [[ -n "$DISK_SUMMARY_BAD" && "$DISK_SUMMARY_BAD" != "-" ]] && details+=("defects=$DISK_SUMMARY_BAD")
+    [[ -n "$DISK_SUMMARY_NOTE" && "$DISK_SUMMARY_NOTE" != "-" ]] && details+=("$DISK_SUMMARY_NOTE")
+    if [[ ${#details[@]} -gt 0 ]]; then
+        print_wrapped_line "│         " "${details[*]}" "│         " "$note_color"
+    fi
 }
 
 # Function to get disk information with enhanced SMART data
@@ -4313,7 +4400,15 @@ get_raid_info() {
         if [[ -n "$md_info" ]]; then
             echo "│ Software RAID:"
             while IFS= read -r line; do
-                echo "│   $line"
+                local raid_line_color=""
+                if [[ "$line" =~ faulty|degraded|inactive|failed ]]; then
+                    raid_line_color="$RED"
+                elif [[ "$line" =~ raid0 ]]; then
+                    raid_line_color="$YELLOW"
+                elif [[ "$line" =~ active ]]; then
+                    raid_line_color="$GREEN"
+                fi
+                print_wrapped_line "│   " "$line" "│     " "$raid_line_color"
                 JSON_RAID_SW+=("$line")
             done <<< "$md_info"
             raid_found=true
@@ -4324,11 +4419,10 @@ get_raid_info() {
         local mdadm_scan=""
         mdadm_scan=$(run_limited 5 mdadm --detail --scan 2>/dev/null || true)
         if [[ -n "$mdadm_scan" ]]; then
-            echo "│"
             print_color "$GREEN" "│ mdadm Detail Scan:"
             while IFS= read -r line; do
                 [[ -z "$line" ]] && continue
-                echo "│   $line"
+                print_wrapped_line "│   " "$line" "│     "
                 JSON_RAID_SW+=("mdadm: $line")
             done <<< "$mdadm_scan"
             raid_found=true
@@ -4351,10 +4445,9 @@ get_raid_info() {
             done <<< "$raid_controllers"
             print_info "Storage Controllers" "$hw_count"
             if [[ ${#important_hw[@]} -gt 0 ]]; then
-                echo "│"
                 print_color "$GREEN" "│ RAID/HBA Controllers:"
                 for line in "${important_hw[@]}"; do
-                    echo "│   $line"
+                    print_wrapped_line "│   " "$line" "│     "
                 done
             fi
             raid_found=true
@@ -4382,13 +4475,12 @@ get_raid_info() {
                 ;;
         esac
 
-        echo "│"
         print_color "$GREEN" "│ RAID Tool: $tool_label"
         if [[ -n "$tool_output" ]]; then
             local tool_line="" summary_lines=()
             while IFS= read -r tool_line; do
                 [[ -z "$tool_line" ]] && continue
-                echo "│   $tool_line"
+                print_wrapped_line "│   " "$tool_line" "│     "
                 summary_lines+=("$tool_line")
             done <<< "$tool_output"
             tool_kv=(
@@ -4625,13 +4717,14 @@ get_network_info() {
     fi
 
     # Network interfaces with enhanced information (physical only)
+    local printed_interfaces=0
     for interface in "${interfaces[@]}"; do
         # Skip virtual interfaces
         if ! is_physical_interface "$interface"; then
             continue
         fi
-        echo "│"
-        print_color "$CYAN" "│ ═══ $interface ═══"
+        ((printed_interfaces++))
+        print_color "$CYAN" "│ Interface: $interface"
         
         # Get PCI device path for this interface
         local pci_path=""
@@ -4828,15 +4921,21 @@ get_network_info() {
         [[ -n "$duplex_val" ]] && link_summary+=" $duplex_val"
         [[ -n "$link_detected" ]] && link_summary+=" link=$link_detected"
         [[ -n "$master_val" ]] && link_summary+=" master=$master_val"
-        echo "│   Link: $link_summary"
-        [[ -n "$driver_val" || -n "$firmware_val" ]] && echo "│   Driver: ${driver_val:-?}${firmware_val:+ fw=$firmware_val}"
-        [[ -n "$model_val" ]] && echo "│   Model: $model_val"
-        [[ -n "$rx_display$tx_display" ]] && echo "│   Traffic: RX=${rx_display:-?} TX=${tx_display:-?}"
+        local link_color=""
+        if [[ "$status" == "UP" && "$link_detected" != "No" ]]; then
+            link_color="$GREEN"
+        elif [[ "$status" == "DOWN" || "$link_detected" == "No" ]]; then
+            link_color="$YELLOW"
+        fi
+        print_detail_line "Link" "$link_summary" "$link_color"
+        [[ -n "$driver_val" || -n "$firmware_val" ]] && print_detail_line "Driver" "${driver_val:-?}${firmware_val:+ fw=$firmware_val}"
+        [[ -n "$model_val" ]] && print_detail_line "Model" "$model_val"
+        [[ -n "$rx_display$tx_display" ]] && print_detail_line "Traffic" "RX=${rx_display:-?} TX=${tx_display:-?}"
 
         if [[ ${#error_summary[@]} -gt 0 ]]; then
-            printf '%b\n' "│   Errors: ${YELLOW}${error_summary[*]}${NC}"
+            print_detail_line "Errors" "${error_summary[*]}" "$YELLOW"
         fi
-        [[ -n "$ethtool_error_summary" ]] && printf '%b\n' "│   NIC Counters: ${YELLOW}${ethtool_error_summary}${NC}"
+        [[ -n "$ethtool_error_summary" ]] && print_detail_line "NIC Counters" "$ethtool_error_summary" "$YELLOW"
 
         local net_kv=(
             "$(json_kv "name" "$interface")"
@@ -4878,7 +4977,6 @@ get_gpu_info() {
     
     # NVIDIA GPUs
     if command -v nvidia-smi >/dev/null 2>&1; then
-        echo "│"
         print_color "$GREEN" "│ NVIDIA Graphics Cards:"
         
         # Get NVIDIA GPU information
@@ -4890,13 +4988,12 @@ get_gpu_info() {
             local power_val=$(echo "$power" | xargs)
             local util_val=$(echo "$util" | xargs)
 
-            echo "│   ═══ $name_val ═══"
-            echo "│   $(get_label "memory"): ${memory_val} MB"
-            echo "│   $(get_label "driver"): $driver_val"
-            echo "│   $(get_label "temperature"): ${temp_val}°C"
-            echo "│   Power Draw: ${power_val} W"
-            echo "│   GPU Usage: ${util_val}%"
-            echo "│"
+            print_color "$CYAN" "│ GPU: $name_val"
+            print_detail_line "$(get_label "memory")" "${memory_val} MB"
+            print_detail_line "$(get_label "driver")" "$driver_val"
+            print_detail_line "$(get_label "temperature")" "${temp_val}°C"
+            print_detail_line "Power Draw" "${power_val} W"
+            print_detail_line "GPU Usage" "${util_val}%"
 
             local gpu_kv=(
                 "$(json_kv "source" "nvidia-smi")"
@@ -4914,10 +5011,9 @@ get_gpu_info() {
     
     # AMD GPUs
     if command -v rocm-smi >/dev/null 2>&1; then
-        echo "│"
         print_color "$GREEN" "│ AMD Graphics Cards:"
         while IFS= read -r line; do
-            echo "│   $line"
+            print_wrapped_line "│   " "$line" "│     "
             local gpu_kv=(
                 "$(json_kv "source" "rocm-smi")"
                 "$(json_kv "line" "$line")"
@@ -4933,11 +5029,10 @@ get_gpu_info() {
         local gpu_devices=$(printf '%s\n' "$LSPCI_RESULT" | grep -E "(VGA|3D|Display)" | grep -v "Audio")
         if [[ -n "$gpu_devices" ]]; then
             if [[ "$gpu_found" == false ]]; then
-                echo "│"
                 print_color "$GREEN" "│ Graphics Cards (PCI):"
             fi
             while IFS= read -r line; do
-                echo "│   $line"
+                print_wrapped_line "│   " "$line" "│     "
                 local gpu_kv=(
                     "$(json_kv "source" "lspci")"
                     "$(json_kv "line" "$line")"
@@ -4953,11 +5048,11 @@ get_gpu_info() {
     if [[ -n "$LSHW_DISPLAY_RESULT" ]]; then
         local gpu_lshw="$LSHW_DISPLAY_RESULT"
         if [[ -n "$gpu_lshw" ]]; then
-            echo "│"
             print_color "$GREEN" "│ Display Hardware Summary:"
             while IFS= read -r line; do
                 if [[ -n "$line" ]]; then
-                    echo "│   $line"
+                    [[ "$line" =~ ^[[:space:]=]+$ ]] && continue
+                    print_wrapped_line "│   " "$line" "│     "
                     local gpu_kv=(
                         "$(json_kv "source" "lshw")"
                         "$(json_kv "line" "$line")"
