@@ -41,6 +41,7 @@ LSHW_DISPLAY_PREFETCH_PID=""
 LSHW_DISPLAY_PREFETCH_FILE=""
 COLLECT_JSON=false
 declare -A DISK_BASIC_INFO_CACHE
+declare -A DISK_SMART_FIELDS
 declare -A PCIE_NAME_CACHE
 
 # Collected memory data. Rendering and JSON assembly consume these instead of
@@ -386,13 +387,15 @@ json_reset() {
 
 disk_smart_reset() {
     JSON_DISK_SMART_KV=()
+    DISK_SMART_FIELDS=()
 }
 
 disk_smart_add() {
     local key="$1"
     local val="$2"
-    [[ "$COLLECT_JSON" == true ]] || return
     [[ -z "$key" || -z "$val" ]] && return
+    DISK_SMART_FIELDS[$key]="$val"
+    [[ "$COLLECT_JSON" == true ]] || return
     JSON_DISK_SMART_KV+=("$(json_kv "$key" "$val")")
 }
 
@@ -478,6 +481,11 @@ print_subsection() {
 # Function to calculate display width of string (considering CJK characters)
 get_display_width() {
     local str="$1"
+
+    if [[ -z "$str" ]]; then
+        DISPLAY_WIDTH_RESULT=0
+        return
+    fi
 
     if [[ ${DISPLAY_WIDTH_CACHE[$str]+_} ]]; then
         DISPLAY_WIDTH_RESULT="${DISPLAY_WIDTH_CACHE[$str]}"
@@ -585,6 +593,62 @@ print_table_row() {
     done
     
     echo "$row"
+}
+
+fit_display_to() {
+    local __result_var="$1"
+    local value="${2:-}"
+    local width="$3"
+    local candidate="$value"
+
+    [[ -z "$candidate" ]] && candidate="-"
+
+    get_display_width "$candidate"
+    if [[ "$DISPLAY_WIDTH_RESULT" -gt "$width" ]]; then
+        candidate="${candidate:0:$((width - 1))}~"
+        while true; do
+            get_display_width "$candidate"
+            [[ "$DISPLAY_WIDTH_RESULT" -le "$width" || ${#candidate} -le 1 ]] && break
+            candidate="${candidate:0:$(( ${#candidate} - 2 ))}~"
+        done
+    fi
+
+    printf -v "$__result_var" '%s' "$candidate"
+}
+
+print_fixed_cell() {
+    local value="${1:-}"
+    local width="$2"
+    local fitted=""
+    local pad=0
+
+    fit_display_to fitted "$value" "$width"
+    get_display_width "$fitted"
+    pad=$((width - DISPLAY_WIDTH_RESULT))
+    [[ "$pad" -lt 0 ]] && pad=0
+    printf '%s%*s' "$fitted" "$pad" ''
+}
+
+fit_simple_to() {
+    local __result_var="$1"
+    local value="${2:-}"
+    local width="$3"
+
+    [[ -z "$value" ]] && value="-"
+    if [[ ${#value} -gt "$width" ]]; then
+        value="${value:0:$((width - 1))}~"
+    fi
+
+    printf -v "$__result_var" '%s' "$value"
+}
+
+print_simple_cell() {
+    local value="${1:-}"
+    local width="$2"
+    local fitted=""
+
+    fit_simple_to fitted "$value" "$width"
+    printf "%-${width}s" "$fitted"
 }
 
 # Function to read a value from /etc/os-release without sourcing executable shell
@@ -3587,6 +3651,276 @@ parse_smart_text() {
     return 0
 }
 
+DISK_SUMMARY_SMART="-"
+DISK_SUMMARY_HOURS="-"
+DISK_SUMMARY_TEMP="-"
+DISK_SUMMARY_BAD="-"
+DISK_SUMMARY_NOTE="-"
+
+disk_summary_reset() {
+    DISK_SUMMARY_SMART="-"
+    DISK_SUMMARY_HOURS="-"
+    DISK_SUMMARY_TEMP="-"
+    DISK_SUMMARY_BAD="-"
+    DISK_SUMMARY_NOTE="-"
+}
+
+disk_summary_is_uint() {
+    [[ "${1:-}" =~ ^[0-9]+$ ]]
+}
+
+disk_summary_note_add() {
+    local note="$1"
+    [[ -z "$note" || "$note" == "-" ]] && return
+
+    if [[ -z "$DISK_SUMMARY_NOTE" || "$DISK_SUMMARY_NOTE" == "-" ]]; then
+        DISK_SUMMARY_NOTE="$note"
+    else
+        DISK_SUMMARY_NOTE+=", $note"
+    fi
+}
+
+disk_summary_set_smart() {
+    local status="$1"
+
+    case "$status" in
+        true|TRUE|True|PASSED|passed|Passed|OK|ok|Ok)
+            DISK_SUMMARY_SMART="PASS"
+            ;;
+        false|FALSE|False|FAILED|failed|Failed|FAIL|fail|Fail)
+            DISK_SUMMARY_SMART="FAIL"
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                disk_summary_note_add "SMART失败"
+            else
+                disk_summary_note_add "SMART failed"
+            fi
+            ;;
+        "")
+            DISK_SUMMARY_SMART="-"
+            ;;
+        *)
+            DISK_SUMMARY_SMART="$status"
+            ;;
+    esac
+}
+
+disk_summary_set_bad_metrics() {
+    local grown_defects="$1"
+    local read_uncorrected="$2"
+    local write_uncorrected="$3"
+    local verify_uncorrected="$4"
+    local non_medium_errors="$5"
+    local reallocated_sectors="$6"
+    local pending_sectors="$7"
+    local offline_uncorrectable="$8"
+    local reported_uncorrect="$9"
+    local has_ata_metrics=false
+    local has_sas_metrics=false
+    local total_bad=0
+    local total_uncorrected=0
+
+    disk_summary_is_uint "$reallocated_sectors" && has_ata_metrics=true
+    disk_summary_is_uint "$pending_sectors" && has_ata_metrics=true
+    disk_summary_is_uint "$offline_uncorrectable" && has_ata_metrics=true
+
+    if [[ "$has_ata_metrics" == true ]]; then
+        disk_summary_is_uint "$reallocated_sectors" || reallocated_sectors=0
+        disk_summary_is_uint "$pending_sectors" || pending_sectors=0
+        disk_summary_is_uint "$offline_uncorrectable" || offline_uncorrectable=0
+        total_bad=$((reallocated_sectors + pending_sectors + offline_uncorrectable))
+        DISK_SUMMARY_BAD="${reallocated_sectors}/${pending_sectors}/${offline_uncorrectable}"
+        if [[ "$total_bad" -gt 0 ]]; then
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                disk_summary_note_add "坏块=$total_bad"
+            else
+                disk_summary_note_add "bad sectors=$total_bad"
+            fi
+        fi
+    fi
+
+    disk_summary_is_uint "$read_uncorrected" && total_uncorrected=$((total_uncorrected + read_uncorrected))
+    disk_summary_is_uint "$write_uncorrected" && total_uncorrected=$((total_uncorrected + write_uncorrected))
+    disk_summary_is_uint "$verify_uncorrected" && total_uncorrected=$((total_uncorrected + verify_uncorrected))
+    disk_summary_is_uint "$grown_defects" && has_sas_metrics=true
+    [[ "$total_uncorrected" -gt 0 ]] && has_sas_metrics=true
+    disk_summary_is_uint "$non_medium_errors" && [[ "$non_medium_errors" -gt 0 ]] && has_sas_metrics=true
+
+    if [[ "$has_ata_metrics" == false && "$has_sas_metrics" == true ]]; then
+        disk_summary_is_uint "$grown_defects" || grown_defects=0
+        DISK_SUMMARY_BAD="GD:${grown_defects}/UE:${total_uncorrected}"
+    fi
+
+    if disk_summary_is_uint "$reported_uncorrect" && [[ "$reported_uncorrect" -gt 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "报告不可纠正=$reported_uncorrect"
+        else
+            disk_summary_note_add "reported uncorrect=$reported_uncorrect"
+        fi
+    fi
+    if disk_summary_is_uint "$grown_defects" && [[ "$grown_defects" -gt 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "增长缺陷=$grown_defects"
+        else
+            disk_summary_note_add "grown defects=$grown_defects"
+        fi
+    fi
+    if [[ "$total_uncorrected" -gt 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "未校正=$total_uncorrected"
+        else
+            disk_summary_note_add "uncorrected=$total_uncorrected"
+        fi
+    fi
+    if disk_summary_is_uint "$non_medium_errors" && [[ "$non_medium_errors" -gt 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "非介质=$non_medium_errors"
+        else
+            disk_summary_note_add "non-medium=$non_medium_errors"
+        fi
+    fi
+}
+
+disk_summary_from_fields() {
+    local disk="$1"
+    disk_summary_reset
+
+    if [[ "${#DISK_SMART_FIELDS[@]}" -eq 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            DISK_SUMMARY_NOTE="无SMART信息"
+        else
+            DISK_SUMMARY_NOTE="no SMART info"
+        fi
+        return 0
+    fi
+
+    local smart_status="${DISK_SMART_FIELDS[smart_status]:-}"
+    local power_on_hours="${DISK_SMART_FIELDS[power_on_hours]:-}"
+    local temperature="${DISK_SMART_FIELDS[temperature]:-}"
+    local total_reads="${DISK_SMART_FIELDS[total_reads]:-}"
+    local total_writes="${DISK_SMART_FIELDS[total_writes]:-}"
+    local percentage_used="${DISK_SMART_FIELDS[percentage_used]:-}"
+    local available_spare="${DISK_SMART_FIELDS[available_spare]:-}"
+    local critical_warning="${DISK_SMART_FIELDS[critical_warning]:-}"
+    local wear_level="${DISK_SMART_FIELDS[wear_level]:-}"
+    local grown_defects="${DISK_SMART_FIELDS[grown_defects]:-}"
+    local read_uncorrected="${DISK_SMART_FIELDS[read_uncorrected_errors]:-}"
+    local write_uncorrected="${DISK_SMART_FIELDS[write_uncorrected_errors]:-}"
+    local verify_uncorrected="${DISK_SMART_FIELDS[verify_uncorrected_errors]:-}"
+    local uncorrected_errors="${DISK_SMART_FIELDS[uncorrected_errors]:-}"
+    local non_medium_errors="${DISK_SMART_FIELDS[non_medium_errors]:-}"
+    local reallocated_sectors="${DISK_SMART_FIELDS[reallocated_sectors]:-}"
+    local pending_sectors="${DISK_SMART_FIELDS[pending_sectors]:-}"
+    local offline_uncorrectable="${DISK_SMART_FIELDS[offline_uncorrectable]:-}"
+    local reported_uncorrect="${DISK_SMART_FIELDS[reported_uncorrect]:-}"
+
+    if [[ -z "$read_uncorrected" && -z "$write_uncorrected" && -z "$verify_uncorrected" ]]; then
+        read_uncorrected="$uncorrected_errors"
+    fi
+
+    disk_summary_set_smart "$smart_status"
+    [[ -n "$power_on_hours" ]] && DISK_SUMMARY_HOURS="${power_on_hours}h"
+    [[ -n "$temperature" ]] && DISK_SUMMARY_TEMP="$temperature"
+    local temp_num="${temperature%%°*}"
+    if disk_summary_is_uint "$temp_num" && [[ "$temp_num" -ge 55 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "高温"
+        else
+            disk_summary_note_add "hot"
+        fi
+    fi
+
+    if [[ -n "$percentage_used" ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "已用${percentage_used}%"
+        else
+            disk_summary_note_add "used ${percentage_used}%"
+        fi
+    fi
+    if [[ -n "$available_spare" ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "备用${available_spare}%"
+        else
+            disk_summary_note_add "spare ${available_spare}%"
+        fi
+    fi
+    if disk_summary_is_uint "$critical_warning" && [[ "$critical_warning" -gt 0 ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "严重告警=$critical_warning"
+        else
+            disk_summary_note_add "critical=$critical_warning"
+        fi
+    fi
+    if [[ -n "$wear_level" ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "寿命${wear_level}%"
+        else
+            disk_summary_note_add "wear ${wear_level}%"
+        fi
+    fi
+    if [[ -n "$total_reads" || -n "$total_writes" ]]; then
+        disk_summary_note_add "R ${total_reads:-?} W ${total_writes:-?}"
+    fi
+
+    disk_summary_set_bad_metrics \
+        "$grown_defects" "$read_uncorrected" "$write_uncorrected" "$verify_uncorrected" \
+        "$non_medium_errors" "$reallocated_sectors" "$pending_sectors" \
+        "$offline_uncorrectable" "$reported_uncorrect"
+
+    if [[ "$DISK_SUMMARY_NOTE" == "-" && ! "$disk" =~ nvme ]]; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            disk_summary_note_add "无读写统计"
+        else
+            disk_summary_note_add "no I/O stats"
+        fi
+    fi
+
+    return 0
+}
+
+print_disk_summary_header() {
+    local last_cell=""
+
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        print_color "$WHITE" "│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）"
+        printf '│   '
+        print_fixed_cell "设备" 12; printf ' '
+        print_fixed_cell "基本信息" 32; printf ' '
+        print_fixed_cell "SMART" 6; printf ' '
+        print_fixed_cell "通电" 8; printf ' '
+        print_fixed_cell "温度" 6; printf ' '
+        print_fixed_cell "坏块" 9; printf ' '
+        fit_display_to last_cell "备注" 24
+        printf '%s\n' "$last_cell"
+    else
+        print_color "$WHITE" "│ Disk Summary (defects=reallocated/pending/offline)"
+        printf '│   '
+        print_fixed_cell "Device" 12; printf ' '
+        print_fixed_cell "Basic Info" 32; printf ' '
+        print_fixed_cell "SMART" 6; printf ' '
+        print_fixed_cell "Hours" 8; printf ' '
+        print_fixed_cell "Temp" 6; printf ' '
+        print_fixed_cell "Defects" 9; printf ' '
+        fit_display_to last_cell "Notes" 24
+        printf '%s\n' "$last_cell"
+    fi
+}
+
+print_disk_summary_row() {
+    local disk="$1"
+    local basic_info="$2"
+    local note_cell=""
+
+    printf '│   '
+    print_simple_cell "/dev/$disk" 12; printf ' '
+    print_simple_cell "$basic_info" 32; printf ' '
+    print_simple_cell "$DISK_SUMMARY_SMART" 6; printf ' '
+    print_simple_cell "$DISK_SUMMARY_HOURS" 8; printf ' '
+    print_simple_cell "$DISK_SUMMARY_TEMP" 6; printf ' '
+    print_simple_cell "$DISK_SUMMARY_BAD" 9; printf ' '
+    fit_simple_to note_cell "$DISK_SUMMARY_NOTE" 24
+    printf '%s\n' "$note_cell"
+}
+
 # Function to get disk information with enhanced SMART data
 # Display structure:
 #   1. First: RAID controllers and their member disks (grouped by controller)
@@ -3785,6 +4119,7 @@ get_disk_info() {
 
     local other_disk_count=0
     local other_disk_regex='^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'
+    [[ "$QUIET_MODE" != true ]] && print_disk_summary_header
 
     # Physical disk information with enhanced details
     for disk in "${disk_names[@]}"; do
@@ -3797,15 +4132,53 @@ get_disk_info() {
         fi
 
         ((other_disk_count++))
-        echo "│"
-        print_color "$CYAN" "│ ═══ /dev/$disk ═══"
-
-        # Basic disk information
         local disk_info="${DISK_BASIC_INFO_CACHE[$disk]}"
-        echo "│   Basic Info: $disk_info"
 
         DISK_JSON_EXTRA=()
         disk_smart_reset
+
+        if [[ "$QUIET_MODE" != true ]]; then
+            disk_summary_reset
+            local parsed=false
+
+            if [[ "$smartctl_available" == true ]]; then
+                if [[ "$use_json" == true ]]; then
+                    get_smart_json "$disk"
+                    local json_data="$SMART_JSON_RESULT"
+                    if [[ -n "$json_data" ]]; then
+                        parse_smart_json "$disk" "$json_data" >/dev/null && parsed=true
+                    fi
+                fi
+
+                if [[ "$parsed" == false ]]; then
+                    parse_smart_text "$disk" >/dev/null && parsed=true
+                fi
+
+                if [[ "$parsed" == true ]]; then
+                    disk_summary_from_fields "$disk"
+                else
+                    DISK_SUMMARY_SMART="-"
+                    if [[ "$LANG_MODE" == "cn" ]]; then
+                        DISK_SUMMARY_NOTE="无SMART信息"
+                    else
+                        DISK_SUMMARY_NOTE="no SMART info"
+                    fi
+                fi
+            else
+                if [[ "$LANG_MODE" == "cn" ]]; then
+                    DISK_SUMMARY_NOTE="smartctl未安装"
+                else
+                    DISK_SUMMARY_NOTE="smartctl missing"
+                fi
+            fi
+
+            print_disk_summary_row "$disk" "$disk_info"
+            continue
+        fi
+
+        echo "│"
+        print_color "$CYAN" "│ ═══ /dev/$disk ═══"
+        echo "│   Basic Info: $disk_info"
 
         # SMART information
         if [[ "$smartctl_available" == true ]]; then
