@@ -5,7 +5,7 @@
 # Compatible with Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora
 # 兼容 Debian/Ubuntu/CentOS/AlmaLinux/Rocky Linux/CloudLinux/Arch Linux/openSUSE/Fedora
 
-VERSION="2.8.0"
+VERSION="2.9.0"
 SCRIPT_NAME="Hardware Info Collector"
 
 # Temporary files tracking for cleanup
@@ -63,6 +63,20 @@ JSON_RAID_CONTROLLERS=()
 JSON_NETWORK=()
 JSON_GPU=()
 JSON_MOTHERBOARD_KV=()
+JSON_ECC_KV=()
+JSON_ECC_CONTROLLERS=()
+JSON_ECC_EVENTS=()
+JSON_NVME_DEEP=()
+JSON_PCIE_LINKS=()
+JSON_PLATFORM_KV=()
+JSON_PLATFORM_VULNERABILITIES=()
+JSON_STORAGE_BLOCKS=()
+JSON_STORAGE_MOUNTS=()
+JSON_STORAGE_LVM=()
+JSON_STORAGE_ZFS=()
+JSON_STORAGE_BTRFS=()
+JSON_STORAGE_MULTIPATH=()
+JSON_RAID_TOOLS=()
 JSON_DISK_SMART_KV=()
 DISK_JSON_EXTRA=()
 
@@ -102,6 +116,11 @@ declare -A LABELS_EN=(
     ["network_info"]="Network Interface Information"
     ["gpu_info"]="Graphics Card Information"
     ["motherboard_info"]="Motherboard Information"
+    ["ecc_info"]="ECC / Memory RAS Information"
+    ["nvme_deep_info"]="NVMe Deep Health"
+    ["pcie_info"]="PCIe Link Status"
+    ["platform_info"]="CPU / Platform Status"
+    ["storage_info"]="Filesystem / Storage Stack"
     ["hostname"]="Hostname"
     ["os"]="Operating System"
     ["kernel"]="Kernel Version"
@@ -159,6 +178,7 @@ declare -A LABELS_EN=(
     ["non_medium_errors"]="Non-medium Errors"
     ["bad_blocks"]="Bad Blocks"
     ["filesystem"]="Filesystem"
+    ["warning"]="Warning"
 )
 
 declare -A LABELS_CN=(
@@ -171,6 +191,11 @@ declare -A LABELS_CN=(
     ["network_info"]="网卡信息"
     ["gpu_info"]="显卡信息"
     ["motherboard_info"]="主板信息"
+    ["ecc_info"]="ECC / 内存 RAS 信息"
+    ["nvme_deep_info"]="NVMe 深度健康"
+    ["pcie_info"]="PCIe 链路状态"
+    ["platform_info"]="CPU / 平台状态"
+    ["storage_info"]="文件系统 / 存储栈"
     ["hostname"]="主机名"
     ["os"]="操作系统"
     ["kernel"]="内核版本"
@@ -228,6 +253,7 @@ declare -A LABELS_CN=(
     ["non_medium_errors"]="非介质错误"
     ["bad_blocks"]="坏块统计"
     ["filesystem"]="文件系统"
+    ["warning"]="警告"
 )
 
 # Function to get label based on current language
@@ -332,6 +358,20 @@ json_reset() {
     JSON_NETWORK=()
     JSON_GPU=()
     JSON_MOTHERBOARD_KV=()
+    JSON_ECC_KV=()
+    JSON_ECC_CONTROLLERS=()
+    JSON_ECC_EVENTS=()
+    JSON_NVME_DEEP=()
+    JSON_PCIE_LINKS=()
+    JSON_PLATFORM_KV=()
+    JSON_PLATFORM_VULNERABILITIES=()
+    JSON_STORAGE_BLOCKS=()
+    JSON_STORAGE_MOUNTS=()
+    JSON_STORAGE_LVM=()
+    JSON_STORAGE_ZFS=()
+    JSON_STORAGE_BTRFS=()
+    JSON_STORAGE_MULTIPATH=()
+    JSON_RAID_TOOLS=()
     JSON_DISK_SMART_KV=()
     DISK_JSON_EXTRA=()
 }
@@ -1487,6 +1527,715 @@ format_bytes() {
     echo "$result"
 }
 
+run_limited() {
+    local seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$seconds" "$@"
+    else
+        "$@"
+    fi
+}
+
+kv_line_get() {
+    local line="$1"
+    local key="$2"
+    local regex="(^|[[:space:]])${key}=\"([^\"]*)\""
+
+    if [[ "$line" =~ $regex ]]; then
+        printf '%s' "${BASH_REMATCH[2]}"
+    fi
+}
+
+get_cpu_platform_info() {
+    print_subsection "$(get_label "platform_info")"
+
+    JSON_PLATFORM_KV=()
+    JSON_PLATFORM_VULNERABILITIES=()
+
+    local microcode=""
+    local virtualization="No"
+    local numa_nodes=""
+    local sockets=""
+    local governor=""
+    local turbo_status=""
+    local lscpu_output=""
+
+    [[ -r /proc/cpuinfo ]] && microcode=$(awk -F': ' '/microcode/ {print $2; exit}' /proc/cpuinfo 2>/dev/null)
+
+    if grep -m1 -qwE 'vmx|svm' /proc/cpuinfo 2>/dev/null; then
+        virtualization="Yes"
+    fi
+
+    if command -v lscpu >/dev/null 2>&1; then
+        lscpu_output=$(lscpu 2>/dev/null)
+        numa_nodes=$(printf '%s\n' "$lscpu_output" | awk -F: '/^NUMA node\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')
+        sockets=$(printf '%s\n' "$lscpu_output" | awk -F: '/^Socket\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')
+    fi
+
+    if compgen -G "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor" >/dev/null 2>&1; then
+        governor=$(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null | sort -u | tr '\n' ',' | sed 's/,$//')
+    fi
+
+    if [[ -r /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
+        if [[ "$(< /sys/devices/system/cpu/intel_pstate/no_turbo)" == "1" ]]; then
+            turbo_status="Disabled"
+        else
+            turbo_status="Enabled"
+        fi
+    elif [[ -r /sys/devices/system/cpu/cpufreq/boost ]]; then
+        if [[ "$(< /sys/devices/system/cpu/cpufreq/boost)" == "1" ]]; then
+            turbo_status="Enabled"
+        else
+            turbo_status="Disabled"
+        fi
+    fi
+
+    print_info "Platform" "${sockets:-?} socket(s), ${numa_nodes:-?} NUMA node(s)"
+    print_info "Virtualization" "$virtualization"
+    [[ -n "$microcode" ]] && print_info "Microcode" "$microcode"
+
+    [[ -n "$microcode" ]] && JSON_PLATFORM_KV+=("$(json_kv "microcode" "$microcode")")
+    JSON_PLATFORM_KV+=("$(json_kv "virtualization" "$virtualization")")
+    [[ -n "$sockets" ]] && JSON_PLATFORM_KV+=("$(json_kv "sockets" "$sockets")")
+    [[ -n "$numa_nodes" ]] && JSON_PLATFORM_KV+=("$(json_kv "numa_nodes" "$numa_nodes")")
+    [[ -n "$governor" ]] && JSON_PLATFORM_KV+=("$(json_kv "governor" "$governor")")
+    [[ -n "$turbo_status" ]] && JSON_PLATFORM_KV+=("$(json_kv "turbo_boost" "$turbo_status")")
+
+    if compgen -G "/sys/devices/system/cpu/vulnerabilities/*" >/dev/null 2>&1; then
+        local vuln_file="" vuln_name="" vuln_status="" vuln_kv=()
+        local vulnerable_count=0 mitigated_count=0 not_affected_count=0 other_vuln_count=0
+        local vulnerable_lines=()
+        for vuln_file in /sys/devices/system/cpu/vulnerabilities/*; do
+            [[ -r "$vuln_file" ]] || continue
+            vuln_name="${vuln_file##*/}"
+            vuln_status=$(<"$vuln_file")
+            case "$vuln_status" in
+                Vulnerable*)
+                    ((vulnerable_count++))
+                    vulnerable_lines+=("$vuln_name: $vuln_status")
+                    ;;
+                Mitigation:*)
+                    ((mitigated_count++))
+                    ;;
+                "Not affected")
+                    ((not_affected_count++))
+                    ;;
+                *)
+                    ((other_vuln_count++))
+                    ;;
+            esac
+            vuln_kv=(
+                "$(json_kv "name" "$vuln_name")"
+                "$(json_kv "status" "$vuln_status")"
+            )
+            JSON_PLATFORM_VULNERABILITIES+=("$(json_obj "${vuln_kv[@]}")")
+        done
+        print_info "CPU Vulnerability" "${vulnerable_count} vulnerable, ${mitigated_count} mitigated"
+        if [[ "$vulnerable_count" -gt 0 ]]; then
+            echo "│"
+            print_color "$YELLOW" "│ Vulnerable CPU Items:"
+            local vline=""
+            for vline in "${vulnerable_lines[@]}"; do
+                printf '%b\n' "│   ${YELLOW}${vline}${NC}"
+            done
+        fi
+    fi
+
+    echo "└$(repeat_char '─' 50)"
+}
+
+get_ecc_info() {
+    print_subsection "$(get_label "ecc_info")"
+
+    JSON_ECC_KV=()
+    JSON_ECC_CONTROLLERS=()
+    JSON_ECC_EVENTS=()
+
+    local correction_type=""
+    local edac_available="No"
+    local total_ce=0
+    local total_ue=0
+
+    if command -v dmidecode >/dev/null 2>&1 && [[ $EUID -eq 0 ]]; then
+        correction_type=$(dmidecode -t 16 2>/dev/null | awk -F': ' '/Error Correction Type:/ {print $2; exit}')
+    fi
+
+    [[ -n "$correction_type" ]] && print_info "ECC Type" "$correction_type"
+
+    if compgen -G "/sys/devices/system/edac/mc/mc*" >/dev/null 2>&1; then
+        edac_available="Yes"
+
+        local mc="" mc_name="" ce="" ue="" size_mb="" dimm="" dimm_label="" dimm_ce="" dimm_ue="" dimm_objs=() dimm_kv=() controller_kv=()
+        local edac_error_lines=()
+        for mc in /sys/devices/system/edac/mc/mc*; do
+            [[ -d "$mc" ]] || continue
+            mc_name="${mc##*/}"
+            [[ -r "$mc/mc_name" ]] && mc_name="$(<"$mc/mc_name")"
+            [[ -r "$mc/ce_count" ]] && ce="$(<"$mc/ce_count")" || ce="0"
+            [[ -r "$mc/ue_count" ]] && ue="$(<"$mc/ue_count")" || ue="0"
+            [[ -r "$mc/size_mb" ]] && size_mb="$(<"$mc/size_mb")" || size_mb=""
+
+            [[ "$ce" =~ ^[0-9]+$ ]] && total_ce=$((total_ce + ce))
+            [[ "$ue" =~ ^[0-9]+$ ]] && total_ue=$((total_ue + ue))
+
+            if [[ "$ue" =~ ^[0-9]+$ && "$ue" -gt 0 ]]; then
+                edac_error_lines+=("${mc##*/}: ${mc_name} CE=$ce UE=$ue")
+            elif [[ "$ce" =~ ^[0-9]+$ && "$ce" -gt 0 ]]; then
+                edac_error_lines+=("${mc##*/}: ${mc_name} CE=$ce UE=$ue")
+            fi
+
+            dimm_objs=()
+            for dimm in "$mc"/dimm*; do
+                [[ -d "$dimm" ]] || continue
+                [[ -r "$dimm/dimm_label" ]] && dimm_label="$(<"$dimm/dimm_label")" || dimm_label="${dimm##*/}"
+                [[ -r "$dimm/dimm_ce_count" ]] && dimm_ce="$(<"$dimm/dimm_ce_count")" || dimm_ce=""
+                [[ -r "$dimm/dimm_ue_count" ]] && dimm_ue="$(<"$dimm/dimm_ue_count")" || dimm_ue=""
+                if [[ -n "$dimm_ce$dimm_ue" ]]; then
+                    if [[ "${dimm_ce:-0}" =~ ^[0-9]+$ && "${dimm_ce:-0}" -gt 0 ]] || [[ "${dimm_ue:-0}" =~ ^[0-9]+$ && "${dimm_ue:-0}" -gt 0 ]]; then
+                        edac_error_lines+=("$dimm_label CE=${dimm_ce:-0} UE=${dimm_ue:-0}")
+                    fi
+                    dimm_kv=(
+                        "$(json_kv "label" "$dimm_label")"
+                    )
+                    [[ -n "$dimm_ce" ]] && dimm_kv+=("$(json_kv "ce_count" "$dimm_ce")")
+                    [[ -n "$dimm_ue" ]] && dimm_kv+=("$(json_kv "ue_count" "$dimm_ue")")
+                    dimm_objs+=("$(json_obj "${dimm_kv[@]}")")
+                fi
+            done
+
+            controller_kv=(
+                "$(json_kv "name" "$mc_name")"
+                "$(json_kv "ce_count" "$ce")"
+                "$(json_kv "ue_count" "$ue")"
+                "$(json_kv_raw "dimms" "$(json_array "${dimm_objs[@]}")")"
+            )
+            [[ -n "$size_mb" ]] && controller_kv+=("$(json_kv "size_mb" "$size_mb")")
+            JSON_ECC_CONTROLLERS+=("$(json_obj "${controller_kv[@]}")")
+        done
+
+        if [[ ${#edac_error_lines[@]} -gt 0 ]]; then
+            echo "│"
+            print_color "$YELLOW" "│ EDAC Errors:"
+            local edac_line=""
+            for edac_line in "${edac_error_lines[@]}"; do
+                if [[ "$edac_line" =~ UE=[1-9] ]]; then
+                    printf '%b\n' "│   ${RED}${edac_line}${NC}"
+                else
+                    printf '%b\n' "│   ${YELLOW}${edac_line}${NC}"
+                fi
+            done
+        fi
+    fi
+
+    print_info "EDAC Available" "$edac_available"
+    print_info "Corrected Errors" "$total_ce"
+    print_info "Uncorrected Errors" "$total_ue"
+
+    if [[ "$total_ue" -gt 0 ]]; then
+        printf '%b\n' "│   $(get_label "warning"): ${RED}Uncorrected ECC errors detected${NC}"
+    elif [[ "$total_ce" -gt 0 ]]; then
+        printf '%b\n' "│   $(get_label "warning"): ${YELLOW}Corrected ECC errors detected${NC}"
+    fi
+
+    local event_lines=""
+    event_lines=$(dmesg 2>/dev/null | grep -Ei 'Hardware Error|Machine check|MCE:|memory error|ECC.*(error|CE|UE)|EDAC.*(error|CE|UE)|corrected error|uncorrected error|rasdaemon|mcelog' | grep -Eiv 'Giving out device|EDAC MC: Ver|ACPI:|systemd|Reserving' | tail -10 || true)
+    if [[ -n "$event_lines" ]]; then
+        echo "│"
+        print_color "$GREEN" "│ Recent Hardware Memory Events:"
+        local event=""
+        while IFS= read -r event; do
+            [[ -z "$event" ]] && continue
+            echo "│   $event"
+            JSON_ECC_EVENTS+=("$event")
+        done <<< "$event_lines"
+    fi
+
+    [[ -n "$correction_type" ]] && JSON_ECC_KV+=("$(json_kv "correction_type" "$correction_type")")
+    JSON_ECC_KV+=("$(json_kv "edac_available" "$edac_available")")
+    JSON_ECC_KV+=("$(json_kv "corrected_errors" "$total_ce")")
+    JSON_ECC_KV+=("$(json_kv "uncorrected_errors" "$total_ue")")
+
+    if [[ -z "$correction_type" && "$edac_available" == "No" && -z "$event_lines" ]]; then
+        print_info "$(get_label "status")" "$(get_label "not_detected")"
+    fi
+
+    echo "└$(repeat_char '─' 50)"
+}
+
+pcie_speed_rank() {
+    local speed="$1"
+    speed="${speed// /}"
+    case "$speed" in
+        2.5GT/s*) echo 1 ;;
+        5GT/s*) echo 2 ;;
+        8GT/s*) echo 3 ;;
+        16GT/s*) echo 4 ;;
+        32GT/s*) echo 5 ;;
+        64GT/s*) echo 6 ;;
+        *) echo 0 ;;
+    esac
+}
+
+process_pcie_link_block() {
+    local block="$1"
+    local first_line="" slot="" name="" lnkcap="" lnksta=""
+    local cap_speed="" cap_width="" sta_speed="" sta_width=""
+    local status="OK" status_color="$GREEN" link_kv=()
+
+    first_line=$(printf '%s\n' "$block" | head -1)
+    lnkcap=$(printf '%s\n' "$block" | grep -m1 'LnkCap:')
+    lnksta=$(printf '%s\n' "$block" | grep -m1 'LnkSta:')
+    [[ -z "$first_line" || -z "$lnkcap" || -z "$lnksta" ]] && return
+
+    slot="${first_line%% *}"
+    name="${first_line#* }"
+    cap_speed=$(sed -n 's/.*Speed \([^,]*\).*/\1/p' <<< "$lnkcap")
+    cap_width=$(sed -n 's/.*Width \(x[0-9]\+\).*/\1/p' <<< "$lnkcap")
+    sta_speed=$(sed -n 's/.*Speed \([^,]*\).*/\1/p' <<< "$lnksta")
+    sta_width=$(sed -n 's/.*Width \(x[0-9]\+\).*/\1/p' <<< "$lnksta")
+
+    local cap_rank="" sta_rank="" cap_width_num="" sta_width_num=""
+    cap_rank=$(pcie_speed_rank "$cap_speed")
+    sta_rank=$(pcie_speed_rank "$sta_speed")
+    cap_width_num="${cap_width#x}"
+    sta_width_num="${sta_width#x}"
+
+    if [[ "$sta_width" == "x0" ]]; then
+        status="INACTIVE"
+        status_color="$BLUE"
+    elif [[ "$cap_rank" =~ ^[0-9]+$ && "$sta_rank" =~ ^[0-9]+$ && "$sta_rank" -gt 0 && "$cap_rank" -gt 0 && "$sta_rank" -lt "$cap_rank" ]]; then
+        status="DEGRADED"
+        status_color="$YELLOW"
+    fi
+    if [[ "$status" != "INACTIVE" && "$cap_width_num" =~ ^[0-9]+$ && "$sta_width_num" =~ ^[0-9]+$ && "$sta_width_num" -gt 0 && "$sta_width_num" -lt "$cap_width_num" ]]; then
+        status="DEGRADED"
+        status_color="$YELLOW"
+    fi
+
+    ((PCIE_LINK_COUNT++))
+    [[ "$status" == "DEGRADED" ]] && ((PCIE_DEGRADED_COUNT++))
+    [[ "$status" == "INACTIVE" ]] && ((PCIE_INACTIVE_COUNT++))
+
+    if [[ "$status" == "DEGRADED" ]]; then
+        if [[ "$PCIE_DEGRADED_PRINTED" != true ]]; then
+            echo "│"
+            print_color "$YELLOW" "│ Degraded PCIe Links:"
+            PCIE_DEGRADED_PRINTED=true
+        fi
+        printf '%b\n' "│   ${slot}: ${sta_speed:-?}/${sta_width:-?} (cap ${cap_speed:-?}/${cap_width:-?}) ${status_color}${status}${NC}"
+        echo "│     $name"
+    fi
+
+    link_kv=(
+        "$(json_kv "slot" "$slot")"
+        "$(json_kv "name" "$name")"
+        "$(json_kv "current_speed" "$sta_speed")"
+        "$(json_kv "current_width" "$sta_width")"
+        "$(json_kv "cap_speed" "$cap_speed")"
+        "$(json_kv "cap_width" "$cap_width")"
+        "$(json_kv "status" "$status")"
+    )
+    JSON_PCIE_LINKS+=("$(json_obj "${link_kv[@]}")")
+}
+
+get_pcie_link_info() {
+    print_subsection "$(get_label "pcie_info")"
+
+    JSON_PCIE_LINKS=()
+    PCIE_LINK_COUNT=0
+    PCIE_DEGRADED_COUNT=0
+    PCIE_INACTIVE_COUNT=0
+    PCIE_DEGRADED_PRINTED=false
+
+    if ! command -v lspci >/dev/null 2>&1; then
+        print_info "$(get_label "status")" "lspci not installed"
+        echo "└$(repeat_char '─' 50)"
+        return
+    fi
+
+    local pci_verbose="" block="" line=""
+    pci_verbose=$(run_limited 8 lspci -D -vv 2>/dev/null || true)
+    if [[ -z "$pci_verbose" ]]; then
+        print_info "$(get_label "status")" "$(get_label "no_info")"
+        echo "└$(repeat_char '─' 50)"
+        return
+    fi
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -z "$line" ]]; then
+            process_pcie_link_block "$block"
+            block=""
+        else
+            block+="${line}"$'\n'
+        fi
+    done <<< "$pci_verbose"
+    process_pcie_link_block "$block"
+
+    echo "│"
+    print_info "PCIe Links" "$PCIE_LINK_COUNT"
+    print_info "Degraded Links" "$PCIE_DEGRADED_COUNT"
+    print_info "Inactive Links" "$PCIE_INACTIVE_COUNT"
+    if [[ "$PCIE_DEGRADED_COUNT" -eq 0 ]]; then
+        print_info "$(get_label "status")" "No degraded active links"
+    fi
+    echo "└$(repeat_char '─' 50)"
+}
+
+get_nvme_deep_info() {
+    print_subsection "$(get_label "nvme_deep_info")"
+
+    JSON_NVME_DEEP=()
+
+    if ! command -v nvme >/dev/null 2>&1; then
+        print_info "$(get_label "status")" "nvme-cli not installed"
+        echo "└$(repeat_char '─' 50)"
+        return
+    fi
+
+    local nvme_disks=()
+    local disk=""
+    if command -v lsblk >/dev/null 2>&1; then
+        while IFS= read -r disk; do
+            [[ "$disk" =~ ^nvme[0-9]+n[0-9]+$ ]] && nvme_disks+=("$disk")
+        done < <(lsblk -d -n -o NAME 2>/dev/null)
+    fi
+    if [[ ${#nvme_disks[@]} -eq 0 ]]; then
+        for disk in /dev/nvme*n*; do
+            [[ -e "$disk" ]] || continue
+            nvme_disks+=("${disk##*/}")
+        done
+    fi
+
+    if [[ ${#nvme_disks[@]} -eq 0 ]]; then
+        print_info "$(get_label "status")" "$(get_label "not_detected")"
+        echo "└$(repeat_char '─' 50)"
+        return
+    fi
+
+    local nvme_checked=0
+    local nvme_warn_count=0
+    local nvme_warn_lines=()
+    local unsafe_summary=()
+
+    for disk in "${nvme_disks[@]}"; do
+        local dev="/dev/$disk"
+        local controller="${disk%%n[0-9]*}"
+        local controller_dev="/dev/$controller"
+        local smart_json="" error_json="" id_json=""
+        local model="" serial="" firmware="" temperature="" critical_warning="" media_errors="" error_entries=""
+        local unsafe_shutdowns="" percentage_used="" available_spare="" warning_temp_time="" critical_temp_time="" nonzero_error_entries=""
+        local temperature_c=""
+        local nvme_kv=()
+
+        ((nvme_checked++))
+
+        smart_json=$(run_limited 6 nvme smart-log -o json "$dev" 2>/dev/null || true)
+        error_json=$(run_limited 6 nvme error-log -e 8 -o json "$dev" 2>/dev/null || true)
+        id_json=$(run_limited 6 nvme id-ctrl -o json "$controller_dev" 2>/dev/null || run_limited 6 nvme id-ctrl -o json "$dev" 2>/dev/null || true)
+
+        if [[ -n "$id_json" ]] && command -v jq >/dev/null 2>&1; then
+            model=$(jq -r '.mn // empty' 2>/dev/null <<< "$id_json" | xargs)
+            serial=$(jq -r '.sn // empty' 2>/dev/null <<< "$id_json" | xargs)
+            firmware=$(jq -r '.fr // empty' 2>/dev/null <<< "$id_json" | xargs)
+        fi
+
+        if [[ -n "$smart_json" ]] && command -v jq >/dev/null 2>&1; then
+            temperature=$(jq -r '.temperature // .temperature_celsius // empty' 2>/dev/null <<< "$smart_json")
+            critical_warning=$(jq -r '.critical_warning // empty' 2>/dev/null <<< "$smart_json")
+            media_errors=$(jq -r '.media_errors // empty' 2>/dev/null <<< "$smart_json")
+            error_entries=$(jq -r '.num_err_log_entries // empty' 2>/dev/null <<< "$smart_json")
+            unsafe_shutdowns=$(jq -r '.unsafe_shutdowns // empty' 2>/dev/null <<< "$smart_json")
+            percentage_used=$(jq -r '.percentage_used // empty' 2>/dev/null <<< "$smart_json")
+            available_spare=$(jq -r '.available_spare // empty' 2>/dev/null <<< "$smart_json")
+            warning_temp_time=$(jq -r '.warning_temp_time // empty' 2>/dev/null <<< "$smart_json")
+            critical_temp_time=$(jq -r '.critical_comp_time // .critical_temp_time // empty' 2>/dev/null <<< "$smart_json")
+        fi
+
+        if [[ -n "$error_json" ]] && command -v jq >/dev/null 2>&1; then
+            nonzero_error_entries=$(jq -r '[.errors[]? | select((.error_count // 0) != 0)] | length' 2>/dev/null <<< "$error_json")
+        fi
+
+        if [[ "$temperature" =~ ^[0-9]+$ ]]; then
+            if [[ "$temperature" -gt 200 ]]; then
+                temperature_c=$((temperature - 273))
+            else
+                temperature_c="$temperature"
+            fi
+        fi
+
+        local nvme_status="OK"
+        local nvme_warn=()
+        [[ "$critical_warning" =~ ^[0-9]+$ && "$critical_warning" -ne 0 ]] && nvme_warn+=("critical_warning=$critical_warning")
+        [[ "$media_errors" =~ ^[0-9]+$ && "$media_errors" -ne 0 ]] && nvme_warn+=("media_errors=$media_errors")
+        [[ "$nonzero_error_entries" =~ ^[0-9]+$ && "$nonzero_error_entries" -ne 0 ]] && nvme_warn+=("error_log_slots=$nonzero_error_entries")
+        [[ "$warning_temp_time" =~ ^[0-9]+$ && "$warning_temp_time" -ne 0 ]] && nvme_warn+=("warning_temp_time=$warning_temp_time")
+        [[ "$critical_temp_time" =~ ^[0-9]+$ && "$critical_temp_time" -ne 0 ]] && nvme_warn+=("critical_temp_time=$critical_temp_time")
+        [[ ${#nvme_warn[@]} -gt 0 ]] && nvme_status="WARN"
+
+        local nvme_summary="${dev}: ${model:-Unknown}"
+        [[ -n "$firmware" ]] && nvme_summary+=" fw=$firmware"
+        [[ -n "$temperature_c" ]] && nvme_summary+=" temp=${temperature_c}°C"
+        [[ -n "$percentage_used" ]] && nvme_summary+=" used=${percentage_used}%"
+        [[ -n "$available_spare" ]] && nvme_summary+=" spare=${available_spare}%"
+        [[ "$unsafe_shutdowns" =~ ^[0-9]+$ && "$unsafe_shutdowns" -gt 0 ]] && unsafe_summary+=("${disk}=$unsafe_shutdowns")
+        if [[ "$nvme_status" == "WARN" ]]; then
+            ((nvme_warn_count++))
+            nvme_warn_lines+=("${nvme_summary} ${nvme_warn[*]}")
+        fi
+
+        nvme_kv=(
+            "$(json_kv "device" "$dev")"
+        )
+        [[ -n "$controller_dev" ]] && nvme_kv+=("$(json_kv "controller" "$controller_dev")")
+        [[ -n "$model" ]] && nvme_kv+=("$(json_kv "model" "$model")")
+        [[ -n "$serial" ]] && nvme_kv+=("$(json_kv "serial" "$serial")")
+        [[ -n "$firmware" ]] && nvme_kv+=("$(json_kv "firmware" "$firmware")")
+        [[ -n "$temperature" ]] && nvme_kv+=("$(json_kv "temperature_kelvin" "$temperature")")
+        [[ -n "$temperature_c" ]] && nvme_kv+=("$(json_kv "temperature_c" "$temperature_c")")
+        [[ -n "$critical_warning" ]] && nvme_kv+=("$(json_kv "critical_warning" "$critical_warning")")
+        [[ -n "$media_errors" ]] && nvme_kv+=("$(json_kv "media_errors" "$media_errors")")
+        [[ -n "$error_entries" ]] && nvme_kv+=("$(json_kv "error_log_entries" "$error_entries")")
+        [[ -n "$nonzero_error_entries" ]] && nvme_kv+=("$(json_kv "nonzero_error_log_slots" "$nonzero_error_entries")")
+        [[ -n "$unsafe_shutdowns" ]] && nvme_kv+=("$(json_kv "unsafe_shutdowns" "$unsafe_shutdowns")")
+        [[ -n "$percentage_used" ]] && nvme_kv+=("$(json_kv "percentage_used" "$percentage_used")")
+        [[ -n "$available_spare" ]] && nvme_kv+=("$(json_kv "available_spare" "$available_spare")")
+        [[ -n "$warning_temp_time" ]] && nvme_kv+=("$(json_kv "warning_temp_time" "$warning_temp_time")")
+        [[ -n "$critical_temp_time" ]] && nvme_kv+=("$(json_kv "critical_temp_time" "$critical_temp_time")")
+        JSON_NVME_DEEP+=("$(json_obj "${nvme_kv[@]}")")
+    done
+
+    print_info "Devices Checked" "$nvme_checked"
+    if [[ "$nvme_warn_count" -eq 0 ]]; then
+        print_info "$(get_label "status")" "No critical/media/error-log issues"
+    else
+        print_info "$(get_label "warning")" "$nvme_warn_count device(s)"
+        local nvme_warn_line=""
+        for nvme_warn_line in "${nvme_warn_lines[@]}"; do
+            printf '%b\n' "│   ${YELLOW}${nvme_warn_line}${NC}"
+        done
+    fi
+    if [[ ${#unsafe_summary[@]} -gt 0 ]]; then
+        echo "│   Unsafe Shutdowns: ${unsafe_summary[*]} (history)"
+    fi
+
+    echo "└$(repeat_char '─' 50)"
+}
+
+get_storage_stack_info() {
+    print_subsection "$(get_label "storage_info")"
+
+    JSON_STORAGE_BLOCKS=()
+    JSON_STORAGE_MOUNTS=()
+    JSON_STORAGE_LVM=()
+    JSON_STORAGE_ZFS=()
+    JSON_STORAGE_BTRFS=()
+    JSON_STORAGE_MULTIPATH=()
+
+    local found=false
+
+    if command -v lsblk >/dev/null 2>&1; then
+        local line="" name="" type="" size="" fstype="" mountpoint="" pkname="" block_kv=()
+        local disk_count=0 part_count=0 raid_count=0 lvm_count=0 other_block_count=0
+        local physical_lines=()
+        local raid_lines=()
+        declare -A seen_physical_lines=()
+        declare -A seen_raid_lines=()
+        declare -A seen_lvm_names=()
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            name=$(kv_line_get "$line" "NAME")
+            type=$(kv_line_get "$line" "TYPE")
+            size=$(kv_line_get "$line" "SIZE")
+            fstype=$(kv_line_get "$line" "FSTYPE")
+            mountpoint=$(kv_line_get "$line" "MOUNTPOINT")
+            pkname=$(kv_line_get "$line" "PKNAME")
+
+            block_kv=(
+                "$(json_kv "name" "$name")"
+                "$(json_kv "type" "$type")"
+                "$(json_kv "size" "$size")"
+            )
+            [[ -n "$fstype" ]] && block_kv+=("$(json_kv "fstype" "$fstype")")
+            [[ -n "$mountpoint" ]] && block_kv+=("$(json_kv "mountpoint" "$mountpoint")")
+            [[ -n "$pkname" ]] && block_kv+=("$(json_kv "parent" "$pkname")")
+            JSON_STORAGE_BLOCKS+=("$(json_obj "${block_kv[@]}")")
+            case "$type" in
+                disk)
+                    ((disk_count++))
+                    if [[ -z "${seen_physical_lines[$name]+x}" ]]; then
+                        seen_physical_lines[$name]=1
+                        physical_lines+=("${name:-?} ${size:-?}${fstype:+ $fstype}")
+                    fi
+                    ;;
+                part)
+                    ((part_count++))
+                    ;;
+                raid*)
+                    if [[ -z "${seen_raid_lines[$name]+x}" ]]; then
+                        seen_raid_lines[$name]=1
+                        ((raid_count++))
+                        raid_lines+=("${name:-?} ${type:-?} ${size:-?} fs=${fstype:-none}")
+                    fi
+                    ;;
+                lvm)
+                    if [[ -z "${seen_lvm_names[$name]+x}" ]]; then
+                        seen_lvm_names[$name]=1
+                        ((lvm_count++))
+                    fi
+                    ;;
+                *)
+                    ((other_block_count++))
+                    ;;
+            esac
+            found=true
+        done < <(lsblk -P -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT,PKNAME 2>/dev/null)
+
+        print_info "Block Summary" "disk=$disk_count part=$part_count raid=$raid_count lvm=$lvm_count"
+        if [[ ${#physical_lines[@]} -gt 0 ]]; then
+            echo "│   Physical: ${physical_lines[*]}"
+        fi
+        if [[ ${#raid_lines[@]} -gt 0 ]]; then
+            local raid_line=""
+            for raid_line in "${raid_lines[@]}"; do
+                echo "│   RAID: $raid_line"
+            done
+        fi
+    fi
+
+    if command -v findmnt >/dev/null 2>&1; then
+        local mount_lines=()
+        local target="" source="" fstype="" options="" mount_kv=()
+        while read -r target source fstype options; do
+            [[ "$source" == /dev/* ]] || continue
+            case "$target" in
+                /|/boot|/boot/efi|/etc/pve|/var|/home|/usr|/tmp)
+                    mount_lines+=("$target <- $source ($fstype)")
+                    ;;
+            esac
+            mount_kv=(
+                "$(json_kv "target" "$target")"
+                "$(json_kv "source" "$source")"
+                "$(json_kv "fstype" "$fstype")"
+            )
+            [[ -n "$options" ]] && mount_kv+=("$(json_kv "options" "$options")")
+            JSON_STORAGE_MOUNTS+=("$(json_obj "${mount_kv[@]}")")
+            found=true
+        done < <(findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS 2>/dev/null)
+        if [[ ${#mount_lines[@]} -gt 0 ]]; then
+            echo "│"
+            print_color "$GREEN" "│ Key Mounts:"
+            local mount_line=""
+            for mount_line in "${mount_lines[@]}"; do
+                echo "│   $mount_line"
+            done
+        fi
+    fi
+
+    if command -v pvs >/dev/null 2>&1 || command -v vgs >/dev/null 2>&1 || command -v lvs >/dev/null 2>&1; then
+        local lvm_line=""
+        local lvm_printed=false
+        local lv_count=0
+        if command -v pvs >/dev/null 2>&1; then
+            while IFS= read -r lvm_line; do
+                [[ -z "$lvm_line" ]] && continue
+                if [[ "$lvm_printed" == false ]]; then
+                    echo "│"
+                    print_color "$GREEN" "│ LVM:"
+                    lvm_printed=true
+                fi
+                echo "│   PV $lvm_line"
+                JSON_STORAGE_LVM+=("PV $lvm_line")
+                found=true
+            done < <(pvs --noheadings -o pv_name,vg_name,pv_size,pv_free 2>/dev/null | sed 's/^ *//')
+        fi
+        if command -v vgs >/dev/null 2>&1; then
+            while IFS= read -r lvm_line; do
+                [[ -z "$lvm_line" ]] && continue
+                if [[ "$lvm_printed" == false ]]; then
+                    echo "│"
+                    print_color "$GREEN" "│ LVM:"
+                    lvm_printed=true
+                fi
+                echo "│   VG $lvm_line"
+                JSON_STORAGE_LVM+=("VG $lvm_line")
+                found=true
+            done < <(vgs --noheadings -o vg_name,vg_size,vg_free,lv_count 2>/dev/null | sed 's/^ *//')
+        fi
+        if command -v lvs >/dev/null 2>&1; then
+            while IFS= read -r lvm_line; do
+                [[ -z "$lvm_line" ]] && continue
+                ((lv_count++))
+                JSON_STORAGE_LVM+=("LV $lvm_line")
+                found=true
+            done < <(lvs --noheadings -o lv_name,vg_name,lv_size,lv_attr 2>/dev/null | sed 's/^ *//')
+        fi
+        if [[ "$lv_count" -gt 0 ]]; then
+            if [[ "$lvm_printed" == false ]]; then
+                echo "│"
+                print_color "$GREEN" "│ LVM:"
+                lvm_printed=true
+            fi
+            echo "│   LV count: $lv_count"
+        fi
+    fi
+
+    if command -v zpool >/dev/null 2>&1; then
+        local zfs_line=""
+        local zfs_printed=false
+        while IFS= read -r zfs_line; do
+            [[ -z "$zfs_line" ]] && continue
+            if [[ "$zfs_printed" == false ]]; then
+                echo "│"
+                print_color "$GREEN" "│ ZFS:"
+                zfs_printed=true
+            fi
+            echo "│   $zfs_line"
+            JSON_STORAGE_ZFS+=("$zfs_line")
+            found=true
+        done < <(run_limited 6 zpool status -x 2>/dev/null)
+    fi
+
+    if command -v btrfs >/dev/null 2>&1; then
+        local btrfs_line=""
+        local btrfs_printed=false
+        while IFS= read -r btrfs_line; do
+            [[ -z "$btrfs_line" ]] && continue
+            if [[ "$btrfs_printed" == false ]]; then
+                echo "│"
+                print_color "$GREEN" "│ Btrfs:"
+                btrfs_printed=true
+            fi
+            echo "│   $btrfs_line"
+            JSON_STORAGE_BTRFS+=("$btrfs_line")
+            found=true
+        done < <(run_limited 6 btrfs filesystem show 2>/dev/null)
+    fi
+
+    if command -v multipath >/dev/null 2>&1; then
+        local mp_line=""
+        local mp_printed=false
+        while IFS= read -r mp_line; do
+            [[ -z "$mp_line" ]] && continue
+            if [[ "$mp_printed" == false ]]; then
+                echo "│"
+                print_color "$GREEN" "│ Multipath:"
+                mp_printed=true
+            fi
+            echo "│   $mp_line"
+            JSON_STORAGE_MULTIPATH+=("$mp_line")
+            found=true
+        done < <(run_limited 6 multipath -ll 2>/dev/null | head -80)
+    fi
+
+    if [[ "$found" == false ]]; then
+        print_info "$(get_label "status")" "$(get_label "not_detected")"
+    fi
+
+    echo "└$(repeat_char '─' 50)"
+}
+
 # Helper function: Extract value from JSON using basic pattern matching
 # Usage: json_extract "key" "$json_string"
 json_extract() {
@@ -2515,12 +3264,8 @@ parse_smart_json() {
             else
                 if [[ "$LANG_MODE" == "cn" ]]; then
                     echo "│   读写统计: 此硬盘型号暂不支持"
-                    echo "│   → 如需支持请提交: smartctl -a -j /dev/$disk"
-                    echo "│   → 反馈地址: https://github.com/Yuri-NagaSaki/SICK/issues"
                 else
                     echo "│   I/O Stats: Not supported for this drive model"
-                    echo "│   → To request support: smartctl -a -j /dev/$disk"
-                    echo "│   → Report to: https://github.com/Yuri-NagaSaki/SICK/issues"
                 fi
             fi
         fi
@@ -2879,10 +3624,11 @@ get_raid_info() {
     local raid_found=false
     JSON_RAID_SW=()
     JSON_RAID_HW=()
+    JSON_RAID_TOOLS=()
     
     # Check for software RAID
     if [[ -f /proc/mdstat ]]; then
-        local md_info=$(cat /proc/mdstat | grep -E '^md[0-9]')
+        local md_info=$(grep -E '^md[0-9]' /proc/mdstat 2>/dev/null)
         if [[ -n "$md_info" ]]; then
             echo "│ Software RAID:"
             while IFS= read -r line; do
@@ -2892,20 +3638,94 @@ get_raid_info() {
             raid_found=true
         fi
     fi
-    
-    # Check for hardware RAID controllers
-    get_lspci_output
-    if [[ -n "$LSPCI_RESULT" ]]; then
-        local raid_controllers=$(printf '%s\n' "$LSPCI_RESULT" | grep -i raid)
-        if [[ -n "$raid_controllers" ]]; then
-            echo "│ Hardware RAID Controllers:"
+
+    if command -v mdadm >/dev/null 2>&1; then
+        local mdadm_scan=""
+        mdadm_scan=$(run_limited 5 mdadm --detail --scan 2>/dev/null || true)
+        if [[ -n "$mdadm_scan" ]]; then
+            echo "│"
+            print_color "$GREEN" "│ mdadm Detail Scan:"
             while IFS= read -r line; do
+                [[ -z "$line" ]] && continue
                 echo "│   $line"
-                JSON_RAID_HW+=("$line")
-            done <<< "$raid_controllers"
+                JSON_RAID_SW+=("mdadm: $line")
+            done <<< "$mdadm_scan"
             raid_found=true
         fi
     fi
+    
+    # Check for hardware RAID/HBA/storage controllers
+    get_lspci_output
+    if [[ -n "$LSPCI_RESULT" ]]; then
+        local raid_controllers=$(printf '%s\n' "$LSPCI_RESULT" | grep -Ei 'RAID|Serial Attached SCSI|SAS|SATA controller|SCSI storage controller|Non-Volatile memory controller')
+        if [[ -n "$raid_controllers" ]]; then
+            local hw_count=0
+            local important_hw=()
+            while IFS= read -r line; do
+                ((hw_count++))
+                if [[ "$line" =~ RAID|Serial\ Attached\ SCSI|SAS|SCSI\ storage ]]; then
+                    important_hw+=("$line")
+                fi
+                JSON_RAID_HW+=("$line")
+            done <<< "$raid_controllers"
+            print_info "Storage Controllers" "$hw_count"
+            if [[ ${#important_hw[@]} -gt 0 ]]; then
+                echo "│"
+                print_color "$GREEN" "│ RAID/HBA Controllers:"
+                for line in "${important_hw[@]}"; do
+                    echo "│   $line"
+                done
+            fi
+            raid_found=true
+        fi
+    fi
+
+    local tool="" tool_path="" tool_output="" tool_label="" tool_kv=()
+    for tool in storcli storcli64 perccli perccli64 ssacli hpssacli arcconf; do
+        tool_path=$(command -v "$tool" 2>/dev/null || true)
+        [[ -n "$tool_path" ]] || continue
+
+        tool_label="$tool"
+        case "$tool" in
+            storcli|storcli64)
+                tool_output=$(run_limited 8 "$tool_path" /call show 2>/dev/null | head -60 || true)
+                ;;
+            perccli|perccli64)
+                tool_output=$(run_limited 8 "$tool_path" /call show 2>/dev/null | head -60 || true)
+                ;;
+            ssacli|hpssacli)
+                tool_output=$(run_limited 8 "$tool_path" ctrl all show status 2>/dev/null | head -60 || true)
+                ;;
+            arcconf)
+                tool_output=$(run_limited 8 "$tool_path" GETCONFIG 1 AD 2>/dev/null | head -60 || true)
+                ;;
+        esac
+
+        echo "│"
+        print_color "$GREEN" "│ RAID Tool: $tool_label"
+        if [[ -n "$tool_output" ]]; then
+            local tool_line="" summary_lines=()
+            while IFS= read -r tool_line; do
+                [[ -z "$tool_line" ]] && continue
+                echo "│   $tool_line"
+                summary_lines+=("$tool_line")
+            done <<< "$tool_output"
+            tool_kv=(
+                "$(json_kv "tool" "$tool_label")"
+                "$(json_kv "path" "$tool_path")"
+                "$(json_kv_raw "summary" "$(json_array_values "${summary_lines[@]}")")"
+            )
+        else
+            echo "│   Installed, but no readable controller output"
+            tool_kv=(
+                "$(json_kv "tool" "$tool_label")"
+                "$(json_kv "path" "$tool_path")"
+                "$(json_kv "status" "no readable output")"
+            )
+        fi
+        JSON_RAID_TOOLS+=("$(json_obj "${tool_kv[@]}")")
+        raid_found=true
+    done
     
     if [[ "$raid_found" == false ]]; then
         print_info "$(get_label "status")" "$(get_label "not_detected")"
@@ -3147,6 +3967,15 @@ get_network_info() {
         local nic_vendor=""
         local model_val=""
         local device_id_val=""
+        local ethtool_info=""
+        local driver_val=""
+        local driver_version_val=""
+        local firmware_val=""
+        local bus_info_val=""
+
+        if command -v ethtool >/dev/null 2>&1; then
+            ethtool_info=$(ethtool -i "$interface" 2>/dev/null || true)
+        fi
         
         if [[ -n "$pci_path" && "$pci_path" =~ ^([0-9a-fA-F]{4}:)?[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F]$ ]]; then
             get_lspci_output
@@ -3156,19 +3985,16 @@ get_network_info() {
             if [[ -n "$pci_info" ]]; then
                 # Extract model info from lspci output
                 nic_model=$(echo "$pci_info" | cut -d':' -f3- | sed 's/^ *//')
-                echo "│   $(get_label "model"): $nic_model"
                 model_val="$nic_model"
             fi
         fi
         
         # Alternative method using ethtool
-        if [[ -z "$nic_model" ]] && command -v ethtool >/dev/null 2>&1; then
-            local ethtool_info=$(ethtool -i "$interface" 2>/dev/null)
+        if [[ -z "$nic_model" && -n "$ethtool_info" ]]; then
             if [[ -n "$ethtool_info" ]]; then
                 nic_vendor=$(echo "$ethtool_info" | grep "driver:" | cut -d':' -f2 | sed 's/^ *//')
                 local bus_info=$(echo "$ethtool_info" | grep "bus-info:" | cut -d':' -f2- | sed 's/^ *//')
                 if [[ -n "$bus_info" ]]; then
-                    echo "│   $(get_label "model"): $nic_vendor ($bus_info)"
                     model_val="$nic_vendor ($bus_info)"
                 fi
             fi
@@ -3182,7 +4008,6 @@ get_network_info() {
                 local vendor_id=$(cat "$vendor_file" 2>/dev/null)
                 local device_id=$(cat "$device_file" 2>/dev/null)
                 if [[ -n "$vendor_id" && -n "$device_id" ]]; then
-                    echo "│   Device ID: $vendor_id:$device_id"
                     device_id_val="$vendor_id:$device_id"
                 fi
             fi
@@ -3197,8 +4022,6 @@ get_network_info() {
                 status="${operstate^^}"
             fi
         fi
-        echo "│   $(get_label "status"): ${status:-"Unknown"}"
-        
         # IP addresses (with privacy masking)
         local ipv4="${iface_ipv4[$interface]}"
         local ipv6="${iface_ipv6[$interface]}"
@@ -3207,11 +4030,9 @@ get_network_info() {
         
         if [[ -n "$ipv4" ]]; then
             masked_ipv4=$(mask_ip_address "$ipv4")
-            echo "│   IPv4: $masked_ipv4"
         fi
         if [[ -n "$ipv6" ]]; then
             masked_ipv6=$(mask_ip_address "$ipv6")
-            echo "│   IPv6: $masked_ipv6"
         fi
         
         # MAC address (with privacy masking)
@@ -3223,7 +4044,18 @@ get_network_info() {
         fi
         if [[ -n "$mac" ]]; then
             masked_mac=$(mask_mac_address "$mac")
-            echo "│   $(get_label "mac_address"): $masked_mac"
+        fi
+
+        if [[ -n "$ethtool_info" ]]; then
+            driver_val=$(echo "$ethtool_info" | awk -F': ' '/^driver:/ {print $2; exit}')
+            driver_version_val=$(echo "$ethtool_info" | awk -F': ' '/^version:/ {print $2; exit}')
+            firmware_val=$(echo "$ethtool_info" | awk -F': ' '/^firmware-version:/ {print $2; exit}')
+            bus_info_val=$(echo "$ethtool_info" | awk -F': ' '/^bus-info:/ {print $2; exit}')
+        fi
+
+        local master_val=""
+        if [[ -L "/sys/class/net/$interface/master" ]]; then
+            master_val=$(basename "$(readlink -f "/sys/class/net/$interface/master" 2>/dev/null)" 2>/dev/null)
         fi
         
         # Speed and duplex information
@@ -3235,7 +4067,6 @@ get_network_info() {
         if [[ -r "$speed_file" ]]; then
             local speed=$(cat "$speed_file" 2>/dev/null)
             if [[ "$speed" != "-1" && -n "$speed" ]]; then
-                echo "│   $(get_label "speed"): ${speed} Mbps"
                 speed_val="$speed"
             fi
         fi
@@ -3243,7 +4074,6 @@ get_network_info() {
         if [[ -r "$duplex_file" ]]; then
             local duplex=$(cat "$duplex_file" 2>/dev/null)
             if [[ -n "$duplex" ]]; then
-                echo "│   $(get_label "duplex"): $duplex"
                 duplex_val="$duplex"
             fi
         fi
@@ -3254,10 +4084,8 @@ get_network_info() {
         if [[ -r "$carrier_file" ]]; then
             local carrier=$(cat "$carrier_file" 2>/dev/null)
             if [[ "$carrier" == "1" ]]; then
-                echo "│   $(get_label "link_detected"): Yes"
                 link_detected="Yes"
             else
-                echo "│   $(get_label "link_detected"): No"
                 link_detected="No"
             fi
         fi
@@ -3285,14 +4113,11 @@ get_network_info() {
                     if [[ "$rx_tb" =~ ^\. ]]; then
                         rx_tb="0$rx_tb"
                     fi
-                    echo "│   RX: ${rx_tb} TB"
                     rx_display="${rx_tb} TB"
                 else
-                    echo "│   RX: ${rx_gb} GB"
                     rx_display="${rx_gb} GB"
                 fi
             else
-                echo "│   RX: 0.00 GB"
                 rx_display="0.00 GB"
             fi
         fi
@@ -3312,17 +4137,56 @@ get_network_info() {
                     if [[ "$tx_tb" =~ ^\. ]]; then
                         tx_tb="0$tx_tb"
                     fi
-                    echo "│   TX: ${tx_tb} TB"
                     tx_display="${tx_tb} TB"
                 else
-                    echo "│   TX: ${tx_gb} GB"
                     tx_display="${tx_gb} GB"
                 fi
             else
-                echo "│   TX: 0.00 GB"
                 tx_display="0.00 GB"
             fi
         fi
+
+        local rx_errors="" tx_errors="" rx_dropped="" tx_dropped="" collisions=""
+        [[ -r "/sys/class/net/$interface/statistics/rx_errors" ]] && rx_errors=$(<"/sys/class/net/$interface/statistics/rx_errors")
+        [[ -r "/sys/class/net/$interface/statistics/tx_errors" ]] && tx_errors=$(<"/sys/class/net/$interface/statistics/tx_errors")
+        [[ -r "/sys/class/net/$interface/statistics/rx_dropped" ]] && rx_dropped=$(<"/sys/class/net/$interface/statistics/rx_dropped")
+        [[ -r "/sys/class/net/$interface/statistics/tx_dropped" ]] && tx_dropped=$(<"/sys/class/net/$interface/statistics/tx_dropped")
+        [[ -r "/sys/class/net/$interface/statistics/collisions" ]] && collisions=$(<"/sys/class/net/$interface/statistics/collisions")
+
+        local error_summary=()
+        [[ -n "$rx_errors" && "$rx_errors" != "0" ]] && error_summary+=("rx_errors=$rx_errors")
+        [[ -n "$tx_errors" && "$tx_errors" != "0" ]] && error_summary+=("tx_errors=$tx_errors")
+        [[ -n "$rx_dropped" && "$rx_dropped" != "0" ]] && error_summary+=("rx_dropped=$rx_dropped")
+        [[ -n "$tx_dropped" && "$tx_dropped" != "0" ]] && error_summary+=("tx_dropped=$tx_dropped")
+        [[ -n "$collisions" && "$collisions" != "0" ]] && error_summary+=("collisions=$collisions")
+        local ethtool_error_summary=""
+        if command -v ethtool >/dev/null 2>&1; then
+            ethtool_error_summary=$(ethtool -S "$interface" 2>/dev/null | awk -F: '
+                /crc|error|drop|timeout|missed|fec/ {
+                    key=$1; val=$2
+                    gsub(/^[ \t]+|[ \t]+$/, "", key)
+                    gsub(/^[ \t]+|[ \t]+$/, "", val)
+                    if (val ~ /^[0-9]+$/ && val != "0") {
+                        print key "=" val
+                    }
+                }
+            ' | head -12 | paste -sd ' ' -)
+        fi
+
+        local link_summary="${status:-Unknown}"
+        [[ -n "$speed_val" ]] && link_summary+=" ${speed_val}Mbps"
+        [[ -n "$duplex_val" ]] && link_summary+=" $duplex_val"
+        [[ -n "$link_detected" ]] && link_summary+=" link=$link_detected"
+        [[ -n "$master_val" ]] && link_summary+=" master=$master_val"
+        echo "│   Link: $link_summary"
+        [[ -n "$driver_val" || -n "$firmware_val" ]] && echo "│   Driver: ${driver_val:-?}${firmware_val:+ fw=$firmware_val}"
+        [[ -n "$model_val" ]] && echo "│   Model: $model_val"
+        [[ -n "$rx_display$tx_display" ]] && echo "│   Traffic: RX=${rx_display:-?} TX=${tx_display:-?}"
+
+        if [[ ${#error_summary[@]} -gt 0 ]]; then
+            printf '%b\n' "│   Errors: ${YELLOW}${error_summary[*]}${NC}"
+        fi
+        [[ -n "$ethtool_error_summary" ]] && printf '%b\n' "│   NIC Counters: ${YELLOW}${ethtool_error_summary}${NC}"
 
         local net_kv=(
             "$(json_kv "name" "$interface")"
@@ -3330,6 +4194,11 @@ get_network_info() {
         )
         [[ -n "$model_val" ]] && net_kv+=("$(json_kv "model" "$model_val")")
         [[ -n "$device_id_val" ]] && net_kv+=("$(json_kv "device_id" "$device_id_val")")
+        [[ -n "$driver_val" ]] && net_kv+=("$(json_kv "driver" "$driver_val")")
+        [[ -n "$driver_version_val" ]] && net_kv+=("$(json_kv "driver_version" "$driver_version_val")")
+        [[ -n "$firmware_val" ]] && net_kv+=("$(json_kv "firmware" "$firmware_val")")
+        [[ -n "$bus_info_val" ]] && net_kv+=("$(json_kv "bus_info" "$bus_info_val")")
+        [[ -n "$master_val" ]] && net_kv+=("$(json_kv "master" "$master_val")")
         [[ -n "$masked_ipv4" ]] && net_kv+=("$(json_kv "ipv4" "$masked_ipv4")")
         [[ -n "$masked_ipv6" ]] && net_kv+=("$(json_kv "ipv6" "$masked_ipv6")")
         [[ -n "$masked_mac" ]] && net_kv+=("$(json_kv "mac" "$masked_mac")")
@@ -3338,6 +4207,12 @@ get_network_info() {
         [[ -n "$link_detected" ]] && net_kv+=("$(json_kv "link_detected" "$link_detected")")
         [[ -n "$rx_display" ]] && net_kv+=("$(json_kv "rx" "$rx_display")")
         [[ -n "$tx_display" ]] && net_kv+=("$(json_kv "tx" "$tx_display")")
+        [[ -n "$rx_errors" ]] && net_kv+=("$(json_kv "rx_errors" "$rx_errors")")
+        [[ -n "$tx_errors" ]] && net_kv+=("$(json_kv "tx_errors" "$tx_errors")")
+        [[ -n "$rx_dropped" ]] && net_kv+=("$(json_kv "rx_dropped" "$rx_dropped")")
+        [[ -n "$tx_dropped" ]] && net_kv+=("$(json_kv "tx_dropped" "$tx_dropped")")
+        [[ -n "$collisions" ]] && net_kv+=("$(json_kv "collisions" "$collisions")")
+        [[ -n "$ethtool_error_summary" ]] && net_kv+=("$(json_kv "nic_counters" "$ethtool_error_summary")")
         JSON_NETWORK+=("$(json_obj "${net_kv[@]}")")
     done
     
@@ -3580,14 +4455,36 @@ build_json_report() {
         "$(json_kv_raw "software" "$(json_array_values "${JSON_RAID_SW[@]}")")"
         "$(json_kv_raw "hardware" "$(json_array_values "${JSON_RAID_HW[@]}")")"
         "$(json_kv_raw "controllers" "$(json_array "${JSON_RAID_CONTROLLERS[@]}")")"
+        "$(json_kv_raw "tools" "$(json_array "${JSON_RAID_TOOLS[@]}")")"
+    )
+
+    local ecc_kv=("${JSON_ECC_KV[@]}")
+    ecc_kv+=("$(json_kv_raw "controllers" "$(json_array "${JSON_ECC_CONTROLLERS[@]}")")")
+    ecc_kv+=("$(json_kv_raw "events" "$(json_array_values "${JSON_ECC_EVENTS[@]}")")")
+
+    local platform_kv=("${JSON_PLATFORM_KV[@]}")
+    platform_kv+=("$(json_kv_raw "vulnerabilities" "$(json_array "${JSON_PLATFORM_VULNERABILITIES[@]}")")")
+
+    local storage_kv=(
+        "$(json_kv_raw "block_devices" "$(json_array "${JSON_STORAGE_BLOCKS[@]}")")"
+        "$(json_kv_raw "mounts" "$(json_array "${JSON_STORAGE_MOUNTS[@]}")")"
+        "$(json_kv_raw "lvm" "$(json_array_values "${JSON_STORAGE_LVM[@]}")")"
+        "$(json_kv_raw "zfs" "$(json_array_values "${JSON_STORAGE_ZFS[@]}")")"
+        "$(json_kv_raw "btrfs" "$(json_array_values "${JSON_STORAGE_BTRFS[@]}")")"
+        "$(json_kv_raw "multipath" "$(json_array_values "${JSON_STORAGE_MULTIPATH[@]}")")"
     )
 
     local root_kv=(
         "$(json_kv_raw "meta" "$(json_obj "${meta_kv[@]}")")"
         "$(json_kv_raw "system" "$(json_obj "${JSON_SYSTEM_KV[@]}")")"
         "$(json_kv_raw "cpu" "$(json_obj "${JSON_CPU_KV[@]}")")"
+        "$(json_kv_raw "platform" "$(json_obj "${platform_kv[@]}")")"
         "$(json_kv_raw "memory" "$(json_obj "${memory_kv[@]}")")"
+        "$(json_kv_raw "ecc" "$(json_obj "${ecc_kv[@]}")")"
         "$(json_kv_raw "disks" "$(json_array "${JSON_DISKS[@]}")")"
+        "$(json_kv_raw "nvme_deep" "$(json_array "${JSON_NVME_DEEP[@]}")")"
+        "$(json_kv_raw "pcie" "$(json_array "${JSON_PCIE_LINKS[@]}")")"
+        "$(json_kv_raw "storage" "$(json_obj "${storage_kv[@]}")")"
         "$(json_kv_raw "raid" "$(json_obj "${raid_kv[@]}")")"
         "$(json_kv_raw "network" "$(json_array "${JSON_NETWORK[@]}")")"
         "$(json_kv_raw "gpu" "$(json_array "${JSON_GPU[@]}")")"
@@ -3639,8 +4536,13 @@ main() {
         # Collect all hardware information
         get_system_info
         get_cpu_info
+        get_cpu_platform_info
         get_ram_info
+        get_ecc_info
         get_disk_info
+        get_nvme_deep_info
+        get_pcie_link_info
+        get_storage_stack_info
         get_raid_info
         get_network_info
         get_gpu_info
@@ -3662,7 +4564,12 @@ main() {
         {
             get_system_info
             get_cpu_info
+            get_cpu_platform_info
+            get_ecc_info
             get_disk_info
+            get_nvme_deep_info
+            get_pcie_link_info
+            get_storage_stack_info
             get_raid_info
             get_network_info
             get_gpu_info
