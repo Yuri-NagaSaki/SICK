@@ -1687,10 +1687,10 @@ format_bytes_to() {
 
     local whole=$((bytes / divisor))
     local frac=$(((bytes % divisor) * 100 / divisor))
-    local result=""
-    printf -v result '%d.%02d %s' "$whole" "$frac" "$unit"
-    [[ -n "$suffix" ]] && result="$result $suffix"
-    printf -v "$out_var" '%s' "$result"
+    local formatted_value=""
+    printf -v formatted_value '%d.%02d %s' "$whole" "$frac" "$unit"
+    [[ -n "$suffix" ]] && formatted_value="$formatted_value $suffix"
+    printf -v "$out_var" '%s' "$formatted_value"
 }
 
 format_bytes() {
@@ -3771,6 +3771,7 @@ parse_smart_text() {
 DISK_SUMMARY_SMART="-"
 DISK_SUMMARY_HOURS="-"
 DISK_SUMMARY_TEMP="-"
+DISK_SUMMARY_IO="-"
 DISK_SUMMARY_BAD="-"
 DISK_SUMMARY_NOTE="-"
 
@@ -3778,6 +3779,7 @@ disk_summary_reset() {
     DISK_SUMMARY_SMART="-"
     DISK_SUMMARY_HOURS="-"
     DISK_SUMMARY_TEMP="-"
+    DISK_SUMMARY_IO="-"
     DISK_SUMMARY_BAD="-"
     DISK_SUMMARY_NOTE="-"
 }
@@ -3794,6 +3796,81 @@ disk_summary_note_add() {
         DISK_SUMMARY_NOTE="$note"
     else
         DISK_SUMMARY_NOTE+=", $note"
+    fi
+}
+
+disk_summary_compact_transfer_value() {
+    local __result_var="$1"
+    local value="${2:-}"
+    local compact="$value"
+    local int="" frac="" unit="" frac_part=""
+
+    value="${value//,/}"
+    value="${value//[/}"
+    value="${value//]/}"
+    value="${value//(/}"
+    value="${value//)/}"
+
+    if [[ "$value" =~ ^[[:space:]]*([0-9]+)(\.([0-9]+))?[[:space:]]*([KMGTPE]i?B|[KMGTPE]B|bytes?|Bytes?) ]]; then
+        int="${BASH_REMATCH[1]}"
+        frac="${BASH_REMATCH[3]}"
+        unit="${BASH_REMATCH[4]}"
+
+        case "$unit" in
+            KiB|KB) unit="K" ;;
+            MiB|MB) unit="M" ;;
+            GiB|GB) unit="G" ;;
+            TiB|TB) unit="T" ;;
+            PiB|PB) unit="P" ;;
+            EiB|EB) unit="E" ;;
+            *) unit="B" ;;
+        esac
+
+        if [[ "${#int}" -ge 2 ]]; then
+            frac="${frac:0:1}"
+        else
+            frac="${frac:0:2}"
+        fi
+
+        if [[ -n "$frac" && ! "$frac" =~ ^0+$ ]]; then
+            frac_part=".$frac"
+        fi
+
+        compact="${int}${frac_part}${unit}"
+    else
+        compact="${compact//,/}"
+        compact="${compact// /}"
+        compact="${compact//KiB/K}"
+        compact="${compact//KB/K}"
+        compact="${compact//MiB/M}"
+        compact="${compact//MB/M}"
+        compact="${compact//GiB/G}"
+        compact="${compact//GB/G}"
+        compact="${compact//TiB/T}"
+        compact="${compact//TB/T}"
+        compact="${compact//PiB/P}"
+        compact="${compact//PB/P}"
+        compact="${compact//EiB/E}"
+        compact="${compact//EB/E}"
+    fi
+
+    printf -v "$__result_var" '%s' "$compact"
+}
+
+disk_summary_set_io() {
+    local total_reads="${1:-}"
+    local total_writes="${2:-}"
+    local reads_short="" writes_short=""
+
+    [[ -z "$total_reads" && -z "$total_writes" ]] && return
+
+    disk_summary_compact_transfer_value reads_short "$total_reads"
+    disk_summary_compact_transfer_value writes_short "$total_writes"
+
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        DISK_SUMMARY_IO="读${reads_short:-?} 写${writes_short:-?}"
+    else
+        DISK_SUMMARY_IO="R${reads_short:-?} W${writes_short:-?}"
     fi
 }
 
@@ -3974,20 +4051,18 @@ disk_summary_from_fields() {
             disk_summary_note_add "wear ${wear_level}%"
         fi
     fi
-    if [[ -n "$total_reads" || -n "$total_writes" ]]; then
-        disk_summary_note_add "R ${total_reads:-?} W ${total_writes:-?}"
-    fi
+    disk_summary_set_io "$total_reads" "$total_writes"
 
     disk_summary_set_bad_metrics \
         "$grown_defects" "$read_uncorrected" "$write_uncorrected" "$verify_uncorrected" \
         "$non_medium_errors" "$reallocated_sectors" "$pending_sectors" \
         "$offline_uncorrectable" "$reported_uncorrect"
 
-    if [[ "$DISK_SUMMARY_NOTE" == "-" && ! "$disk" =~ nvme ]]; then
+    if [[ "$DISK_SUMMARY_IO" == "-" && ! "$disk" =~ nvme ]]; then
         if [[ "$LANG_MODE" == "cn" ]]; then
-            disk_summary_note_add "无读写统计"
+            DISK_SUMMARY_IO="无统计"
         else
-            disk_summary_note_add "no I/O stats"
+            DISK_SUMMARY_IO="no stats"
         fi
     fi
 
@@ -3995,8 +4070,8 @@ disk_summary_from_fields() {
 }
 
 print_disk_summary_header() {
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
-    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_io=16 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_io + w_bad + w_note + 23))
 
     if [[ "$LANG_MODE" == "cn" ]]; then
         print_color "$WHITE" "│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）"
@@ -4007,6 +4082,7 @@ print_disk_summary_header() {
         print_fixed_cell "SMART" "$w_smart"; printf " │ "
         print_fixed_cell "通电" "$w_hours"; printf " │ "
         print_fixed_cell "温度" "$w_temp"; printf " │ "
+        print_fixed_cell "读写" "$w_io"; printf " │ "
         print_fixed_cell "坏块" "$w_bad"; printf " │ "
         print_fixed_cell "备注" "$w_note"; printf " │\n"
         echo "├$(repeat_char '─' "$table_width")┤"
@@ -4019,6 +4095,7 @@ print_disk_summary_header() {
         print_fixed_cell "SMART" "$w_smart"; printf " │ "
         print_fixed_cell "Hours" "$w_hours"; printf " │ "
         print_fixed_cell "Temp" "$w_temp"; printf " │ "
+        print_fixed_cell "I/O" "$w_io"; printf " │ "
         print_fixed_cell "Defects" "$w_bad"; printf " │ "
         print_fixed_cell "Notes" "$w_note"; printf " │\n"
         echo "├$(repeat_char '─' "$table_width")┤"
@@ -4026,8 +4103,8 @@ print_disk_summary_header() {
 }
 
 print_disk_summary_footer() {
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
-    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_io=16 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_io + w_bad + w_note + 23))
     echo "└$(repeat_char '─' "$table_width")┘"
 }
 
@@ -4077,6 +4154,18 @@ disk_summary_bad_color() {
     fi
 }
 
+disk_summary_io_color() {
+    local io="$DISK_SUMMARY_IO"
+
+    [[ -z "$io" || "$io" == "-" ]] && return
+
+    if [[ "$io" =~ 无统计|no\ stats|no\ I/O ]]; then
+        printf '%s' "$YELLOW"
+    else
+        printf '%s' "$CYAN"
+    fi
+}
+
 disk_summary_note_color() {
     local note="$DISK_SUMMARY_NOTE"
 
@@ -4094,11 +4183,12 @@ disk_summary_note_color() {
 print_disk_summary_row() {
     local disk="$1"
     local basic_info="$2"
-    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
-    local smart_color="" temp_color="" bad_color="" note_color=""
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_io=16 w_bad=9 w_note=20
+    local smart_color="" temp_color="" io_color="" bad_color="" note_color=""
 
     smart_color="$(disk_summary_smart_color)"
     temp_color="$(disk_summary_temp_color)"
+    io_color="$(disk_summary_io_color)"
     bad_color="$(disk_summary_bad_color)"
     note_color="$(disk_summary_note_color)"
 
@@ -4108,6 +4198,7 @@ print_disk_summary_row() {
     print_colored_fixed_cell "$DISK_SUMMARY_SMART" "$w_smart" "$smart_color"; printf " │ "
     print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " │ "
     print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_IO" "$w_io" "$io_color"; printf " │ "
     print_colored_fixed_cell "$DISK_SUMMARY_BAD" "$w_bad" "$bad_color"; printf " │ "
     print_colored_fixed_cell "$DISK_SUMMARY_NOTE" "$w_note" "$note_color"; printf " │\n"
 }
