@@ -629,26 +629,23 @@ print_fixed_cell() {
     printf '%s%*s' "$fitted" "$pad" ''
 }
 
-fit_simple_to() {
-    local __result_var="$1"
-    local value="${2:-}"
-    local width="$3"
-
-    [[ -z "$value" ]] && value="-"
-    if [[ ${#value} -gt "$width" ]]; then
-        value="${value:0:$((width - 1))}~"
-    fi
-
-    printf -v "$__result_var" '%s' "$value"
-}
-
-print_simple_cell() {
+print_colored_fixed_cell() {
     local value="${1:-}"
     local width="$2"
+    local color="${3:-}"
     local fitted=""
+    local pad=0
 
-    fit_simple_to fitted "$value" "$width"
-    printf "%-${width}s" "$fitted"
+    fit_display_to fitted "$value" "$width"
+    get_display_width "$fitted"
+    pad=$((width - DISPLAY_WIDTH_RESULT))
+    [[ "$pad" -lt 0 ]] && pad=0
+
+    if [[ -n "$color" ]]; then
+        printf '%b%s%b%*s' "$color" "$fitted" "$NC" "$pad" ''
+    else
+        printf '%s%*s' "$fitted" "$pad" ''
+    fi
 }
 
 # Function to read a value from /etc/os-release without sourcing executable shell
@@ -3878,47 +3875,121 @@ disk_summary_from_fields() {
 }
 
 print_disk_summary_header() {
-    local last_cell=""
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
 
     if [[ "$LANG_MODE" == "cn" ]]; then
         print_color "$WHITE" "│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）"
-        printf '│   '
-        print_fixed_cell "设备" 12; printf ' '
-        print_fixed_cell "基本信息" 32; printf ' '
-        print_fixed_cell "SMART" 6; printf ' '
-        print_fixed_cell "通电" 8; printf ' '
-        print_fixed_cell "温度" 6; printf ' '
-        print_fixed_cell "坏块" 9; printf ' '
-        fit_display_to last_cell "备注" 24
-        printf '%s\n' "$last_cell"
+        echo "├$(repeat_char '─' "$table_width")┤"
+        printf "│ "
+        print_fixed_cell "设备" "$w_device"; printf " │ "
+        print_fixed_cell "基本信息" "$w_basic"; printf " │ "
+        print_fixed_cell "SMART" "$w_smart"; printf " │ "
+        print_fixed_cell "通电" "$w_hours"; printf " │ "
+        print_fixed_cell "温度" "$w_temp"; printf " │ "
+        print_fixed_cell "坏块" "$w_bad"; printf " │ "
+        print_fixed_cell "备注" "$w_note"; printf " │\n"
+        echo "├$(repeat_char '─' "$table_width")┤"
     else
         print_color "$WHITE" "│ Disk Summary (defects=reallocated/pending/offline)"
-        printf '│   '
-        print_fixed_cell "Device" 12; printf ' '
-        print_fixed_cell "Basic Info" 32; printf ' '
-        print_fixed_cell "SMART" 6; printf ' '
-        print_fixed_cell "Hours" 8; printf ' '
-        print_fixed_cell "Temp" 6; printf ' '
-        print_fixed_cell "Defects" 9; printf ' '
-        fit_display_to last_cell "Notes" 24
-        printf '%s\n' "$last_cell"
+        echo "├$(repeat_char '─' "$table_width")┤"
+        printf "│ "
+        print_fixed_cell "Device" "$w_device"; printf " │ "
+        print_fixed_cell "Basic Info" "$w_basic"; printf " │ "
+        print_fixed_cell "SMART" "$w_smart"; printf " │ "
+        print_fixed_cell "Hours" "$w_hours"; printf " │ "
+        print_fixed_cell "Temp" "$w_temp"; printf " │ "
+        print_fixed_cell "Defects" "$w_bad"; printf " │ "
+        print_fixed_cell "Notes" "$w_note"; printf " │\n"
+        echo "├$(repeat_char '─' "$table_width")┤"
+    fi
+}
+
+print_disk_summary_footer() {
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local table_width=$((w_device + w_basic + w_smart + w_hours + w_temp + w_bad + w_note + 20))
+    echo "└$(repeat_char '─' "$table_width")┘"
+}
+
+disk_summary_smart_color() {
+    case "$DISK_SUMMARY_SMART" in
+        PASS|PASSED|OK)
+            printf '%s' "$GREEN"
+            ;;
+        FAIL|FAILED)
+            printf '%s' "$RED"
+            ;;
+        -|"")
+            printf '%s' "$YELLOW"
+            ;;
+        *)
+            printf '%s' "$YELLOW"
+            ;;
+    esac
+}
+
+disk_summary_temp_color() {
+    local temp="${DISK_SUMMARY_TEMP%%°*}"
+    temp="${temp#+}"
+
+    if ! disk_summary_is_uint "$temp"; then
+        return
+    fi
+
+    if [[ "$temp" -ge 60 ]]; then
+        printf '%s' "$RED"
+    elif [[ "$temp" -ge 50 ]]; then
+        printf '%s' "$YELLOW"
+    else
+        printf '%s' "$GREEN"
+    fi
+}
+
+disk_summary_bad_color() {
+    local bad="$DISK_SUMMARY_BAD"
+
+    [[ -z "$bad" || "$bad" == "-" ]] && return
+
+    if [[ "$bad" =~ (^|[^0-9])[1-9][0-9]* ]]; then
+        printf '%s' "$RED"
+    else
+        printf '%s' "$GREEN"
+    fi
+}
+
+disk_summary_note_color() {
+    local note="$DISK_SUMMARY_NOTE"
+
+    [[ -z "$note" || "$note" == "-" ]] && return
+
+    if [[ "$note" =~ 失败|坏块|高温|严重|不可纠正|未校正|failed|bad|hot|critical|uncorrect|defect ]]; then
+        printf '%s' "$RED"
+    elif [[ "$note" =~ 无SMART|无读写统计|smartctl|no\ SMART|no\ I/O|missing ]]; then
+        printf '%s' "$YELLOW"
+    else
+        printf '%s' "$CYAN"
     fi
 }
 
 print_disk_summary_row() {
     local disk="$1"
     local basic_info="$2"
-    local note_cell=""
+    local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_bad=9 w_note=20
+    local smart_color="" temp_color="" bad_color="" note_color=""
 
-    printf '│   '
-    print_simple_cell "/dev/$disk" 12; printf ' '
-    print_simple_cell "$basic_info" 32; printf ' '
-    print_simple_cell "$DISK_SUMMARY_SMART" 6; printf ' '
-    print_simple_cell "$DISK_SUMMARY_HOURS" 8; printf ' '
-    print_simple_cell "$DISK_SUMMARY_TEMP" 6; printf ' '
-    print_simple_cell "$DISK_SUMMARY_BAD" 9; printf ' '
-    fit_simple_to note_cell "$DISK_SUMMARY_NOTE" 24
-    printf '%s\n' "$note_cell"
+    smart_color="$(disk_summary_smart_color)"
+    temp_color="$(disk_summary_temp_color)"
+    bad_color="$(disk_summary_bad_color)"
+    note_color="$(disk_summary_note_color)"
+
+    printf "│ "
+    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " │ "
+    print_fixed_cell "$basic_info" "$w_basic"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_SMART" "$w_smart" "$smart_color"; printf " │ "
+    print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_TEMP" "$w_temp" "$temp_color"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_BAD" "$w_bad" "$bad_color"; printf " │ "
+    print_colored_fixed_cell "$DISK_SUMMARY_NOTE" "$w_note" "$note_color"; printf " │\n"
 }
 
 # Function to get disk information with enhanced SMART data
@@ -4118,8 +4189,8 @@ get_disk_info() {
     fi
 
     local other_disk_count=0
+    local disk_summary_table_started=false
     local other_disk_regex='^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'
-    [[ "$QUIET_MODE" != true ]] && print_disk_summary_header
 
     # Physical disk information with enhanced details
     for disk in "${disk_names[@]}"; do
@@ -4172,6 +4243,10 @@ get_disk_info() {
                 fi
             fi
 
+            if [[ "$disk_summary_table_started" != true ]]; then
+                print_disk_summary_header
+                disk_summary_table_started=true
+            fi
             print_disk_summary_row "$disk" "$disk_info"
             continue
         fi
@@ -4207,6 +4282,10 @@ get_disk_info() {
 
         disk_json_add "other" "/dev/$disk" "$disk_info"
     done
+
+    if [[ "$QUIET_MODE" != true && "$disk_summary_table_started" == true ]]; then
+        print_disk_summary_footer
+    fi
 
     if [[ "$other_disk_count" -eq 0 ]]; then
         if [[ "$LANG_MODE" == "cn" ]]; then
