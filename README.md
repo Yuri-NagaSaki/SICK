@@ -41,7 +41,6 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 
 ### 🔧 Advanced Features
 - **SMART Detection**: Hard drive health, power-on hours, read/write stats, bad blocks and defect counters
-- **Disk I/O Capability**: Local mount writability checks + optional `fio` 4k/64k/512k/1m read-write tables
 - **Real-time Data**: CPU usage, IO statistics, network traffic
 - **Auto Installation**: Smart detection and installation of required packages
 - **High Compatibility**: Support for mainstream Linux distributions
@@ -57,7 +56,6 @@ But more importantly, we want to make the "sick" (frustrating) task of server ha
 | **Fedora** | dnf | ✅ Fully Supported |
 | **Arch Linux** | pacman | ✅ Fully Supported |
 | **openSUSE** | zypper | ✅ Fully Supported |
-| **Alpine Linux** | apk | ✅ Fully Supported |
 
 ## Quick Start
 
@@ -70,17 +68,11 @@ curl -sL https://ba.sh/sick | bash
 # Chinese
 curl -sL https://ba.sh/sick | bash -s -- -cn
 
-# Text output with local disk I/O tests
-curl -sL https://ba.sh/sick | bash -s -- --io-test
-
 # JSON output
 curl -sL https://ba.sh/sick | bash -s -- --json
-
-# JSON with local disk read/write tests
-curl -sL https://ba.sh/sick | bash -s -- --json --io-test
 ```
 
-When passing options through `curl | bash`, use `bash -s -- <options>` (for example `bash -s -- --io-test`).
+When passing options through `curl | bash`, use `bash -s -- <options>`.
 
 
 ###  Sample Output
