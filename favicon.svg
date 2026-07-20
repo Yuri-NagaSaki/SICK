@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SICK">
+  <rect width="64" height="64" rx="14" fill="#141210"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="12" fill="none" stroke="#3a342c" stroke-width="1.25"/>
+  <!-- Monogram: SI in warm paper, CK in amber -->
+  <text x="14.5" y="40" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+        font-size="17" font-weight="800" letter-spacing="-1.4" fill="#ece7df">SI</text>
+  <text x="32.5" y="40" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+        font-size="17" font-weight="800" letter-spacing="-1.4" fill="#e09a3e">CK</text>
+  <rect x="16" y="46.5" width="32" height="2.5" rx="1.25" fill="#e09a3e" opacity="0.75"/>
+</svg>
