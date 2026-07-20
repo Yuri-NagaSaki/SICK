@@ -116,9 +116,9 @@
         <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- -r" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="Requires <code>iperf3</code> + <code>python3</code>. Options go after <code>bash -s --</code>."
-         data-zh="需要 <code>iperf3</code> + <code>python3</code>。参数写在 <code>bash -s --</code> 后面。">
-        Requires <code>iperf3</code> + <code>python3</code>. Options go after <code>bash -s --</code>.
+         data-en="Needs <code>iperf3</code> + <code>python3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>."
+         data-zh="需要 <code>iperf3</code> + <code>python3</code>（缺失会询问 Y/N 安装）。<code>-y</code> 自动装。参数写在 <code>bash -s --</code> 后。">
+        Needs <code>iperf3</code> + <code>python3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>.
       </p>
     </div>
   </div>
@@ -162,6 +162,14 @@
         <tr>
           <td>--recv-only</td>
           <td data-en="Download only (server → client, iperf -R)" data-zh="只测下载（服务端 → 客户端，iperf -R）">Download only (server → client, iperf -R)</td>
+        </tr>
+        <tr>
+          <td>-y, --yes</td>
+          <td data-en="Auto-install missing <code>iperf3</code> / <code>python3</code> without prompt" data-zh="缺失 <code>iperf3</code> / <code>python3</code> 时自动安装，不询问">Auto-install missing <code>iperf3</code> / <code>python3</code> without prompt</td>
+        </tr>
+        <tr>
+          <td>--no-install</td>
+          <td data-en="Never install; exit if deps missing" data-zh="从不安装；缺依赖则退出">Never install; exit if deps missing</td>
         </tr>
         <tr>
           <td>-l, --list</td>

@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.3.4"
+VERSION="0.3.5"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -404,6 +404,8 @@ FORCE_IP=""              # "" | 4 | 6
 SKIP_RECV=false
 SKIP_SEND=false
 LIST_ONLY=false
+AUTO_YES=false           # -y : install missing deps without prompting
+NO_INSTALL=false         # --no-install : never install
 CONNECT_TIMEOUT=5
 IPERF_BIN=""
 
@@ -456,6 +458,8 @@ Options:
   -P, --parallel <n>    parallel streams (default: ${PARALLEL})
   --send-only           Upload only (client -> server)
   --recv-only           Download only (server -> client, iperf -R)
+  -y, --yes             Auto-install missing deps (iperf3, python3) without prompt
+  --no-install          Never install; exit if deps missing
   -l, --list            List endpoints and exit
   -h, --help            Show help
   -v, --version         Show version
@@ -464,6 +468,7 @@ Examples:
   $(basename "$0")
   $(basename "$0") -r -t 8
   $(basename "$0") --region apac -4
+  curl -sL https://ba.sh/nets | bash -s -- -y -r
 EOF
 }
 
@@ -473,16 +478,164 @@ ok()   { printf '%b\n' "${GREEN}$*${NC}"; }
 warn() { printf '%b\n' "${YELLOW}$*${NC}"; }
 err()  { printf '%b\n' "${RED}$*${NC}" >&2; }
 
-detect_iperf() {
-  if command -v iperf3 >/dev/null 2>&1; then
-    IPERF_BIN="$(command -v iperf3)"
+# Y/N from real TTY (works under curl | bash)
+ask_yn() {
+  local prompt="$1" reply=""
+  if [[ -r /dev/tty ]]; then
+    printf '%s' "$prompt" > /dev/tty 2>/dev/null || printf '%s' "$prompt"
+    # shellcheck disable=SC2162
+    IFS= read -r reply < /dev/tty || true
+  elif [[ -t 0 ]]; then
+    # shellcheck disable=SC2162
+    printf '%s' "$prompt"
+    IFS= read -r reply || true
+  else
+    return 1
+  fi
+  case "$reply" in
+    [Yy]|[Yy][Ee][Ss]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+detect_pkg_manager() {
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "apt"
+  elif command -v dnf >/dev/null 2>&1; then
+    echo "dnf"
+  elif command -v yum >/dev/null 2>&1; then
+    echo "yum"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "pacman"
+  elif command -v zypper >/dev/null 2>&1; then
+    echo "zypper"
+  elif command -v apk >/dev/null 2>&1; then
+    echo "apk"
+  else
+    echo "unknown"
+  fi
+}
+
+# Ensure iperf3 + python3 exist; offer Y/N install if missing.
+# $1 = "true" if iperf3 required (default true); list mode only needs python3.
+ensure_deps() {
+  local need_iperf="${1:-true}"
+  local -a missing_cmds=() missing_pkgs=()
+  local pm pkg c
+
+  if [[ "$need_iperf" == "true" ]]; then
+    if command -v iperf3 >/dev/null 2>&1; then
+      IPERF_BIN="$(command -v iperf3)"
+    else
+      missing_cmds+=("iperf3")
+      missing_pkgs+=("iperf3")
+    fi
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    missing_cmds+=("python3")
+    # distro package names
+    pm="$(detect_pkg_manager)"
+    case "$pm" in
+      apt|apk) missing_pkgs+=("python3") ;;
+      dnf|yum|zypper) missing_pkgs+=("python3") ;;
+      pacman) missing_pkgs+=("python") ;;
+      *) missing_pkgs+=("python3") ;;
+    esac
+  fi
+
+  if ((${#missing_cmds[@]} == 0)); then
+    if [[ "$need_iperf" == "true" && -z "$IPERF_BIN" ]]; then
+      IPERF_BIN="$(command -v iperf3)"
+    fi
     return 0
   fi
-  err "iperf3 not found. Install it first, e.g.:"
-  err "  apt install iperf3   # Debian/Ubuntu"
-  err "  dnf install iperf3   # RHEL/Fedora"
-  err "  pacman -S iperf3     # Arch"
-  return 1
+
+  warn "Missing required tools: ${missing_cmds[*]}"
+  info "NETS needs: iperf3 (throughput) · python3 (parse endpoints / JSON results)"
+
+  if $NO_INSTALL; then
+    err "--no-install set: cannot continue without: ${missing_cmds[*]}"
+    return 1
+  fi
+
+  pm="$(detect_pkg_manager)"
+  local -a sudo_prefix=()
+  if [[ $EUID -ne 0 ]]; then
+    if command -v sudo >/dev/null 2>&1; then
+      sudo_prefix=(sudo)
+    else
+      err "No root/sudo. Install manually, then re-run:"
+      case "$pm" in
+        apt)    err "  sudo apt-get update && sudo apt-get install -y ${missing_pkgs[*]}" ;;
+        dnf)    err "  sudo dnf install -y ${missing_pkgs[*]}" ;;
+        yum)    err "  sudo yum install -y ${missing_pkgs[*]}" ;;
+        pacman) err "  sudo pacman -S --needed ${missing_pkgs[*]}" ;;
+        zypper) err "  sudo zypper install -y ${missing_pkgs[*]}" ;;
+        apk)    err "  sudo apk add ${missing_pkgs[*]}" ;;
+        *)      err "  install: ${missing_pkgs[*]}" ;;
+      esac
+      return 1
+    fi
+  fi
+
+  if [[ "$pm" == "unknown" ]]; then
+    err "Unknown package manager. Install manually: ${missing_pkgs[*]}"
+    return 1
+  fi
+
+  info "Packages to install: ${missing_pkgs[*]}  (via ${pm})"
+
+  local do_install=false
+  if $AUTO_YES; then
+    do_install=true
+  elif ask_yn "Install missing packages now? [y/N]: "; then
+    do_install=true
+  else
+    err "Skipped install. Install ${missing_cmds[*]} and re-run (or pass -y)."
+    return 1
+  fi
+
+  if ! $do_install; then
+    return 1
+  fi
+
+  local -a install_cmd=()
+  case "$pm" in
+    apt)
+      info "Running apt-get update..."
+      "${sudo_prefix[@]}" apt-get update -qq >/dev/null 2>&1 || true
+      install_cmd=("${sudo_prefix[@]}" apt-get install -y)
+      ;;
+    dnf)    install_cmd=("${sudo_prefix[@]}" dnf install -y) ;;
+    yum)    install_cmd=("${sudo_prefix[@]}" yum install -y) ;;
+    pacman) install_cmd=("${sudo_prefix[@]}" pacman -S --noconfirm --needed) ;;
+    zypper) install_cmd=("${sudo_prefix[@]}" zypper install -y) ;;
+    apk)    install_cmd=("${sudo_prefix[@]}" apk add) ;;
+  esac
+
+  info "Installing: ${missing_pkgs[*]}"
+  if "${install_cmd[@]}" "${missing_pkgs[@]}"; then
+    ok "Install finished."
+  else
+    err "Package install failed. Install manually: ${missing_pkgs[*]}"
+    return 1
+  fi
+
+  # Re-check
+  if [[ "$need_iperf" == "true" ]]; then
+    if command -v iperf3 >/dev/null 2>&1; then
+      IPERF_BIN="$(command -v iperf3)"
+    else
+      err "iperf3 still not found after install."
+      return 1
+    fi
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    err "python3 still not found after install."
+    return 1
+  fi
+  return 0
 }
 
 detect_connectivity() {
@@ -1062,6 +1215,8 @@ parse_args() {
       --parallel=*) PARALLEL="${1#*=}"; shift ;;
       --send-only) SKIP_RECV=true; shift ;;
       --recv-only) SKIP_SEND=true; shift ;;
+      -y|--yes) AUTO_YES=true; shift ;;
+      --no-install) NO_INSTALL=true; shift ;;
       -l|--list) LIST_ONLY=true; shift ;;
       -h|--help) usage; exit 0 ;;
       -v|--version) echo "NETS v${VERSION}"; exit 0 ;;
@@ -1076,7 +1231,14 @@ parse_args() {
 
 main() {
   parse_args "$@"
-  detect_iperf || exit 1
+
+  # Pre-check: python3 always; iperf3 for real tests (not for -l)
+  if $LIST_ONLY; then
+    ensure_deps false || exit 1
+  else
+    ensure_deps true || exit 1
+  fi
+
   load_endpoints || exit 1
 
   if $LIST_ONLY; then
