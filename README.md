@@ -4,10 +4,19 @@ Open-source Linux server scripts on **[catbash.net](https://catbash.net/)**:
 
 | Project | What it does | Run | Docs |
 |---------|--------------|-----|------|
+| **Launcher** | Menu → SICK or NETS | `curl -sL https://catbash.net/menu \| bash` | [catbash.sh](catbash.sh) |
 | **[SICK](https://catbash.net/sick.html)** | One-shot hardware inventory | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · this README |
-| **[NETS](https://catbash.net/nets.html)** | Public iperf3 throughput sampler | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
+| **[NETS](https://catbash.net/nets.html)** | Public iperf3 throughput sampler | `curl -sL https://catbash.net/nets \| bash` | [nets.html](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
 
-Short links (also on ba.sh): `https://ba.sh/sick` · `https://ba.sh/nets`
+```bash
+# Interactive menu (1 = SICK, 2 = NETS)
+curl -sL https://catbash.net/menu | bash
+# Skip menu
+curl -sL https://catbash.net/menu | bash -s -- sick -cn
+curl -sL https://catbash.net/menu | bash -s -- nets -r
+```
+
+Short links (also on ba.sh): `https://ba.sh/sick` · `https://ba.sh/nets` · menu: `https://catbash.net/menu`
 
 ---
 

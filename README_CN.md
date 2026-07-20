@@ -4,10 +4,19 @@
 
 | 项目 | 用途 | 运行 | 文档 |
 |------|------|------|------|
+| **主菜单** | 选择 SICK 或 NETS | `curl -sL https://catbash.net/menu \| bash` | [catbash.sh](catbash.sh) |
 | **[SICK](https://catbash.net/sick.html)** | 一次性硬件盘点 | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · 本 README |
-| **[NETS](https://catbash.net/nets.html)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
+| **[NETS](https://catbash.net/nets.html)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets.html](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
 
-短链（含 ba.sh）：`https://ba.sh/sick` · `https://ba.sh/nets`
+```bash
+# 交互菜单（1 = SICK，2 = NETS）
+curl -sL https://catbash.net/menu | bash
+# 跳过菜单
+curl -sL https://catbash.net/menu | bash -s -- sick -cn
+curl -sL https://catbash.net/menu | bash -s -- nets -r
+```
+
+短链（含 ba.sh）：`https://ba.sh/sick` · `https://ba.sh/nets` · 菜单：`https://catbash.net/menu`
 
 ---
 
