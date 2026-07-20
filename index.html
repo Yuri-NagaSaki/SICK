@@ -343,28 +343,26 @@
   }
   .term-body pre {
     margin: 0;
-    /* Dual-width CJK mono stack so box tables align like a real terminal */
+    /* Prefer dual-width CJK mono when present; never clip glyphs */
     font-family: "Sarasa Term SC", "Sarasa Mono SC", "Noto Sans Mono CJK SC",
       "Source Han Mono SC", "WenQuanYi Zen Hei Mono", "Cascadia Mono",
       "JetBrains Mono", var(--font-mono), ui-monospace, monospace;
     font-size: clamp(11px, 0.15vw + 10.5px, 13px);
-    line-height: 1.4;
+    line-height: 1.45;
     white-space: pre;
     color: var(--ink-soft);
     tab-size: 4;
+    letter-spacing: 0;
+    word-spacing: 0;
+    font-variant-ligatures: none;
     -webkit-font-smoothing: antialiased;
   }
-  .term-body pre span { font-family: inherit; }
-  /* Force terminal cell geometry: 1ch ASCII / 2ch CJK — matches real tty columns */
-  .term-body pre .cw {
-    display: inline-block;
+  .term-body pre span {
+    font-family: inherit;
+    font-size: inherit;
     line-height: inherit;
-    vertical-align: top;
-    text-align: center;
-    overflow: hidden;
+    letter-spacing: inherit;
   }
-  .term-body pre .cw1 { width: 1ch; }
-  .term-body pre .cw2 { width: 2ch; }
 
   .c-frame { color: oklch(78% 0.14 95); }
   .c-title { color: oklch(96% 0.01 90); font-weight: 600; }
@@ -853,111 +851,145 @@
   const out = document.getElementById('sample-out');
   if (!rawEl || !out) return;
 
+  // Exact CLI dump — never mutate character content
   const text = JSON.parse(rawEl.textContent);
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // East-Asian full/wide → 2 columns (same rule as most terminals for CJK)
-  function isWide(ch) {
-    const c = ch.codePointAt(0);
-    if (c <= 0x1f) return false;
-    // Hangul Jamo
-    if (c >= 0x1100 && c <= 0x115f) return true;
-    // CJK / Fullwidth blocks (common ranges)
-    if (c >= 0x2e80 && c <= 0xa4cf) return true;
-    if (c >= 0xac00 && c <= 0xd7a3) return true;
-    if (c >= 0xf900 && c <= 0xfaff) return true;
-    if (c >= 0xfe10 && c <= 0xfe19) return true;
-    if (c >= 0xfe30 && c <= 0xfe6f) return true;
-    if (c >= 0xff00 && c <= 0xff60) return true;
-    if (c >= 0xffe0 && c <= 0xffe6) return true;
-    if (c >= 0x20000 && c <= 0x2fffd) return true;
-    if (c >= 0x30000 && c <= 0x3fffd) return true;
-    return false;
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function paintChars(str, cls) {
-    let html = '';
-    for (const ch of str) {
-      const w = isWide(ch) ? 2 : 1;
-      const c = cls ? ('cw cw' + w + ' ' + cls) : ('cw cw' + w);
-      html += '<span class="' + c + '">' + esc(ch) + '</span>';
+  /**
+   * Color a line by wrapping tokens only.
+   * Critical: never split into fixed-width cells (that clipped Latin glyphs).
+   */
+  function colorLine(line) {
+    if (line === '') return '';
+
+    // Full ═ bars
+    if (/^[═]+$/.test(line)) {
+      return '<span class="c-bar">' + esc(line) + '</span>';
     }
-    return html;
-  }
 
-  // Classify whole line into segments {t, c}
-  function segmentsFor(line) {
-    if (line === '') return [];
+    // Pure box-drawing rows (table borders / section closers)
+    if (/^[\u2500-\u257F]+$/.test(line)) {
+      return '<span class="c-frame">' + esc(line) + '</span>';
+    }
 
-    if (/^[═]+$/.test(line)) return [{ t: line, c: 'c-bar' }];
-    if (line.indexOf('系统硬件信息报告') !== -1) return [{ t: line, c: 'c-title' }];
-    if (/^[\u2500-\u257F]+$/.test(line)) return [{ t: line, c: 'c-frame' }];
-    if (/^└[─]+$/.test(line)) return [{ t: line, c: 'c-frame' }];
-    if (line.indexOf('报告生成完成') !== -1) return [{ t: line, c: 'c-done' }];
-    if (line.indexOf('Generated on') === 0) return [{ t: line, c: 'c-dim' }];
+    // Report title row
+    if (line.indexOf('系统硬件信息报告') !== -1) {
+      return '<span class="c-title">' + esc(line) + '</span>';
+    }
 
-    // Section header ┌─ Title ──
+    if (line.indexOf('报告生成完成') !== -1) {
+      return '<span class="c-done">' + esc(line) + '</span>';
+    }
+    if (line.indexOf('Generated on') === 0) {
+      return '<span class="c-dim">' + esc(line) + '</span>';
+    }
+
+    // Section headers: ┌─ Title ──… (no internal │)
     if (/^[┌├]─ /.test(line) && line.indexOf('│') === -1) {
-      const m = line.match(/^([┌├]─\s*)(.+?)(─+)$/);
+      const m = line.match(/^([┌├]─\s*)(.+?)(─*)$/);
       if (m) {
-        return [
-          { t: m[1], c: 'c-frame' },
-          { t: m[2], c: 'c-title' },
-          { t: m[3], c: 'c-frame' }
-        ];
+        return (
+          '<span class="c-frame">' + esc(m[1]) + '</span>' +
+          '<span class="c-title">' + esc(m[2]) + '</span>' +
+          '<span class="c-frame">' + esc(m[3]) + '</span>'
+        );
       }
-      return [{ t: line, c: 'c-frame' }];
     }
 
     // Prompt
     if (line.indexOf('curl -sL') !== -1) {
       const m = line.match(/^(root@pve)(:)(~)(\$.*)$/);
       if (m) {
-        return [
-          { t: m[1], c: 'c-prompt-u' },
-          { t: m[2], c: null },
-          { t: m[3], c: 'c-prompt-p' },
-          { t: m[4], c: null }
-        ];
+        return (
+          '<span class="c-prompt-u">' + esc(m[1]) + '</span>' +
+          esc(m[2]) +
+          '<span class="c-prompt-p">' + esc(m[3]) + '</span>' +
+          esc(m[4])
+        );
       }
     }
 
-    // Generic content lines — regex token scan left-to-right
+    // Content lines — left-to-right token walk, preserve every char
     if (line.charAt(0) === '│' || line.charAt(0) === '├' || line.charAt(0) === '└') {
-      const segs = [];
-      const re = /(\/dev\/[A-Za-z0-9_./+-]+|\bPASS\b|\bOK\b|\bUP\b|\bDOWN\b|\+?\d+(?:\.\d+)?°C|⚠[^\n]*|ℹ[^\n]*|[\u2500-\u257F]+|[^\/\u2500-\u257F⚠ℹPHOUDpd0-9+]+)/g;
-      // Simpler: walk with ordered matchers
+      let html = '';
       let i = 0;
-      while (i < line.length) {
+      const n = line.length;
+      while (i < n) {
         const rest = line.slice(i);
         let m;
-        if ((m = rest.match(/^⚠.*/))) { segs.push({ t: m[0], c: 'c-warn' }); i += m[0].length; continue; }
-        if ((m = rest.match(/^ℹ.*/))) { segs.push({ t: m[0], c: 'c-info' }); i += m[0].length; continue; }
-        if ((m = rest.match(/^\/dev\/[A-Za-z0-9_./+-]+/))) { segs.push({ t: m[0], c: 'c-dev' }); i += m[0].length; continue; }
-        if ((m = rest.match(/^\+?\d+(?:\.\d+)?°C/))) { segs.push({ t: m[0], c: 'c-good' }); i += m[0].length; continue; }
-        if ((m = rest.match(/^(PASS|OK)\b/))) { segs.push({ t: m[1], c: 'c-ok' }); i += m[1].length; continue; }
-        if ((m = rest.match(/^UP\b/))) { segs.push({ t: 'UP', c: 'c-up' }); i += 2; continue; }
-        if ((m = rest.match(/^DOWN\b/))) { segs.push({ t: 'DOWN', c: 'c-down' }); i += 4; continue; }
-        if ((m = rest.match(/^[\u2500-\u257F]+/))) { segs.push({ t: m[0], c: 'c-frame' }); i += m[0].length; continue; }
+
+        // warning / info rest of line
+        if ((m = rest.match(/^(⚠.*)$/))) {
+          html += '<span class="c-warn">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+        if ((m = rest.match(/^(ℹ.*)$/))) {
+          html += '<span class="c-info">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+
+        // device path
+        if ((m = rest.match(/^(\/dev\/[A-Za-z0-9_./+-]+)/))) {
+          html += '<span class="c-dev">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+
+        // temperatures
+        if ((m = rest.match(/^(\+?\d+(?:\.\d+)?°C)/))) {
+          html += '<span class="c-good">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+
+        // status words (word boundary)
+        if ((m = rest.match(/^(PASS|OK)(?![A-Za-z0-9_])/))) {
+          html += '<span class="c-ok">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+        if ((m = rest.match(/^(UP)(?![A-Za-z0-9_])/))) {
+          html += '<span class="c-up">UP</span>';
+          i += 2;
+          continue;
+        }
+        if ((m = rest.match(/^(DOWN)(?![A-Za-z0-9_])/))) {
+          html += '<span class="c-down">DOWN</span>';
+          i += 4;
+          continue;
+        }
+
+        // box-drawing run
+        if ((m = rest.match(/^([\u2500-\u257F]+)/))) {
+          html += '<span class="c-frame">' + esc(m[1]) + '</span>';
+          i += m[1].length;
+          continue;
+        }
+
         // plain run until next special
         let j = i + 1;
-        while (j < line.length) {
+        while (j < n) {
           const r = line.slice(j);
-          if (/^(⚠|ℹ|\/dev\/|PASS\b|OK\b|UP\b|DOWN\b|\+?\d+(?:\.\d+)?°C|[\u2500-\u257F])/.test(r)) break;
+          if (/^(⚠|ℹ|\/dev\/|PASS(?![A-Za-z0-9_])|OK(?![A-Za-z0-9_])|UP(?![A-Za-z0-9_])|DOWN(?![A-Za-z0-9_])|\+?\d+(?:\.\d+)?°C|[\u2500-\u257F])/.test(r)) {
+            break;
+          }
           j++;
         }
-        segs.push({ t: line.slice(i, j), c: null });
+        html += esc(line.slice(i, j));
         i = j;
       }
-      return segs;
+      return html;
     }
 
-    return [{ t: line, c: null }];
+    return esc(line);
   }
 
-  out.innerHTML = text.split('\n').map((line) => {
-    return segmentsFor(line).map((s) => paintChars(s.t, s.c)).join('');
-  }).join('\n');
+  out.innerHTML = text.split('\n').map(colorLine).join('\n');
 })();
 </script>
 
