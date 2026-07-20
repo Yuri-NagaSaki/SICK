@@ -2,18 +2,17 @@
  * catbash.net / 猫脚本 — short install URLs + static site
  *
  * Pages (HTML):
- *   /           → 猫脚本 hub (index.html)
+ *   /           → 猫脚本 hub (index.html)  [worker maps / because html_handling=none]
  *   /sick.html  → SICK intro
  *   /nets.html  → NETS intro
  *
  * Scripts (text/plain, curl|bash):
  *   /sick  /sick/  → hardware_info.sh
- *   /nets          → nets/nets.sh
+ *   /nets  /nets/  → nets/nets.sh
  *   /nets.sh       → nets/nets.sh
  *
- * Note: do NOT serve HTML from /nets/index.html via ASSETS for /nets/ —
- * Workers static assets 307 /nets/index.html → /nets/, which collides with
- * the install short-link. Intro page lives at /nets.html instead.
+ * html_handling is "none" so /sick.html is NOT redirected to /sick
+ * (which would collide with the install short link).
  *
  * External short links (ba.sh):
  *   https://ba.sh/sick · https://ba.sh/nets
@@ -40,23 +39,22 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Hub home — assets.html_handling=none does not auto-serve index.html for /
+    if (path === "/" || path === "") {
+      return asset(env, request, "/index.html");
+    }
+
     // SICK one-shot hardware script (page is /sick.html)
     if (path === "/sick" || path === "/sick/") {
       return asScript(await asset(env, request, "/hardware_info.sh"));
     }
 
     // NETS: bare /nets and /nets/ are always the shell script (curl|bash)
-    // Trailing slash also script so accidental /nets/ still installs.
     if (path === "/nets" || path === "/nets/") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 
-    if (path === "/nets.sh") {
-      return asScript(await asset(env, request, "/nets/nets.sh"));
-    }
-
-    // Force script content-type for the raw file path too
-    if (path === "/nets/nets.sh") {
+    if (path === "/nets.sh" || path === "/nets/nets.sh") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 
