@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.2.1"
+VERSION="0.3.0"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -454,7 +454,7 @@ resolve_endpoints_json() {
   if [[ -n "$ENDPOINTS_JSON" && -f "$ENDPOINTS_JSON" ]]; then
     return 0
   fi
-  # 2) beside script
+  # 2) beside script (local checkout)
   if [[ -n "$SCRIPT_DIR" && -f "${SCRIPT_DIR}/endpoints.json" ]]; then
     ENDPOINTS_JSON="${SCRIPT_DIR}/endpoints.json"
     return 0
@@ -464,9 +464,17 @@ resolve_endpoints_json() {
     ENDPOINTS_JSON="$(pwd)/endpoints.json"
     return 0
   fi
-  # 4) download from public short hosts
-  local url
   ENDPOINTS_TMP="$(mktemp "${TMPDIR:-/tmp}/nets-endpoints.XXXXXX.json")"
+  # 4) embedded catalog first — always matches this script version (curl|bash)
+  if declare -F write_embedded_endpoints >/dev/null 2>&1; then
+    write_embedded_endpoints "$ENDPOINTS_TMP"
+    if [[ -s "$ENDPOINTS_TMP" ]]; then
+      ENDPOINTS_JSON="$ENDPOINTS_TMP"
+      return 0
+    fi
+  fi
+  # 5) download from public hosts (override / fallback)
+  local url
   for url in "${ENDPOINTS_URLS[@]}"; do
     [[ -z "$url" ]] && continue
     if command -v curl >/dev/null 2>&1; then
@@ -485,17 +493,9 @@ resolve_endpoints_json() {
       fi
     fi
   done
-  # 5) embedded catalog (works when only /nets is reverse-proxied)
-  if declare -F write_embedded_endpoints >/dev/null 2>&1; then
-    write_embedded_endpoints "$ENDPOINTS_TMP"
-    if [[ -s "$ENDPOINTS_TMP" ]]; then
-      ENDPOINTS_JSON="$ENDPOINTS_TMP"
-      return 0
-    fi
-  fi
   rm -f "$ENDPOINTS_TMP"
   ENDPOINTS_TMP=""
-  err "Could not load endpoints.json (local, remote, or embedded)."
+  err "Could not load endpoints.json (local, embedded, or remote)."
   return 1
 }
 
@@ -574,14 +574,17 @@ PY
 
 list_endpoints() {
   printf '%b\n' "${C_HDR}NETS endpoints${NC} ${C_META}(region=${REGION})${NC}"
-  printf '%b\n' "${C_BAR}──────────────────────────────────────────────────────────────────────────────${NC}"
-  printf '%b%-18s %-16s %-26s %-34s %s%b\n' \
+  printf '%b\n' "${C_META}--------------------------------------------------------------------------------${NC}"
+  printf '%b%-20s %-16s %-22s %-36s %s%b\n' \
     "${DIM}" "ID" "PROVIDER" "CITY" "HOST" "STACK" "${NC}"
   local i
   for ((i = 0; i < ${#EP_ID[@]}; i++)); do
-    printf '%b%-18s%b %-16s %-26s %-34s %s\n' \
-      "${C_LOC}" "${EP_ID[$i]}" "${NC}" \
-      "${EP_PROVIDER[$i]}" "${EP_CITY[$i]}" "${EP_HOST[$i]}" "${EP_STACK[$i]}"
+    printf '%-20s %-16s %-22s %-36s %s\n' \
+      "$(fit "${EP_ID[$i]}" 20)" \
+      "$(fit "${EP_PROVIDER[$i]}" 16)" \
+      "$(fit "${EP_CITY[$i]}" 22)" \
+      "$(fit "${EP_HOST[$i]}" 36)" \
+      "${EP_STACK[$i]}"
   done
   printf '\n%b%d endpoint(s)%b\n' "${C_META}" "${#EP_ID[@]}" "${NC}"
 }
@@ -597,11 +600,35 @@ human_bytes() {
   }'
 }
 
-# Pad plain text then wrap color (ANSI-safe column width)
-cell() {
+# ASCII-safe truncate to display width (no wide Unicode)
+fit() {
+  local s="$1" w="$2"
+  # strip non-ASCII that can break terminal columns
+  s="$(printf '%s' "$s" | tr -cd '\11\12\15\40-\176')"
+  if ((${#s} > w)); then
+    printf '%s' "${s:0:$((w - 3))}..."
+  else
+    printf '%s' "$s"
+  fi
+}
+
+# Left-pad plain text then wrap color (ANSI-safe column width)
+lcell() {
   local width="$1" text="$2" color="${3:-}"
   local plain
   plain="$(printf '%-*s' "$width" "$text")"
+  if [[ -n "$color" ]]; then
+    printf '%b%s%b' "$color" "$plain" "$NC"
+  else
+    printf '%s' "$plain"
+  fi
+}
+
+# Right-pad (for numbers) then wrap color
+rcell() {
+  local width="$1" text="$2" color="${3:-}"
+  local plain
+  plain="$(printf '%*s' "$width" "$text")"
   if [[ -n "$color" ]]; then
     printf '%b%s%b' "$color" "$plain" "$NC"
   else
@@ -739,19 +766,21 @@ run_iperf_range() {
   fi
 }
 
-# Speed text for table (no color)
+# Speed text for table — fixed patterns so columns stay aligned
+# ok values always fit in 10 ASCII chars: "9999 Mbps" / "99.99 Gbps"
 format_speed_text() {
   local status="$1" mbps="$2"
   case "$status" in
     ok)
-      # Prefer Gbps when large
       awk -v m="${mbps:-0}" 'BEGIN{
-        if (m >= 1000) printf "%.2f Gbps", m/1000
-        else printf "%.0f Mbps", m
+        if (m >= 1000) printf "%.2fG", m/1000
+        else if (m >= 100) printf "%.0fM", m
+        else if (m >= 10)  printf "%.1fM", m
+        else               printf "%.2fM", m
       }'
       ;;
     busy) printf '%s' "busy" ;;
-    skip) printf '%s' "—" ;;
+    skip) printf '%s' "-" ;;
     *)    printf '%s' "fail" ;;
   esac
 }
@@ -786,9 +815,11 @@ track_result() {
 }
 
 print_header() {
-  printf '%b\n' "${C_BAR}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
-  printf '%b\n' "${C_BAR}║${NC}  ${C_HDR}NETS v${VERSION}${NC}  ${C_META}— Network Endpoint Throughput Sampler${NC}              ${C_BAR}║${NC}"
-  printf '%b\n' "${C_BAR}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+  # ASCII-only frame — wide Unicode box-drawing misaligns on many CJK terminals
+  printf '%b\n' "${C_BAR}+--------------------------------------------------------------------------+${NC}"
+  printf '%b|%b  %bNETS v%s%b — Network Endpoint Throughput Sampler%b\n' \
+    "${C_BAR}" "${NC}" "${C_HDR}" "$VERSION" "${NC}" "${NC}"
+  printf '%b\n' "${C_BAR}+--------------------------------------------------------------------------+${NC}"
   printf '  %bRegion%b      %s\n' "${BOLD}" "${NC}" "$REGION"
   printf '  %bDuration%b    %ss / direction · parallel %s\n' "${BOLD}" "${NC}" "$TEST_TIME" "$PARALLEL"
   printf '  %bStack%b       IPv4 %b%s%b · IPv6 %b%s%b\n' \
@@ -798,15 +829,18 @@ print_header() {
     "$( $HAVE_IPV6 && printf '%s' "$C_OK" || printf '%s' "$C_META" )" \
     "$( $HAVE_IPV6 && echo on || echo off )" "${NC}"
   printf '  %bEndpoints%b   %d · iperf3 %s\n' "${BOLD}" "${NC}" "${#EP_ID[@]}" "$IPERF_BIN"
-  printf '  %bLegend%b      %b↑ Send (upload)%b  %b↓ Recv (download)%b  %bbusy%b  %bfail%b\n' \
+  printf '  %bLegend%b      %bSend=upload%b  %bRecv=download%b  %bbusy%b  %bfail%b\n' \
     "${BOLD}" "${NC}" "${C_UP}" "${NC}" "${C_DOWN}" "${NC}" "${C_BUSY}" "${NC}" "${C_FAIL}" "${NC}"
-  printf '%b  Public shared servers — busy is normal; not bare-metal capacity.%b\n' "${DIM}" "${NC}"
+  printf '%b  Note: public shared servers — busy is normal; not bare-metal capacity.%b\n' "${DIM}" "${NC}"
   echo
 }
 
+# Column layout (ASCII widths, fixed):
+#  Location(20) + 2 + Provider(14) + 2 + Send(10) + 2 + Recv(10) + 2 + Link(6) = 68
 run_mode_table() {
   local ipver="$1"   # 4 or 6
   local mode_label="IPv${ipver}"
+  local W_LOC=20 W_PROV=14 W_SPD=10 W_LINK=6
 
   if [[ "$ipver" == "4" ]] && ! $HAVE_IPV4; then
     warn "Skipping ${mode_label} (no IPv4 connectivity)."
@@ -820,18 +854,27 @@ run_mode_table() {
     return 0
   fi
 
-  printf '%b\n' "${C_BAR}── ${C_HDR}iperf3 ${mode_label}${C_BAR} ────────────────────────────────────────────────────${NC}"
-  # Headers: no Port column
-  printf '  %b%b  %b  %b  %b  %b%b\n' \
-    "${DIM}" \
-    "$(printf '%-18s' 'Location')" \
-    "$(printf '%-16s' 'Provider')" \
-    "$(printf '%-12s' '↑ Send')" \
-    "$(printf '%-12s' '↓ Recv')" \
-    "$(printf '%-6s' 'Link')" \
-    "${NC}"
-  printf '  %b%b%b\n' "${C_META}" \
-    "──────────────────  ────────────────  ────────────  ────────────  ──────" "${NC}"
+  printf '%b\n' "${C_BAR}-- iperf3 ${mode_label} -----------------------------------------------------------${NC}"
+  # Header row (all ASCII)
+  printf '  %b' "${DIM}"
+  lcell "$W_LOC" "Location"
+  printf '  '
+  lcell "$W_PROV" "Provider"
+  printf '  '
+  rcell "$W_SPD" "Send"
+  printf '  '
+  rcell "$W_SPD" "Recv"
+  printf '  '
+  lcell "$W_LINK" "Link"
+  printf '%b\n' "${NC}"
+  printf '  %b' "${C_META}"
+  printf '%s  %s  %s  %s  %s' \
+    "$(printf '%*s' "$W_LOC" '' | tr ' ' '-')" \
+    "$(printf '%*s' "$W_PROV" '' | tr ' ' '-')" \
+    "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
+    "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
+    "$(printf '%*s' "$W_LINK" '' | tr ' ' '-')"
+  printf '%b\n' "${NC}"
 
   local i host p0 p1 stack city prov speed_meta
   local do_test send_st send_mb send_by recv_st recv_mb recv_by send_s recv_s
@@ -855,11 +898,6 @@ run_mode_table() {
       continue
     fi
 
-    local city_short="$city"
-    ((${#city_short} > 18)) && city_short="${city_short:0:17}…"
-    local prov_short="$prov"
-    ((${#prov_short} > 16)) && prov_short="${prov_short:0:15}…"
-
     send_st="skip"; send_mb=""; send_by=0
     recv_st="skip"; recv_mb=""; recv_by=0
 
@@ -876,15 +914,15 @@ run_mode_table() {
     recv_s="$(format_speed_text "$recv_st" "$recv_mb")"
 
     printf '  '
-    cell 18 "$city_short" "$C_LOC"
+    lcell "$W_LOC" "$(fit "$city" "$W_LOC")" "$C_LOC"
     printf '  '
-    cell 16 "$prov_short" "$C_PROV"
+    lcell "$W_PROV" "$(fit "$prov" "$W_PROV")" "$C_PROV"
     printf '  '
-    cell 12 "$send_s" "$(speed_color "$send_st" up)"
+    rcell "$W_SPD" "$send_s" "$(speed_color "$send_st" up)"
     printf '  '
-    cell 12 "$recv_s" "$(speed_color "$recv_st" down)"
+    rcell "$W_SPD" "$recv_s" "$(speed_color "$recv_st" down)"
     printf '  '
-    cell 6 "$speed_meta" "$C_META"
+    lcell "$W_LINK" "$(fit "$speed_meta" "$W_LINK")" "$C_META"
     printf '\n'
   done
   echo
@@ -898,23 +936,20 @@ print_summary() {
   down_h="$(human_bytes "$TOTAL_RECV_BYTES")"
   tot_h="$(human_bytes "$total_bytes")"
 
-  printf '%b\n' "${C_BAR}── ${C_HDR}Summary${C_BAR} ──────────────────────────────────────────────────────────${NC}"
+  printf '%b\n' "${C_BAR}-- Summary ----------------------------------------------------------------${NC}"
   printf '  %bElapsed%b     %ss\n' "${BOLD}" "${NC}" "$elapsed"
-  printf '  %bTests%b       %b%d ok%b · %b%d busy%b · %b%d fail%b · %d total\n' \
+  printf '  %bTests%b       %b%d ok%b  %b%d busy%b  %b%d fail%b  %d total\n' \
     "${BOLD}" "${NC}" \
     "${C_OK}" "$TOTAL_OK" "${NC}" \
     "${C_BUSY}" "$TOTAL_BUSY" "${NC}" \
     "${C_FAIL}" "$TOTAL_FAIL" "${NC}" \
     "$TOTAL_TESTS"
-  printf '  %bTraffic%b     %b↑ upload %s%b  ·  %b↓ download %s%b  ·  total %s\n' \
-    "${BOLD}" "${NC}" \
-    "${C_UP}" "$up_h" "${NC}" \
-    "${C_DOWN}" "$down_h" "${NC}" \
-    "$tot_h"
-  printf '  %b            (this run only — iperf3 payload transfer)%b\n' "${DIM}" "${NC}"
-  printf '%b\n' "${C_BAR}────────────────────────────────────────────────────────────────────────────${NC}"
+  printf '  %bTraffic%b     %bSend(up)  %s%b\n' "${BOLD}" "${NC}" "${C_UP}" "$up_h" "${NC}"
+  printf '               %bRecv(down) %s%b\n' "${C_DOWN}" "$down_h" "${NC}"
+  printf '               total      %s\n' "$tot_h"
+  printf '  %b             (this run only — iperf3 payload)%b\n' "${DIM}" "${NC}"
+  printf '%b\n' "${C_BAR}--------------------------------------------------------------------------${NC}"
   ok "Done · NETS v${VERSION}"
-  printf '%b\n' "${DIM}  catalog: ${ENDPOINTS_JSON}${NC}"
 }
 
 parse_args() {

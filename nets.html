@@ -65,6 +65,7 @@
       <a href="/sick.html">SICK</a>
       <a class="active" href="/nets.html">NETS</a>
       <a class="nav-hide-sm" href="#install" data-en="Install" data-zh="安装">Install</a>
+      <a class="nav-hide-sm" href="#usage" data-en="Usage" data-zh="用法">Usage</a>
       <a class="nav-hide-sm" href="#endpoints" data-en="Endpoints" data-zh="节点">Endpoints</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
@@ -116,13 +117,175 @@
         <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash -s -- -r" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="<code>-r</code> reduced · <code>--region na|eu|apac</code> · <code>-4</code>/<code>-6</code> · <code>-t 10</code> · <code>-P 4</code> · needs <code>iperf3</code> + <code>python3</code>"
-         data-zh="<code>-r</code> 精简 · <code>--region na|eu|apac</code> · <code>-4</code>/<code>-6</code> · <code>-t 10</code> · <code>-P 4</code> · 需要 <code>iperf3</code> + <code>python3</code>">
-        <code>-r</code> reduced · <code>--region na|eu|apac</code> · <code>-4</code>/<code>-6</code> · <code>-t 10</code> · <code>-P 4</code> · needs <code>iperf3</code> + <code>python3</code>
+         data-en="Needs <code>iperf3</code> + <code>python3</code>. Pass options after <code>bash -s --</code>."
+         data-zh="需要 <code>iperf3</code> + <code>python3</code>。参数写在 <code>bash -s --</code> 后面。">
+        Needs <code>iperf3</code> + <code>python3</code>. Pass options after <code>bash -s --</code>.
       </p>
     </div>
   </div>
 </header>
+
+<section class="rule" id="usage">
+  <div class="wrap">
+    <h2 data-en="Requirements" data-zh="依赖">Requirements</h2>
+    <div class="report-map" style="margin-bottom:1.25rem">
+      <div class="rm-item"><strong>iperf3</strong><span data-en="Throughput tests" data-zh="吞吐测试">Throughput tests</span></div>
+      <div class="rm-item"><strong>python3</strong><span data-en="Parse results &amp; catalog" data-zh="解析结果与节点表">Parse results &amp; catalog</span></div>
+      <div class="rm-item"><strong>bash</strong><span data-en="4.x recommended" data-zh="建议 4.x">4.x recommended</span></div>
+      <div class="rm-item"><strong data-en="Network" data-zh="网络">Network</strong><span data-en="Outbound TCP to public iperf ports" data-zh="出站 TCP 访问公网 iperf 端口">Outbound TCP to public iperf ports</span></div>
+    </div>
+    <div class="cmd-panel" style="margin-bottom:1.75rem">
+      <div class="cmd-head">
+        <span class="label" data-en="Install deps" data-zh="安装依赖">Install deps</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>sudo apt install -y iperf3 python3</code>
+          <button class="copy" type="button" data-copy="sudo apt install -y iperf3 python3" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>sudo dnf install -y iperf3 python3</code>
+          <button class="copy" type="button" data-copy="sudo dnf install -y iperf3 python3" data-en="copy" data-zh="复制">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 data-en="Options" data-zh="参数">Options</h2>
+    <table class="opts" style="margin-bottom:1.75rem">
+      <thead>
+        <tr>
+          <th data-en="Flag" data-zh="参数">Flag</th>
+          <th data-en="Description" data-zh="说明">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>-r, --reduced</td>
+          <td data-en="Short list (~8 endpoints) for a quick pass" data-zh="精简列表（约 8 个节点），快速摸底">Short list (~8 endpoints) for a quick pass</td>
+        </tr>
+        <tr>
+          <td>--region na|eu|apac|global|reduced</td>
+          <td data-en="Filter by region (default: global)" data-zh="按区域筛选（默认 global）">Filter by region (default: global)</td>
+        </tr>
+        <tr>
+          <td>-4 / -6</td>
+          <td data-en="IPv4 only / IPv6 only" data-zh="仅 IPv4 / 仅 IPv6">IPv4 only / IPv6 only</td>
+        </tr>
+        <tr>
+          <td>-t, --time &lt;sec&gt;</td>
+          <td data-en="iperf3 duration per direction (default: 10)" data-zh="每个方向测试秒数（默认 10）">iperf3 duration per direction (default: 10)</td>
+        </tr>
+        <tr>
+          <td>-P, --parallel &lt;n&gt;</td>
+          <td data-en="Parallel streams (default: 4). Keep low on shared nodes." data-zh="并行流数（默认 4）。公网节点请勿过大。">Parallel streams (default: 4). Keep low on shared nodes.</td>
+        </tr>
+        <tr>
+          <td>--send-only</td>
+          <td data-en="Upload only (client → server)" data-zh="只测上传（客户端 → 服务端）">Upload only (client → server)</td>
+        </tr>
+        <tr>
+          <td>--recv-only</td>
+          <td data-en="Download only (server → client, iperf -R)" data-zh="只测下载（服务端 → 客户端，iperf -R）">Download only (server → client, iperf -R)</td>
+        </tr>
+        <tr>
+          <td>-l, --list</td>
+          <td data-en="List endpoints and exit" data-zh="列出节点后退出">List endpoints and exit</td>
+        </tr>
+        <tr>
+          <td>-h / -v</td>
+          <td data-en="Help / version" data-zh="帮助 / 版本">Help / version</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 data-en="Examples" data-zh="示例">Examples</h2>
+    <div class="cmd-panel" style="margin-bottom:1.75rem">
+      <div class="cmd-head">
+        <span class="label" data-en="Common recipes" data-zh="常用命令">Common recipes</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/nets | bash -s -- -r -t 5</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- -r -t 5" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Reduced set, 5s per direction — good first look." data-zh="精简节点 + 每方向 5 秒，适合首次摸底。">Reduced set, 5s per direction — good first look.</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/nets | bash -s -- --region apac -4</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- --region apac -4" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Asia-Pacific endpoints, IPv4 only." data-zh="仅亚太节点，IPv4。">Asia-Pacific endpoints, IPv4 only.</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/nets | bash -s -- --region eu --recv-only -t 8</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- --region eu --recv-only -t 8" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Europe download-only (saves half the traffic)." data-zh="欧洲只测下载（大约一半流量）。">Europe download-only (saves half the traffic).</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/nets | bash -s -- -l</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- -l" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Print the catalog without running tests." data-zh="只打印节点表，不跑测试。">Print the catalog without running tests.</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sLO https://catbash.net/nets/nets.sh &amp;&amp; chmod +x nets.sh &amp;&amp; ./nets.sh -r</code>
+          <button class="copy" type="button" data-copy="curl -sLO https://catbash.net/nets/nets.sh && chmod +x nets.sh && ./nets.sh -r" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Download once, run locally (uses local endpoints.json if present)." data-zh="下载到本地再跑（同目录有 endpoints.json 时优先用）。">Download once, run locally (uses local endpoints.json if present).</p>
+      </div>
+    </div>
+
+    <h2 data-en="How to read the output" data-zh="如何阅读输出">How to read the output</h2>
+    <div class="report-map" style="margin-bottom:1.25rem">
+      <div class="rm-item"><strong>Send</strong><span data-en="Upload: your machine → remote iperf3" data-zh="上传：本机 → 远端 iperf3">Upload: your machine → remote iperf3</span></div>
+      <div class="rm-item"><strong>Recv</strong><span data-en="Download: remote → your machine (-R)" data-zh="下载：远端 → 本机 (-R)">Download: remote → your machine (-R)</span></div>
+      <div class="rm-item"><strong>Link</strong><span data-en="Advertised peer capacity (not a guarantee)" data-zh="节点标称链路（非保证值）">Advertised peer capacity (not a guarantee)</span></div>
+      <div class="rm-item"><strong>Traffic</strong><span data-en="Bytes transferred this run (summary)" data-zh="本轮实际传输量（汇总）">Bytes transferred this run (summary)</span></div>
+    </div>
+    <ul class="lede" style="max-width:none;margin:0 0 1.5rem;padding-left:1.2rem;list-style:disc">
+      <li data-en="<b>M / G</b> = Mbps / Gbps. Compare relative ranks more than absolute peaks."
+          data-zh="<b>M / G</b> = Mbps / Gbps。更关注相对高低，不必迷信峰值。">
+        <b>M / G</b> = Mbps / Gbps. Compare relative ranks more than absolute peaks.
+      </li>
+      <li data-en="<b>busy</b> = peer is running someone else's test. Re-run later."
+          data-zh="<b>busy</b> = 对端正被占用，稍后再试。">
+        <b>busy</b> = peer is running someone else's test. Re-run later.
+      </li>
+      <li data-en="<b>fail</b> = connect/timeout/error. Firewall, routing, or dead public node."
+          data-zh="<b>fail</b> = 连接失败/超时。可能是防火墙、路由或节点失效。">
+        <b>fail</b> = connect/timeout/error. Firewall, routing, or dead public node.
+      </li>
+      <li data-en="Ports are retried internally and <b>not printed</b> (keeps the table clean)."
+          data-zh="端口在内部自动重试，<b>表格不显示端口</b>，避免杂乱。">
+        Ports are retried internally and <b>not printed</b> (keeps the table clean).
+      </li>
+      <li data-en="A full global dual-stack run moves a lot of data (tens of GiB). Prefer <code>-r</code> or <code>--region</code> first."
+          data-zh="全量双栈一轮流量很大（可达数十 GiB）。建议先用 <code>-r</code> 或 <code>--region</code>。">
+        A full global dual-stack run moves a lot of data (tens of GiB). Prefer <code>-r</code> or <code>--region</code> first.
+      </li>
+    </ul>
+
+    <h2 data-en="Tips" data-zh="建议">Tips</h2>
+    <ul class="lede" style="max-width:none;margin:0;padding-left:1.2rem;list-style:disc">
+      <li data-en="Be polite on public nodes: default <code>-P 4</code>, avoid long <code>-t</code> storms."
+          data-zh="公网节点请克制：默认 <code>-P 4</code>，不要长时间高并行轰炸。">
+        Be polite on public nodes: default <code>-P 4</code>, avoid long <code>-t</code> storms.
+      </li>
+      <li data-en="Results are comparative, not lab-grade capacity of your NIC or the peer DC."
+          data-zh="结果用于对比，不等于本机网卡或对端机房的实验室带宽。">
+        Results are comparative, not lab-grade capacity of your NIC or the peer DC.
+      </li>
+      <li data-en="Override catalog: <code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>"
+          data-zh="自定义节点表：<code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>">
+        Override catalog: <code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>
+      </li>
+    </ul>
+  </div>
+</section>
 
 <section class="rule" id="endpoints">
   <div class="wrap">
