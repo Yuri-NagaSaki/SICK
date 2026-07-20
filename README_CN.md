@@ -1,246 +1,161 @@
 # 猫脚本 · Catbash
 
-开源 Linux 服务器脚本站点 **[catbash.net](https://catbash.net/)**：
+一组用一条 `curl | bash` 就能跑的 **Linux 服务器脚本** —— 无需安装器、无守护进程、零残留。
 
-| 项目 | 用途 | 运行 | 文档 |
-|------|------|------|------|
-| **主菜单** | 选择 SICK 或 NETS | `curl -sL https://catbash.net/menu \| bash` | [catbash.sh](catbash.sh) |
-| **[SICK](https://catbash.net/sick.html)** | 一次性硬件盘点 | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · 本 README |
-| **[NETS](https://catbash.net/nets.html)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets.html](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
-
-```bash
-# 交互菜单（1 = SICK，2 = NETS）
-curl -sL https://ba.sh/menu | bash
-# curl -sL https://catbash.net/menu | bash
-
-# 跳过菜单
-curl -sL https://ba.sh/menu | bash -s -- sick -cn
-curl -sL https://ba.sh/menu | bash -s -- nets -r
-```
-
-短链：`https://ba.sh/menu` · `https://ba.sh/sick` · `https://ba.sh/nets`  
-（以及 `https://catbash.net/menu` · `/sick` · `/nets`）
+**官网：** [https://catbash.net/](https://catbash.net/)  
+**语言：** [中文](README_CN.md) · [English](README.md)
 
 ---
 
-# SICK — 服务器信息检查工具包 (Server Info & Check Kit)
+## 包含什么
 
-> 一款“一次性”的 Linux 服务器硬件盘点工具。单次运行即可采集整台机器的硬件信息，并输出一份干净、彩色、对齐的报告（或 JSON）。它不会安装守护进程、不落地任何数据、也不作为监控常驻运行。
+| 工具 | 作用 | 一键运行 | 文档 |
+|------|------|----------|------|
+| **主菜单** | 交互选择 SICK 或 NETS | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
+| **SICK** | 一次性硬件盘点 | `curl -sL https://ba.sh/sick \| bash` | [sick.html](https://catbash.net/sick.html) |
+| **NETS** | 公网 iperf3 吞吐采样 | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
 
-**语言 / Language:** [中文](README_CN.md) | [English](README.md)
+**catbash.net** 上的对应短链：
 
-**官网:** [https://catbash.net/](https://catbash.net/) · [SICK 介绍](https://catbash.net/sick.html)
-
-## 简介
-
-**SICK**（Server Info & Check Kit）只回答一个问题，而且回答得很快：*这台服务器里是什么硬件、现在是否健康？* 跑一次、看报告、收工。每个板块都以对齐、按状态着色的表格呈现，无论机器上是 1 块盘还是 40 块盘，输出都清晰可读。
-
-## 特性
-
-- **一次性、无残留** —— 纯采集与渲染；不写盘、不装服务。
-- **对齐彩色表格** —— 内存模组、文件系统、硬盘/SMART、NVMe 健康、RAID 阵列、网卡、显卡全部以带状态色的表格框呈现，中英文混排也能正确对齐。
-- **中英双语** —— 完整的中文（`-cn`）与英文输出。
-- **JSON 输出** —— `--json` 向标准输出打印一个机器可读的 JSON 对象。
-- **隐私友好** —— 默认对 IPv4/IPv6 与 MAC 地址脱敏；序列号完整显示。
-- **依赖处理友好** —— 检测并列出缺失的工具，**安装前先询问 Y/N**（`-y` 自动安装，`--no-install` 只用现有工具生成报告）。
-- **广泛兼容** —— Debian/Ubuntu、RHEL/CentOS/Alma/Rocky/CloudLinux、Fedora、Arch/Manjaro、openSUSE/SLES。
-
-## 报告内容
-
-| 板块 | 说明 |
+| 短链 | 指向 |
 |------|------|
-| **系统** | 主机名、操作系统、内核、运行时间 |
-| **CPU / 平台** | 型号、核心/线程、频率、缓存、实时使用率、温度、插槽/NUMA、虚拟化、微码 |
-| **内存** | 总计 / 已用 / 可用，以及逐模组表格（大小、类型、频率、厂商、序列号、型号） |
-| **硬盘** | 已挂载文件系统使用表 + SMART 摘要表（健康、通电时长、温度、累计读写、重映射/待处理/离线坏块） |
-| **NVMe 深度健康** | 每块盘的温度、已用耐久、可用备用、健康状态 |
-| **RAID** | 软件 RAID（mdraid）阵列、硬件 RAID/HBA 控制器、检测到的厂商 CLI 工具；RAID 成员盘会并入硬盘表并按序列号去重 |
-| **网卡** | 仅物理接口：链路/速率/双工、脱敏后的 MAC 与 IPv4、网卡型号，以及累计错误/丢包计数 |
-| **显卡** | 厂商与类别（独显 / 集显 / 管理BMC）、型号；NVIDIA 额外显示显存、驱动、温度 |
-| **主板** | 厂商、型号、BIOS 厂商/版本 |
+| https://ba.sh/menu · https://catbash.net/menu | [catbash.sh](catbash.sh) 主菜单 |
+| https://ba.sh/sick · https://catbash.net/sick | [hardware_info.sh](hardware_info.sh) |
+| https://ba.sh/nets · https://catbash.net/nets | [nets/nets.sh](nets/nets.sh) |
 
-## 快速开始
+---
 
-### 一键运行
+## 快速开始 — 主菜单
 
-短链安装地址（同一脚本）：
-
-- `https://ba.sh/sick`
-- `https://catbash.net/sick`
+交互菜单（`1` = SICK，`2` = NETS，`0` = 退出）：
 
 ```bash
-# 中文
-curl -sL https://ba.sh/sick | bash -s -- -cn
-# curl -sL https://catbash.net/sick | bash -s -- -cn
+curl -sL https://ba.sh/menu | bash
+# curl -sL https://catbash.net/menu | bash
+```
 
-# 英文（默认）
-curl -sL https://ba.sh/sick | bash
-# curl -sL https://catbash.net/sick | bash
+跳过菜单并传参：
 
-# 自动安装缺失工具，不询问
-curl -sL https://ba.sh/sick | bash -s -- -cn -y
-
-# 输出 JSON 到标准输出
-curl -sL https://ba.sh/sick | bash -s -- --json
+```bash
+curl -sL https://ba.sh/menu | bash -s -- sick -cn
+curl -sL https://ba.sh/menu | bash -s -- nets -r -t 5
+curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu
 ```
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
 
-也可以下载到本地再运行：
+---
+
+## SICK — 服务器信息检查工具包
+
+一条命令 → 完整硬件报告：CPU、内存（逐模组）、磁盘/SMART、NVMe、RAID、网卡、GPU、主板。彩色表格或 JSON。中英双语。
 
 ```bash
-curl -sLO https://catbash.net/hardware_info.sh
-# 或: curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
-chmod +x hardware_info.sh
-sudo ./hardware_info.sh -cn
+# 英文（默认）
+curl -sL https://ba.sh/sick | bash
+
+# 中文
+curl -sL https://ba.sh/sick | bash -s -- -cn
+
+# 自动安装缺失工具
+curl -sL https://ba.sh/sick | bash -s -- -y
+
+# 仅输出 JSON
+curl -sL https://ba.sh/sick | bash -s -- --json
 ```
 
-建议以 `sudo` 运行以获取完整信息（dmidecode、SMART 及部分传感器需要 root）。
+建议 `sudo` 运行以获取完整信息（dmidecode、SMART、部分传感器需要 root）。
 
-## 参数
+### 参数
 
 | 参数 | 说明 |
 |------|------|
-| `-cn`, `--chinese` | 中文输出 |
-| `-us`, `--english` | 英文输出（默认） |
-| `-j`, `--json` | 仅向标准输出打印 JSON |
-| `-y`, `--yes` | 不询问，直接安装缺失工具 |
-| `--no-install` | 从不安装，只用现有工具生成报告 |
-| `-h`, `--help` | 显示帮助 |
-| `-v`, `--version` | 显示版本 |
+| `-cn` / `--chinese` | 中文输出 |
+| `-us` / `--english` | 英文输出（默认） |
+| `-j` / `--json` | 仅向 stdout 打印 JSON |
+| `-y` / `--yes` | 不询问，直接安装缺失工具 |
+| `--no-install` | 从不安装；只用现有工具 |
+| `-h` / `-v` | 帮助 / 版本 |
 
-## 依赖
+### 报告覆盖
 
-SICK 使用一组标准 Linux 工具，并在启动时检测缺失项：
-`dmidecode`、`lshw`、`smartmontools`（smartctl）、`ethtool`、`nvme-cli`、`jq`、`pciutils`（lspci）、`lm-sensors`。
-它会根据你的发行版映射到对应软件包并在确认后安装。仍然缺失的工具会被直接跳过，报告继续用现有数据生成。
+系统 · CPU / 平台 · 内存 · 磁盘 / SMART · NVMe · RAID · 网卡 · 显卡 · 主板
 
-## 输出示例
+更多：[https://catbash.net/sick.html](https://catbash.net/sick.html)
 
-```text
-                                    系统硬件信息报告
-════════════════════════════════════════════════════════════════════════════════
+---
 
-┌─ 报告概览 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-│ 版本                : 3.0.0
-│ 模式                : 文本
-│ 隐私                : IP/MAC 已脱敏
-│ 序列号              : 明文显示
-└──────────────────────────────────────────────────
-┌─ 处理器信息 ────────────────────────────────────
-├──────────────────────────────────────────────────
-│ 型号                : Intel(R) Xeon(R) W-1250 CPU @ 3.30GHz
-│ 核心数              : 6
-│ 线程数              : 12
-│ 频率                : 3397.767 MHz
-│ 缓存                : 12288 KB
-│ 使用率              : 13.7%
-│ CPU温度             : +54.0°C
-└──────────────────────────────────────────────────
-┌─ 内存信息 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-│ 总计                : 62.67 GB
-│ 已用                : 29Gi
-│ 可用                : 33.55 GB
-│
-│ 内存模组:
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 大小     │ 类型   │ 频率         │ 制造商       │ 序列号           │ 型号                   │
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 32 GB    │ DDR4   │ 2667 MT/s    │ Samsung      │ 03ED821A         │ M391A4G43MB1-CTD       │
-│ 32 GB    │ DDR4   │ 2667 MT/s    │ Samsung      │ 042F10F4         │ M391A4G43MB1-CTD       │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────
-┌─ 硬盘信息 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-│ 已挂载文件系统:
-├──────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 文件系统                           │ 容量    │ 已用    │ 可用    │ 使用率 │ 挂载点               │
-├──────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ /dev/mapper/example--vg-root       │ 878G    │ 422G    │ 412G    │ 51%    │ /                    │
-│ /dev/md0                           │ 102T    │ 35T     │ 68T     │ 34%    │ /hdd                 │
-└──────────────────────────────────────────────────────────────────────────────────────────────────┘
-│
-│ 磁盘摘要（坏块=重映射/待处理/离线不可纠正）
-├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 设备         │ 基本信息                           │ SMART  │ 通电     │ 温度   │ 读写                 │ 坏块      │ 备注                 │
-├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ /dev/sda     │ 25.5T ST28000NM000C-3WM103 ATA     │ PASS   │ 9225h    │ 38°C   │ 读132.2T 写8.99T     │ 0/0/0     │ -                    │
-│ /dev/nvme0n1 │ 894.3G MZXLR960HBHQ-000H3          │ PASS   │ 20194h   │ 29°C   │ 读717.4T 写755.5T    │ -         │ 已用8%, 备用100%     │
-└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────
-┌─ NVMe 深度健康 ─────────────────────────────────
-├──────────────────────────────────────────────────
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│ 设备           │ 型号                       │ 温度    │ 耐久    │ 备用    │ 状态    │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│ /dev/nvme0n1   │ MZXLR960HBHQ-000H3         │ 29°C    │ 8%      │ 100%    │ OK      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────
-┌─ RAID控制器信息 ────────────────────────────────
-├──────────────────────────────────────────────────
-│ 软件 RAID (mdraid):
-├───────────────────────────────────────────────────────────┤
-│ 阵列     │ 级别       │ 状态         │ 成员数    │ 健康   │
-├───────────────────────────────────────────────────────────┤
-│ md0      │ raid0      │ active       │ 4         │ OK     │
-└───────────────────────────────────────────────────────────┘
-│   ⚠ md0             raid0 无冗余，任一成员故障将导致阵列失效
-│ RAID/HBA 控制器:
-├───────────────────────────────────────────────────────────────────────────┤
-│ 插槽       │ 类型      │ 控制器                                           │
-├───────────────────────────────────────────────────────────────────────────┤
-│ 05:00.0    │ RAID      │ Broadcom / LSI MegaRAID SAS-3 3108 [Invader] (r~ │
-└───────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────
-┌─ 网卡信息 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 网卡         │ 状态     │ 速率         │ MAC地址            │ IPv4                 │ 型号                     │
-├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ enp8s0       │ UP       │ 1000M/full   │ d0:50:99:XX:XX:XX  │ 104.250.XX.XX/30     │ Intel Corporation I210 ~ │
-│ enp9s0       │ DOWN     │ -            │ d0:50:99:XX:XX:XX  │ -                    │ Intel Corporation I210 ~ │
-└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-│
-│ 收发错误 / 丢包计数 (累计):
-│   ⚠ enp8s0          rx_errors=4
-└──────────────────────────────────────────────────
-┌─ 显卡信息 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-├────────────────────────────────────────────────────────────────────────────────┤
-│ 厂商     │ 类别       │ 型号                                                   │
-├────────────────────────────────────────────────────────────────────────────────┤
-│ ASPEED   │ 管理       │ ASPEED Technology, Inc. ASPEED Graphics Family (rev 4~ │
-└────────────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────
-┌─ 主板信息 ──────────────────────────────────────
-├──────────────────────────────────────────────────
-│ 厂商                : ASRockRack
-│ 型号                : W480D4U/JAX
-│ BIOS Vendor         : American Megatrends Inc.
-│ BIOS Version        : L0.04
-└──────────────────────────────────────────────────
+## NETS — 公网节点吞吐采样
+
+对精选公网节点跑 **iperf3** 上下行（NA / EU / APAC）。支持 IPv4 与 IPv6。汇总含 **Mbps/Gbps** 与 **本轮流量**。
+
+```bash
+# 全量
+curl -sL https://ba.sh/nets | bash
+
+# 精简节点，每方向 5 秒
+curl -sL https://ba.sh/nets | bash -s -- -r -t 5
+
+# 缺依赖时自动安装 iperf3 + python3
+curl -sL https://ba.sh/nets | bash -s -- -y -r
+
+# 仅亚太 + IPv4
+curl -sL https://ba.sh/nets | bash -s -- --region apac -4
+
+# 只列节点
+curl -sL https://ba.sh/nets | bash -s -- -l
 ```
 
-## 支持的系统
+**依赖：** `iperf3`、`python3`。缺失时会 **Y/N 询问安装**（也可用 `-y` / `--no-install`）。
 
-| 发行版 | 包管理器 | 状态 |
-|--------|----------|------|
-| Debian / Ubuntu / Mint | apt | 支持 |
-| RHEL / CentOS / AlmaLinux / Rocky / CloudLinux | yum / dnf | 支持 |
-| Fedora | dnf | 支持 |
-| Arch / Manjaro | pacman | 支持 |
-| openSUSE / SLES | zypper | 支持 |
+### 参数
 
-## 隐私
+| 参数 | 说明 |
+|------|------|
+| `-r` / `--reduced` | 精简节点列表 |
+| `--region na\|eu\|apac\|global\|reduced` | 按区域筛选 |
+| `-4` / `-6` | 仅 IPv4 / 仅 IPv6 |
+| `-t <秒>` | 每方向测试时长（默认 10） |
+| `-P <n>` | 并行流数（默认 4） |
+| `--send-only` / `--recv-only` | 只测上传 / 只测下载 |
+| `-y` / `--yes` | 自动安装缺失依赖 |
+| `--no-install` | 不安装；缺依赖则退出 |
+| `-l` | 列出节点后退出 |
 
-报告会对 IPv4/IPv6（保留网络前缀、隐藏主机位）与 MAC 地址（保留厂商 OUI、隐藏设备位）脱敏。序列号（硬盘、内存、主板）完整显示以便盘点硬件；公开分享报告前请注意这一点。
+节点目录：[nets/endpoints.md](nets/endpoints.md) · [nets/endpoints.json](nets/endpoints.json)  
+更多：[https://catbash.net/nets.html](https://catbash.net/nets.html)
+
+> 公网共享节点常 busy，结果用于对比，不等于实验室带宽。建议先用 `-r` 或 `--region`——全量双栈流量很大。
+
+---
+
+## 仓库结构
+
+```
+.
+├── catbash.sh           # 主菜单
+├── hardware_info.sh     # SICK
+├── index.html           # 官网首页
+├── sick.html            # SICK 介绍
+├── nets.html            # NETS 介绍
+├── nets/
+│   ├── nets.sh
+│   ├── endpoints.json
+│   └── endpoints.md
+├── worker.js            # Cloudflare 短链
+└── wrangler.jsonc
+```
+
+---
+
+## 赞助
+
+- **USDT (TRC20):** `TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5`
+- **爱发电：** [afdian.com/a/ellye](https://afdian.com/a/ellye)
+- **博客：** [catcat.blog](https://catcat.blog)
+
+---
 
 ## 许可证
 
-MIT —— 详见 [LICENSE](LICENSE)。
-
-## 作者
-
-由 Yuri NagaSaki 制作 —— 博客：[猫猫博客](https://catcat.blog)
+[MIT](LICENSE) · © Yuri NagaSaki
