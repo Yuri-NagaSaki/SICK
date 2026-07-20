@@ -89,67 +89,59 @@
   </div>
 </nav>
 
-<header class="wrap hero">
-  <p class="kicker" data-en="catbash.net" data-zh="catbash.net · 猫脚本">catbash.net</p>
-  <h1 data-en="Server scripts that <span class=&quot;mark&quot;>just run</span>."
-      data-zh="一条命令就能跑的<span class=&quot;mark&quot;>服务器脚本</span>。">
-    Server scripts that <span class="mark">just run</span>.
-  </h1>
-  <p class="lede"
-     data-en="<strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done."
-     data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点与公网吞吐测试。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
-    <strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done.
-  </p>
-  <div class="pills">
-    <span class="pill"><b>SICK</b> · hardware</span>
-    <span class="pill"><b>NETS</b> · iperf3</span>
-    <span class="pill" data-en="<b>MIT</b> · open source" data-zh="<b>MIT</b> · 开源"><b>MIT</b> · open source</span>
-  </div>
-</header>
-
-<section class="rule">
-  <div class="wrap">
-    <h2 data-en="Launcher menu" data-zh="主菜单">Launcher menu</h2>
-    <p class="lede" style="margin-bottom:1rem"
-       data-en="<strong>catbash.sh</strong> — one entry point. Interactive menu picks <strong>SICK</strong> or <strong>NETS</strong>, or pass the name as an argument."
-       data-zh="<strong>catbash.sh</strong> 统一入口。交互选择 <strong>SICK</strong> / <strong>NETS</strong>，也可直接传参数跳过菜单。">
-      <strong>catbash.sh</strong> — one entry point. Interactive menu picks <strong>SICK</strong> or <strong>NETS</strong>, or pass the name as an argument.
+<header class="wrap hero grid">
+  <div>
+    <p class="kicker" data-en="catbash.net" data-zh="catbash.net · 猫脚本">catbash.net</p>
+    <h1 data-en="Server scripts that <span class=&quot;mark&quot;>just run</span>."
+        data-zh="一条命令就能跑的<span class=&quot;mark&quot;>服务器脚本</span>。">
+      Server scripts that <span class="mark">just run</span>.
+    </h1>
+    <p class="lede"
+       data-en="<strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done."
+       data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点与公网吞吐测试。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
+      <strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done.
     </p>
-    <div class="cmd-panel" id="install-menu" style="margin-bottom:1.75rem">
-      <div class="cmd-head">
-        <span class="label" data-en="Menu" data-zh="菜单">Menu</span>
-        <span class="label">ba.sh/menu · catbash.net/menu</span>
-      </div>
-      <div class="cmd-body">
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/menu | bash</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://catbash.net/menu | bash</code>
-          <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/menu | bash -s -- nets -r</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- nets -r" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/menu | bash -s -- sick -cn</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- sick -cn" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint"
-           data-en="Interactive: type <code>1</code> (SICK) / <code>2</code> (NETS) / <code>0</code> exit. Skip menu: <code>sick</code> or <code>nets</code> after <code>bash -s --</code>. Source: <a href=&quot;https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/catbash.sh&quot;>catbash.sh</a>"
-           data-zh="交互：输入 <code>1</code>（SICK）/ <code>2</code>（NETS）/ <code>0</code> 退出。跳过菜单：在 <code>bash -s --</code> 后写 <code>sick</code> 或 <code>nets</code>。源码：<a href=&quot;https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/catbash.sh&quot;>catbash.sh</a>">
-          Interactive: type <code>1</code> (SICK) / <code>2</code> (NETS) / <code>0</code> exit. Skip menu: <code>sick</code> or <code>nets</code> after <code>bash -s --</code>. Source: <a href="https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/catbash.sh">catbash.sh</a>
-        </p>
-      </div>
+    <div class="pills">
+      <span class="pill"><b>SICK</b> · hardware</span>
+      <span class="pill"><b>NETS</b> · iperf3</span>
+      <span class="pill" data-en="<b>MIT</b> · open source" data-zh="<b>MIT</b> · 开源"><b>MIT</b> · open source</span>
     </div>
   </div>
-</section>
+
+  <div class="cmd-panel" id="install-menu">
+    <div class="cmd-head">
+      <span class="label" data-en="Menu · catbash.sh" data-zh="主菜单 · catbash.sh">Menu · catbash.sh</span>
+      <span class="label">ba.sh · catbash</span>
+    </div>
+    <div class="cmd-body">
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/menu | bash</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash" data-en="copy" data-zh="复制">copy</button>
+      </div>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://catbash.net/menu | bash</code>
+        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash" data-en="copy" data-zh="复制">copy</button>
+      </div>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/menu | bash -s -- nets -r</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- nets -r" data-en="copy" data-zh="复制">copy</button>
+      </div>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/menu | bash -s -- sick -cn</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- sick -cn" data-en="copy" data-zh="复制">copy</button>
+      </div>
+      <p class="cmd-hint"
+         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code> after <code>bash -s --</code>."
+         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>。">
+        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code> after <code>bash -s --</code>.
+      </p>
+    </div>
+  </div>
+</header>
 
 <section class="rule">
   <div class="wrap">
