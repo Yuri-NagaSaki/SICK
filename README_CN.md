@@ -40,16 +40,16 @@
 
 ```bash
 # 中文
-curl -sL https://catbash.net/sick | bash -s -- -cn
+curl -sL https://catbash.net/hardware_info.sh | bash -s -- -cn
 
 # 英文（默认）
-curl -sL https://catbash.net/sick | bash
+curl -sL https://catbash.net/hardware_info.sh | bash
 
 # 自动安装缺失工具，不询问
-curl -sL https://catbash.net/sick | bash -s -- -cn -y
+curl -sL https://catbash.net/hardware_info.sh | bash -s -- -cn -y
 
 # 输出 JSON 到标准输出
-curl -sL https://catbash.net/sick | bash -s -- --json
+curl -sL https://catbash.net/hardware_info.sh | bash -s -- --json
 ```
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
