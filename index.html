@@ -1,1177 +1,1044 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SICK — Server Info &amp; Check Kit</title>
-  <meta name="description"
-    content="A one-shot Linux server hardware inventory tool. Collects everything about a box in a single run and prints a clean, colorized report — or JSON. No daemon, no persistence.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
-  <style>
-    :root {
-      --bg-primary: #0a0e17;
-      --bg-secondary: #111827;
-      --bg-tertiary: #1a2332;
-      --neon-blue: #00d4ff;
-      --neon-blue-dim: #0091b3;
-      --neon-cyan: #00ffff;
-      --neon-purple: #b24bff;
-      --text-primary: #e2e8f0;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --border-color: #1e3a5f;
-      --code-bg: #0d1520;
-      --success: #10b981;
-      --error: #ef4444;
-      --glow-blue: 0 0 20px rgba(0, 212, 255, 0.3);
-      --glow-strong: 0 0 30px rgba(0, 212, 255, 0.5);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: 'JetBrains Mono', monospace;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      line-height: 1.7;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Scanline effect overlay */
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: repeating-linear-gradient(0deg,
-          transparent,
-          transparent 2px,
-          rgba(0, 0, 0, 0.03) 2px,
-          rgba(0, 0, 0, 0.03) 4px);
-      pointer-events: none;
-      z-index: 9999;
-    }
-
-    /* Grid background */
-    body::after {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-      background-size: 50px 50px;
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 2rem 2rem 4rem;
-      position: relative;
-    }
-
-    /* Top bar */
-    .topbar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 1rem;
-      padding-top: 0.5rem;
-    }
-
-    .topbar a {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      border-bottom: none;
-    }
-
-    .topbar a:hover {
-      color: var(--neon-cyan);
-      border-bottom: none;
-      text-shadow: none;
-    }
-
-    .lang-btn {
-      background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      letter-spacing: 0.5px;
-    }
-
-    .lang-btn:hover {
-      border-color: var(--neon-blue);
-      color: var(--neon-blue);
-    }
-
-    /* Header */
-    .header {
-      text-align: center;
-      padding: 3rem 0 2.5rem;
-      position: relative;
-    }
-
-    .logo {
-      font-size: 4rem;
-      font-weight: 700;
-      color: var(--neon-blue);
-      text-shadow: var(--glow-strong);
-      letter-spacing: -2px;
-      margin-bottom: 0.5rem;
-      animation: flicker 4s infinite;
-    }
-
-    .logo .version {
-      font-size: 0.9rem;
-      font-weight: 400;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-      margin-left: 0.5rem;
-      text-shadow: none;
-      vertical-align: super;
-    }
-
-    @keyframes flicker {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      92% {
-        opacity: 1;
-      }
-
-      93% {
-        opacity: 0.8;
-      }
-
-      94% {
-        opacity: 1;
-      }
-
-      96% {
-        opacity: 0.9;
-      }
-
-      97% {
-        opacity: 1;
-      }
-    }
-
-    .tagline {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      font-weight: 400;
-      max-width: 560px;
-      margin: 0 auto 0.75rem;
-    }
-
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    /* Sections */
-    section {
-      margin-bottom: 3rem;
-    }
-
-    h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--neon-blue);
-      margin-bottom: 1.5rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    h2::before {
-      content: '>';
-      color: var(--neon-cyan);
-      font-weight: 400;
-      animation: blink 1s step-end infinite;
-    }
-
-    @keyframes blink {
-      50% {
-        opacity: 0;
-      }
-    }
-
-    h3 {
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      margin: 2rem 0 1rem;
-    }
-
-    h4 {
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      margin: 1.5rem 0 0.75rem;
-    }
-
-    p {
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
-    }
-
-    /* Lists */
-    ul {
-      list-style: none;
-      margin: 1rem 0;
-    }
-
-    li {
-      position: relative;
-      padding-left: 1.5rem;
-      margin-bottom: 0.75rem;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-
-    li::before {
-      content: '▹';
-      position: absolute;
-      left: 0;
-      color: var(--neon-blue);
-    }
-
-    ul ul {
-      margin-top: 0.5rem;
-      margin-left: 0.5rem;
-    }
-
-    ul ul li::before {
-      content: '◦';
-      color: var(--neon-blue-dim);
-    }
-
-    strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    /* Links */
-    a {
-      color: var(--neon-blue);
-      text-decoration: none;
-      transition: all 0.2s ease;
-      border-bottom: 1px solid transparent;
-    }
-
-    a:hover {
-      color: var(--neon-cyan);
-      border-bottom-color: var(--neon-cyan);
-      text-shadow: var(--glow-blue);
-    }
-
-    /* Code blocks */
-    pre {
-      background: var(--code-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      overflow-x: auto;
-      margin: 1rem 0;
-      position: relative;
-    }
-
-    .code-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--border-color);
-      margin: -1.25rem -1.5rem 1rem -1.5rem;
-      padding: 0.4rem 0.75rem;
-      border-radius: 8px 8px 0 0;
-    }
-
-    .code-label {
-      color: var(--text-muted);
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--neon-cyan);
-    }
-
-    pre code {
-      color: var(--text-primary);
-      display: block;
-      line-height: 1.6;
-    }
-
-    p code,
-    li code,
-    td code {
-      background: var(--bg-tertiary);
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      color: var(--neon-blue);
-    }
-
-    .copy-btn {
-      background: none;
-      border: none;
-      padding: 0.2rem;
-      cursor: pointer;
-      color: var(--text-muted);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .copy-btn:hover {
-      color: var(--neon-cyan);
-    }
-
-    .copy-btn.copied {
-      color: var(--success);
-    }
-
-    .copy-btn svg {
-      width: 14px;
-      height: 14px;
-      display: block;
-    }
-
-    .copy-btn span {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* Sample output */
-    .sample-output pre {
-      background: linear-gradient(135deg, var(--code-bg) 0%, #0f1a2a 100%);
-      border-color: var(--neon-blue-dim);
-      box-shadow: inset 0 0 50px rgba(0, 212, 255, 0.03);
-    }
-
-    .sample-output .code-header {
-      background: var(--neon-blue-dim);
-    }
-
-    .sample-output .code-label {
-      color: var(--bg-primary);
-    }
-
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1.5rem 0;
-      font-size: 0.85rem;
-    }
-
-    thead {
-      background: var(--bg-tertiary);
-    }
-
-    th {
-      color: var(--neon-blue);
-      font-weight: 600;
-      text-align: left;
-      padding: 1rem;
-      border-bottom: 2px solid var(--border-color);
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 1px;
-    }
-
-    td {
-      padding: 0.85rem 1rem;
-      border-bottom: 1px solid var(--border-color);
-      color: var(--text-secondary);
-    }
-
-    tr:hover td {
-      background: var(--bg-tertiary);
-    }
-
-    td:first-child {
-      color: var(--neon-cyan);
-      white-space: nowrap;
-      font-weight: 500;
-    }
-
-    /* Quick start */
-    .quick-start {
-      background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(178, 75, 255, 0.05) 100%);
-      border: 1px solid var(--neon-blue-dim);
-      border-radius: 12px;
-      padding: 2rem;
-      margin: 2rem 0;
-    }
-
-    .quick-start h3 {
-      color: var(--neon-blue);
-      margin-top: 0;
-      margin-bottom: 1rem;
-    }
-
-    .quick-start pre {
-      margin: 0.75rem 0;
-    }
-
-    .quick-start .note {
-      margin-top: 1rem;
-      margin-bottom: 0;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    /* Badges / distros */
-    .badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin: 1rem 0;
-    }
-
-    .badge {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 0.5rem 0.9rem;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .badge .pm {
-      color: var(--text-muted);
-      font-size: 0.7rem;
-      margin-left: 0.35rem;
-    }
-
-    /* Donations */
-    .donations {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 2rem;
-      margin-top: 2rem;
-    }
-
-    .donations h2 {
-      border-bottom: none;
-      padding-bottom: 0;
-      margin-bottom: 1rem;
-    }
-
-    .wallet {
-      margin: 1.5rem 0;
-    }
-
-    .wallet-label {
-      color: var(--neon-purple);
-      font-weight: 600;
-      font-size: 0.85rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .wallet-address {
-      background: var(--code-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 0.75rem 1rem;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      word-break: break-all;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .wallet-address:hover {
-      border-color: var(--neon-blue);
-      color: var(--text-secondary);
-    }
-
-    .wallet-address code {
-      color: inherit;
-      font-size: 0.75rem;
-      flex: 1;
-      word-break: break-all;
-    }
-
-    .wallet-address .copy-btn {
-      flex-shrink: 0;
-    }
-
-    .net-tag {
-      display: inline-block;
-      margin-top: 0.5rem;
-      font-size: 0.7rem;
-      color: var(--neon-purple);
-      border: 1px solid rgba(178, 75, 255, 0.35);
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-    }
-
-    .afdian-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: linear-gradient(135deg, #8256ff 0%, #6b3ff0 100%);
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.9rem;
-      padding: 0.85rem 1.4rem;
-      border-radius: 8px;
-      border-bottom: none;
-      transition: all 0.2s ease;
-      margin-top: 0.5rem;
-    }
-
-    .afdian-btn:hover {
-      color: #fff;
-      border-bottom: none;
-      text-shadow: none;
-      filter: brightness(1.1);
-      box-shadow: 0 0 24px rgba(130, 86, 255, 0.4);
-    }
-
-    .heart {
-      color: #ff8fab;
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 3rem 0 1rem;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      border-top: 1px solid var(--border-color);
-      margin-top: 4rem;
-    }
-
-    .footer p {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      margin-bottom: 0.4rem;
-    }
-
-    .footer a {
-      border-bottom: none;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container {
-        padding: 1.5rem;
-        margin: 0 auto;
-        width: 100%;
-      }
-
-      .header {
-        padding: 2rem 0 1.5rem;
-        text-align: center;
-      }
-
-      .logo {
-        font-size: 2.5rem;
-      }
-
-      .tagline {
-        padding: 0 0.5rem;
-      }
-
-      h2 {
-        font-size: 1.15rem;
-      }
-
-      h3 {
-        font-size: 1rem;
-      }
-
-      p,
-      li {
-        font-size: 0.85rem;
-      }
-
-      pre {
-        padding: 1rem;
-        font-size: 0.7rem;
-        margin-left: 0;
-        margin-right: 0;
-        border-radius: 6px;
-      }
-
-      .quick-start {
-        padding: 1.25rem;
-        margin: 1.5rem 0;
-      }
-
-      .donations {
-        padding: 1.25rem;
-      }
-
-      table {
-        display: block;
-        overflow-x: auto;
-        font-size: 0.75rem;
-      }
-    }
-
-    ::selection {
-      background: var(--neon-blue);
-      color: var(--bg-primary);
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--bg-secondary);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--neon-blue-dim);
-    }
-
-    section {
-      animation: fadeInUp 0.6s ease-out backwards;
-    }
-
-    section:nth-child(1) {
-      animation-delay: 0.1s;
-    }
-
-    section:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    section:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-
-    section:nth-child(4) {
-      animation-delay: 0.4s;
-    }
-
-    section:nth-child(5) {
-      animation-delay: 0.5s;
-    }
-
-    section:nth-child(6) {
-      animation-delay: 0.55s;
-    }
-
-    section:nth-child(7) {
-      animation-delay: 0.6s;
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .logo {
-        animation: none;
-      }
-
-      h2::before {
-        animation: none;
-      }
-
-      section {
-        animation: none;
-      }
-
-      body::before {
-        display: none;
-      }
-    }
-
-    [hidden] {
-      display: none !important;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SICK — Server Info &amp; Check Kit</title>
+<meta name="description" content="One-shot Linux server hardware inventory. Colorized report or JSON. No daemon, no footprint.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: oklch(16% 0.012 75);
+    --bg-elev: oklch(20% 0.014 70);
+    --bg-panel: oklch(22% 0.016 68);
+    --bg-deep: oklch(13% 0.01 80);
+    --line: oklch(32% 0.02 70);
+    --line-soft: oklch(28% 0.015 70 / 0.7);
+    --ink: oklch(94% 0.012 85);
+    --ink-soft: oklch(78% 0.02 80);
+    --muted: oklch(58% 0.02 75);
+    --amber: oklch(78% 0.14 70);
+    --amber-dim: oklch(62% 0.12 65);
+    --brass: oklch(72% 0.09 75);
+    --mint: oklch(72% 0.12 155);
+    --mint-dim: oklch(55% 0.1 155);
+    --coral: oklch(68% 0.14 25);
+    --sky: oklch(76% 0.07 220);
+    --sky-dim: oklch(62% 0.06 220);
+    --warn: oklch(80% 0.13 85);
+    --glow-amber: 0 0 40px oklch(70% 0.14 70 / 0.18);
+    --shadow-lg: 0 28px 60px -28px oklch(0% 0 0 / 0.65), 0 0 0 1px var(--line-soft);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-mono: "Azeret Mono", ui-monospace, monospace;
+    --space: clamp(1rem, 2.5vw, 1.5rem);
+    --max: 1120px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-mono);
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--ink);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Warm vignette + soft noise grain — not a cyan grid */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 520px at 12% -10%, oklch(55% 0.1 70 / 0.12), transparent 60%),
+      radial-gradient(700px 480px at 95% 15%, oklch(40% 0.05 155 / 0.08), transparent 55%),
+      radial-gradient(600px 400px at 50% 100%, oklch(30% 0.04 70 / 0.1), transparent 50%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg) 40%, oklch(15% 0.012 70));
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  a { color: var(--amber); text-decoration: none; transition: color .15s; }
+  a:hover { color: var(--brass); }
+
+  .wrap {
+    width: min(100% - 2.5rem, var(--max));
+    margin-inline: auto;
+  }
+
+  /* ── Nav ── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(14px) saturate(1.2);
+    background: oklch(16% 0.012 75 / 0.78);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-in {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    gap: 1rem;
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+  .brand em {
+    font-style: normal;
+    color: var(--amber);
+  }
+  .brand small {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    font-size: 0.78rem;
+  }
+  .nav-links a { color: var(--ink-soft); }
+  .nav-links a:hover { color: var(--amber); }
+  .lang {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: .15s;
+  }
+  .lang:hover {
+    border-color: var(--amber-dim);
+    color: var(--amber);
+  }
+  @media (max-width: 640px) {
+    .nav-links a:not(.gh) { display: none; }
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(2rem, 4vw, 3rem);
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: end;
+  }
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; align-items: start; }
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .eyebrow span { color: var(--amber); }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(3.2rem, 9vw, 5.6rem);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    color: var(--ink);
+    margin-bottom: 1rem;
+  }
+  h1 .mark {
+    color: var(--amber);
+    text-shadow: var(--glow-amber);
+  }
+
+  .lede {
+    font-size: 1rem;
+    color: var(--ink-soft);
+    max-width: 38ch;
+    margin-bottom: 1.4rem;
+    line-height: 1.7;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .pill {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    color: var(--ink-soft);
+  }
+  .pill b { color: var(--mint); font-weight: 600; }
+
+  /* Command panel — elevated layer */
+  .cmd-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+  }
+  .cmd-panel::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--amber), var(--mint-dim), transparent 70%);
+  }
+  .cmd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--line-soft);
+    background: oklch(18% 0.012 70);
+  }
+  .cmd-head .label {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cmd-body { padding: 1.1rem; display: flex; flex-direction: column; gap: 0.65rem; }
+
+  .cmd-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: var(--bg-deep);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.9rem;
+  }
+  .cmd-row .prompt { color: var(--amber); user-select: none; flex-shrink: 0; }
+  .cmd-row code {
+    flex: 1;
+    font-size: 0.78rem;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .copy {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: .15s;
+  }
+  .copy:hover { color: var(--amber); border-color: var(--amber-dim); }
+  .copy.ok { color: var(--mint); border-color: var(--mint-dim); }
+
+  .cmd-hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding: 0 0.15rem;
+  }
+  .cmd-hint code {
+    color: var(--sky);
+    font-size: 0.72rem;
+  }
+
+  /* ── Sections ── */
+  section {
+    padding: clamp(2.2rem, 5vw, 3.5rem) 0;
+  }
+  .section-head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem 1.25rem;
+    align-items: end;
+    margin-bottom: 1.75rem;
+  }
+  .section-head .idx {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2rem;
+    line-height: 1;
+    color: oklch(35% 0.03 70);
+    letter-spacing: -0.03em;
+  }
+  .section-head h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .section-head p {
+    grid-column: 2;
+    color: var(--muted);
+    font-size: 0.85rem;
+    max-width: 52ch;
+  }
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+    margin-bottom: 1.75rem;
+  }
+
+  /* Feature grid — layered, not left-stripe cards */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.85rem;
+  }
+  @media (max-width: 900px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .feat-grid { grid-template-columns: 1fr; } }
+
+  .feat {
+    background: var(--bg-elev);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    padding: 1.2rem 1.15rem;
+    position: relative;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .feat:hover {
+    border-color: oklch(45% 0.04 70);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px -20px oklch(0% 0 0 / 0.7);
+  }
+  .feat .tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber-dim);
+    margin-bottom: 0.55rem;
+  }
+  .feat h3 {
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 0.45rem;
+  }
+  .feat p {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .feat p code {
+    font-size: 0.75rem;
+    color: var(--sky);
+    background: var(--bg-deep);
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+  }
+
+  /* Report map */
+  .report-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.65rem;
+  }
+  .rm-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.9rem 1rem;
+    background: var(--bg-deep);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+  }
+  .rm-item strong {
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: 0.9rem;
+    color: var(--brass);
+  }
+  .rm-item span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  /* Terminal demo */
+  .term {
+    background: var(--bg-deep);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 oklch(100% 0 0 / 0.04);
+    overflow: hidden;
+  }
+  .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    background: oklch(18% 0.012 70);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #e06c6c; }
+  .dot.y { background: #e0a84e; }
+  .dot.g { background: #6fbf8a; }
+  .term-title {
+    margin-left: 0.4rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .term-body {
+    padding: 1.1rem 1.15rem 1.3rem;
+    overflow-x: auto;
+    max-height: min(70vh, 640px);
+    overflow-y: auto;
+  }
+  .term-body pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.48;
+    white-space: pre;
+    color: var(--ink-soft);
+  }
+
+  /* Syntax colors matching script palette (YELLOW frames, CYAN titles, GREEN pass…) */
+  .c-frame { color: oklch(78% 0.14 95); }       /* yellow box chrome */
+  .c-title { color: oklch(96% 0.01 90); font-weight: 600; } /* white titles */
+  .c-bar   { color: oklch(72% 0.08 210); }      /* cyan ═ bars */
+  .c-key   { color: oklch(70% 0.02 80); }       /* labels */
+  .c-val   { color: oklch(88% 0.04 200); }      /* values sky */
+  .c-dev   { color: oklch(78% 0.1 210); }       /* device paths */
+  .c-ok    { color: oklch(74% 0.14 150); font-weight: 600; }
+  .c-warn  { color: oklch(80% 0.14 75); }
+  .c-info  { color: oklch(72% 0.08 230); }
+  .c-num   { color: oklch(82% 0.1 70); }        /* sizes / temps amber-ish */
+  .c-dim   { color: oklch(48% 0.02 75); }
+  .c-good  { color: oklch(74% 0.14 150); }
+  .c-up    { color: oklch(74% 0.14 150); }
+  .c-down  { color: oklch(55% 0.04 75); }
+  .c-done  { color: oklch(74% 0.14 150); font-weight: 600; }
+  .c-prompt-u { color: var(--amber); }
+  .c-prompt-p { color: var(--sky); }
+
+  /* Options table */
+  .opts {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .opts th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: var(--bg-panel);
+    color: var(--amber-dim);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line);
+  }
+  .opts td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink-soft);
+    vertical-align: top;
+  }
+  .opts tr:last-child td { border-bottom: none; }
+  .opts tr:hover td { background: oklch(22% 0.014 70 / 0.5); }
+  .opts td:first-child {
+    color: var(--sky);
+    white-space: nowrap;
+    font-weight: 500;
+    width: 11rem;
+  }
+
+  /* Distro chips */
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .badge {
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--bg-elev);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .badge .pm {
+    color: var(--muted);
+    font-size: 0.68rem;
+    margin-left: 0.3rem;
+  }
+
+  /* Donate — two layers */
+  .donate-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 0.9rem;
+  }
+  @media (max-width: 720px) { .donate-grid { grid-template-columns: 1fr; } }
+
+  .donate-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.35rem;
+    box-shadow: 0 16px 40px -28px oklch(0% 0 0 / 0.6);
+  }
+  .donate-card h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
+  }
+  .donate-card .lead {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .addr {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--bg-deep);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+  }
+  .addr code {
+    flex: 1;
+    font-size: 0.72rem;
+    color: var(--sky);
+    word-break: break-all;
+  }
+  .net-tag {
+    display: inline-block;
+    margin-top: 0.65rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    color: var(--amber-dim);
+    border: 1px solid oklch(50% 0.08 70 / 0.4);
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+  }
+  .afd-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    background: linear-gradient(160deg, oklch(58% 0.2 300), oklch(48% 0.18 295));
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: 0.95rem;
+    border: none;
+    transition: filter .15s, transform .15s, box-shadow .15s;
+    box-shadow: 0 12px 28px -14px oklch(50% 0.2 300 / 0.7);
+  }
+  .afd-btn:hover {
+    color: #fff;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+  .heart { color: #ff9bb8; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 2.5rem 0 3.5rem;
+    margin-top: 1rem;
+  }
+  .foot-in {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .foot-brand {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+  }
+  .foot-brand em { font-style: normal; color: var(--amber); }
+  .foot-tag {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    max-width: 36ch;
+  }
+  .foot-links {
+    text-align: right;
+    font-size: 0.8rem;
+    line-height: 1.9;
+    color: var(--muted);
+  }
+  .foot-links a { color: var(--ink-soft); }
+  .foot-links a:hover { color: var(--amber); }
+
+  /* Motion */
+  .rise {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise .65s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .d1 { animation-delay: .05s; }
+  .d2 { animation-delay: .12s; }
+  .d3 { animation-delay: .2s; }
+  .d4 { animation-delay: .28s; }
+  .d5 { animation-delay: .36s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; transform: none; }
+  }
+
+  ::selection {
+    background: oklch(70% 0.12 70 / 0.45);
+    color: var(--ink);
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+</style>
 </head>
-
 <body>
-  <div class="container">
-    <div class="topbar">
-      <a href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">GitHub ↗</a>
-      <button class="lang-btn" id="langBtn" type="button" onclick="toggleLang()">中文</button>
+
+<nav class="nav">
+  <div class="wrap nav-in">
+    <div class="brand">SI<em>CK</em><small>v3.0.0</small></div>
+    <div class="nav-links">
+      <a href="#features" data-en="Features" data-zh="特性">Features</a>
+      <a href="#output" data-en="Output" data-zh="输出">Output</a>
+      <a href="#install" data-en="Install" data-zh="安装">Install</a>
+      <a href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
+      <a class="gh" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">GitHub ↗</a>
+      <button class="lang" id="langBtn" type="button" onclick="toggleLang()">中文</button>
     </div>
+  </div>
+</nav>
 
-    <!-- Header -->
-    <header class="header">
-      <h1 class="logo">SICK<span class="version">v3.0.0</span></h1>
-      <p class="subtitle" data-en="Server Info &amp; Check Kit" data-zh="服务器信息检查工具包">Server Info &amp; Check Kit</p>
-      <p class="tagline"
-        data-en="One-shot Linux server hardware inventory. Run once, get a full colorized report — or JSON. Zero footprint."
-        data-zh="一次性 Linux 服务器硬件盘点。跑一次，拿到完整彩色报告（或 JSON）。零残留。">
-        One-shot Linux server hardware inventory. Run once, get a full colorized report — or JSON. Zero footprint.
-      </p>
-    </header>
+<header class="wrap hero">
+  <div>
+    <p class="eyebrow rise d1"><span>S</span>erver <span>I</span>nfo &amp; <span>C</span>heck <span>K</span>it</p>
+    <h1 class="rise d1">Hardware<br>without the <span class="mark">sick</span>.</h1>
+    <p class="lede rise d2"
+       data-en="One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or a single JSON blob. No daemon. No disk writes. No monitoring bloat."
+       data-zh="一条命令，完整盘点。<strong>彩色对齐表格</strong>覆盖 CPU、内存、SMART、NVMe、RAID、网卡与显卡——也可输出 JSON。不装守护进程、不写盘、不做监控。">
+      One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or a single JSON blob. No daemon. No disk writes. No monitoring bloat.
+    </p>
+    <div class="pills rise d3">
+      <span class="pill" data-en="<b>one-shot</b> · zero footprint" data-zh="<b>一次性</b> · 零残留"><b>one-shot</b> · zero footprint</span>
+      <span class="pill" data-en="<b>EN / 中文</b>" data-zh="<b>中英双语</b>"><b>EN / 中文</b></span>
+      <span class="pill"><b>JSON</b></span>
+      <span class="pill">MIT</span>
+    </div>
+  </div>
 
-    <!-- Features -->
-    <section>
-      <h2 data-en="Features" data-zh="特性">Features</h2>
-      <ul>
-        <li>
-          <strong data-en="One-shot, zero footprint:" data-zh="一次性，零占用：">One-shot, zero footprint:</strong>
-          <span data-en="Pure collection and rendering — nothing is written to disk, no service is installed. Run it, read it, done."
-            data-zh="纯粹的收集与渲染——不写入磁盘、不安装任何服务。跑一次、看报告、收工。">Pure collection and rendering — nothing is written to disk, no
-            service is installed. Run it, read it, done.</span>
-        </li>
-        <li>
-          <strong data-en="Aligned, colorized tables:" data-zh="对齐的彩色表格：">Aligned, colorized tables:</strong>
-          <span
-            data-en="Memory, filesystems, disks/SMART, NVMe health, RAID, network and GPU all render as boxed tables with status colors — correct even with CJK text."
-            data-zh="内存、文件系统、磁盘/SMART、NVMe 健康、RAID、网络和 GPU 全部以带状态颜色的方框表格呈现，即使 CJK 文本也对齐无误。">Memory, filesystems,
-            disks/SMART, NVMe health, RAID, network and GPU all render as boxed tables with status colors — correct even
-            with CJK text.</span>
-        </li>
-        <li>
-          <strong data-en="Bilingual output:" data-zh="双语输出：">Bilingual output:</strong>
-          <span data-en="Full English and Chinese via the <code>-cn</code> flag."
-            data-zh="通过 <code>-cn</code> 参数提供完整中文输出。">Full English and Chinese via the <code>-cn</code> flag.</span>
-        </li>
-        <li>
-          <strong data-en="JSON output:" data-zh="JSON 输出：">JSON output:</strong>
-          <span
-            data-en="<code>--json</code> emits a single machine-readable object to stdout — pipe it into <code>jq</code> or your CMDB."
-            data-zh="<code>--json</code> 向标准输出打印单个机器可读对象，可直接管道给 <code>jq</code> 或写入 CMDB。"><code>--json</code> emits a
-            single machine-readable object to stdout — pipe it into <code>jq</code> or your CMDB.</span>
-        </li>
-        <li>
-          <strong data-en="Privacy-aware:" data-zh="注重隐私：">Privacy-aware:</strong>
-          <span
-            data-en="IPv4/IPv6 and MAC addresses are masked by default (network prefix / vendor OUI kept). Serial numbers are shown in full for inventory."
-            data-zh="IPv4/IPv6 与 MAC 地址默认脱敏（保留网络前缀 / 厂商 OUI）。序列号完整显示以便盘点。">IPv4/IPv6 and MAC addresses are masked by
-            default (network prefix / vendor OUI kept). Serial numbers are shown in full for inventory.</span>
-        </li>
-        <li>
-          <strong data-en="Friendly dependencies:" data-zh="友好的依赖处理：">Friendly dependencies:</strong>
-          <span
-            data-en="Missing tools are detected and listed; the script asks <strong>Y/N before installing</strong>. Use <code>-y</code> to auto-install or <code>--no-install</code> to report with what's present."
-            data-zh="检测并列出缺失工具；安装前先询问 <strong>Y/N</strong>。用 <code>-y</code> 自动安装，或 <code>--no-install</code> 只用现有工具生成报告。">Missing tools are detected and listed;
-            the script asks <strong>Y/N before installing</strong>. Use <code>-y</code> to auto-install or
-            <code>--no-install</code> to report with what's present.</span>
-        </li>
-        <li>
-          <strong data-en="Broad compatibility:" data-zh="广泛兼容：">Broad compatibility:</strong>
-          <span
-            data-en="Debian/Ubuntu, RHEL/CentOS/Alma/Rocky/CloudLinux, Fedora, Arch/Manjaro, openSUSE/SLES."
-            data-zh="Debian/Ubuntu、RHEL/CentOS/Alma/Rocky/CloudLinux、Fedora、Arch/Manjaro、openSUSE/SLES。">Debian/Ubuntu,
-            RHEL/CentOS/Alma/Rocky/CloudLinux, Fedora, Arch/Manjaro, openSUSE/SLES.</span>
-        </li>
-      </ul>
-    </section>
-
-    <!-- What it reports -->
-    <section>
-      <h2 data-en="What it reports" data-zh="报告内容">What it reports</h2>
-      <ul>
-        <li><strong data-en="System" data-zh="系统">System</strong> — <span
-            data-en="Hostname, OS, kernel, uptime" data-zh="主机名、操作系统、内核、运行时间">Hostname, OS, kernel, uptime</span></li>
-        <li><strong>CPU / Platform</strong> — <span
-            data-en="Model, cores/threads, frequency, cache, live usage, temperature, sockets/NUMA, virtualization, microcode"
-            data-zh="型号、核心/线程、频率、缓存、实时使用率、温度、插槽/NUMA、虚拟化、微码">Model, cores/threads, frequency, cache, live usage,
-            temperature, sockets/NUMA, virtualization, microcode</span></li>
-        <li><strong data-en="Memory" data-zh="内存">Memory</strong> — <span
-            data-en="Total / used / available, plus per-module table (size, type, speed, vendor, serial, part number)"
-            data-zh="总计 / 已用 / 可用，以及逐模组表格（大小、类型、频率、厂商、序列号、型号）">Total / used / available, plus per-module table (size,
-            type, speed, vendor, serial, part number)</span></li>
-        <li><strong data-en="Disks" data-zh="硬盘">Disks</strong> — <span
-            data-en="Mounted-filesystem usage + SMART summary (health, power-on hours, temperature, lifetime I/O, defects)"
-            data-zh="已挂载文件系统使用表 + SMART 摘要（健康、通电时长、温度、累计读写、坏块）">Mounted-filesystem usage + SMART summary (health,
-            power-on hours, temperature, lifetime I/O, defects)</span></li>
-        <li><strong data-en="NVMe deep health" data-zh="NVMe 深度健康">NVMe deep health</strong> — <span
-            data-en="Per-drive temperature, endurance used, spare, and health status"
-            data-zh="每块盘的温度、已用耐久、可用备用、健康状态">Per-drive temperature, endurance used, spare, and health status</span></li>
-        <li><strong>RAID</strong> — <span
-            data-en="Software RAID (mdraid), hardware RAID/HBA controllers, vendor CLI tools"
-            data-zh="软件 RAID（mdraid）、硬件 RAID/HBA 控制器、厂商 CLI 工具">Software RAID (mdraid), hardware RAID/HBA controllers,
-            vendor CLI tools</span></li>
-        <li><strong data-en="Network" data-zh="网卡">Network</strong> — <span
-            data-en="Physical interfaces: link/speed/duplex, masked MAC &amp; IPv4, NIC model, error/drop counters"
-            data-zh="仅物理接口：链路/速率/双工、脱敏 MAC 与 IPv4、网卡型号、错误/丢包计数">Physical interfaces: link/speed/duplex, masked MAC
-            &amp; IPv4, NIC model, error/drop counters</span></li>
-        <li><strong>GPU</strong> — <span
-            data-en="Vendor and class (Discrete / Integrated / BMC); NVIDIA: memory, driver, temperature"
-            data-zh="厂商与类别（独显 / 集显 / BMC）；NVIDIA 额外显示显存、驱动、温度">Vendor and class (Discrete / Integrated / BMC); NVIDIA:
-            memory, driver, temperature</span></li>
-        <li><strong data-en="Motherboard" data-zh="主板">Motherboard</strong> — <span
-            data-en="Vendor, model, BIOS vendor/version" data-zh="厂商、型号、BIOS 厂商/版本">Vendor, model, BIOS
-            vendor/version</span></li>
-      </ul>
-    </section>
-
-    <!-- Usage -->
-    <section>
-      <h2 data-en="Usage" data-zh="用法">Usage</h2>
-
-      <div class="quick-start">
-        <h3 data-en="One-line run (default · English)" data-zh="一键运行（默认 · 英文）">One-line run (default · English)</h3>
-        <pre><code>curl -sL https://ba.sh/sick | bash</code></pre>
-        <pre><code>wget -qO- https://ba.sh/sick | bash</code></pre>
-        <p class="note"
-          data-en="Pass options via <code>bash -s -- &lt;options&gt;</code>. Prefer <code>sudo</code> for full data (dmidecode, SMART, sensors)."
-          data-zh="通过 <code>bash -s -- &lt;参数&gt;</code> 传参。建议 <code>sudo</code> 运行以获取完整信息（dmidecode、SMART、传感器）。">
-          Pass options via <code>bash -s -- &lt;options&gt;</code>. Prefer <code>sudo</code> for full data (dmidecode,
-          SMART, sensors).
-        </p>
+  <div class="cmd-panel rise d4" id="install">
+    <div class="cmd-head">
+      <span class="label" data-en="Quick start" data-zh="快速开始">Quick start</span>
+      <span class="label">ba.sh/sick</span>
+    </div>
+    <div class="cmd-body">
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code id="cmd-main">curl -sL https://ba.sh/sick | bash</code>
+        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash', this)" data-en="copy" data-zh="复制">copy</button>
       </div>
-
-      <h3 data-en="Chinese output" data-zh="中文输出">Chinese output</h3>
-      <pre><code>curl -sL https://ba.sh/sick | bash -s -- -cn</code></pre>
-
-      <h3 data-en="Auto-install missing tools" data-zh="自动安装缺失工具">Auto-install missing tools</h3>
-      <pre><code>curl -sL https://ba.sh/sick | bash -s -- -y</code></pre>
-
-      <h3 data-en="JSON to stdout" data-zh="输出 JSON 到标准输出">JSON to stdout</h3>
-      <pre><code>curl -sL https://ba.sh/sick | bash -s -- --json</code></pre>
-
-      <h3 data-en="Run from source" data-zh="从源码运行">Run from source</h3>
-      <pre><code>curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
-chmod +x hardware_info.sh
-sudo ./hardware_info.sh</code></pre>
-    </section>
-
-    <!-- Options -->
-    <section>
-      <h2 data-en="Options" data-zh="参数">Options</h2>
-      <table>
-        <thead>
-          <tr>
-            <th data-en="Option" data-zh="参数">Option</th>
-            <th data-en="Description" data-zh="说明">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>-cn, --chinese</code></td>
-            <td data-en="Output in Chinese" data-zh="中文输出">Output in Chinese</td>
-          </tr>
-          <tr>
-            <td><code>-us, --english</code></td>
-            <td data-en="Output in English (default)" data-zh="英文输出（默认）">Output in English (default)</td>
-          </tr>
-          <tr>
-            <td><code>-j, --json</code></td>
-            <td data-en="Print a JSON object to stdout only" data-zh="仅向标准输出打印 JSON 对象">Print a JSON object to stdout
-              only</td>
-          </tr>
-          <tr>
-            <td><code>-y, --yes</code></td>
-            <td data-en="Install missing tools without prompting" data-zh="不询问，直接安装缺失工具">Install missing tools without
-              prompting</td>
-          </tr>
-          <tr>
-            <td><code>--no-install</code></td>
-            <td data-en="Never install; report with whatever tools are present" data-zh="从不安装；只用现有工具生成报告">Never install;
-              report with whatever tools are present</td>
-          </tr>
-          <tr>
-            <td><code>-h, --help</code></td>
-            <td data-en="Show help" data-zh="显示帮助">Show help</td>
-          </tr>
-          <tr>
-            <td><code>-v, --version</code></td>
-            <td data-en="Show version" data-zh="显示版本">Show version</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- Supported systems -->
-    <section>
-      <h2 data-en="Supported systems" data-zh="支持的系统">Supported systems</h2>
-      <div class="badges">
-        <span class="badge">Debian / Ubuntu / Mint <span class="pm">apt</span></span>
-        <span class="badge">RHEL / CentOS / Alma / Rocky <span class="pm">yum · dnf</span></span>
-        <span class="badge">Fedora <span class="pm">dnf</span></span>
-        <span class="badge">Arch / Manjaro <span class="pm">pacman</span></span>
-        <span class="badge">openSUSE / SLES <span class="pm">zypper</span></span>
-        <span class="badge">CloudLinux <span class="pm">dnf</span></span>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/sick | bash -s -- -cn</code>
+        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash -s -- -cn', this)" data-en="copy" data-zh="复制">copy</button>
       </div>
-      <p
-        data-en="Dependencies detected at startup: <code>dmidecode</code>, <code>lshw</code>, <code>smartmontools</code>, <code>ethtool</code>, <code>nvme-cli</code>, <code>jq</code>, <code>pciutils</code>, <code>lm-sensors</code>. Missing tools map to the right package for your distro and install on confirmation."
-        data-zh="启动时检测依赖：<code>dmidecode</code>、<code>lshw</code>、<code>smartmontools</code>、<code>ethtool</code>、<code>nvme-cli</code>、<code>jq</code>、<code>pciutils</code>、<code>lm-sensors</code>。缺失工具会映射到对应发行版软件包，确认后安装。">
-        Dependencies detected at startup: <code>dmidecode</code>, <code>lshw</code>, <code>smartmontools</code>,
-        <code>ethtool</code>, <code>nvme-cli</code>, <code>jq</code>, <code>pciutils</code>, <code>lm-sensors</code>.
-        Missing tools map to the right package for your distro and install on confirmation.
+      <p class="cmd-hint"
+         data-en="Flags: <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · pass via <code>bash -s -- …</code>"
+         data-zh="参数：<code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> 机器可读 · 用 <code>bash -s -- …</code> 传参">
+        Flags: <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · pass via <code>bash -s -- …</code>
       </p>
-    </section>
+    </div>
+  </div>
+</header>
 
-    <!-- Sample Output -->
-    <section class="sample-output">
-      <h2 data-en="Sample Output" data-zh="输出示例">Sample Output</h2>
-      <pre><code>                       System Hardware Information Report
-════════════════════════════════════════════════════════════════════════════════
+<!-- Features -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">01</span>
+      <div>
+        <h2 data-en="What you get" data-zh="你能得到什么">What you get</h2>
+        <p data-en="Built for operators who need a truthful picture of the box — not another agent."
+           data-zh="给需要看清机器真实状态的运维用——不是再装一个 agent。">Built for operators who need a truthful picture of the box — not another agent.</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="feat-grid">
+      <article class="feat">
+        <div class="tag">01</div>
+        <h3 data-en="One-shot, zero footprint" data-zh="一次性，零占用">One-shot, zero footprint</h3>
+        <p data-en="Collect and render. Nothing written to disk. No service left behind."
+           data-zh="只采集与渲染。不写盘，不留下任何服务。">Collect and render. Nothing written to disk. No service left behind.</p>
+      </article>
+      <article class="feat">
+        <div class="tag">02</div>
+        <h3 data-en="Colorized tables" data-zh="彩色对齐表格">Colorized tables</h3>
+        <p data-en="Frames, status, temps and defects use terminal colors — readable even with CJK."
+           data-zh="边框、状态、温度与坏块用终端色区分，中英文混排也能对齐。">Frames, status, temps and defects use terminal colors — readable even with CJK.</p>
+      </article>
+      <article class="feat">
+        <div class="tag">03</div>
+        <h3 data-en="Bilingual" data-zh="中英双语">Bilingual</h3>
+        <p data-en="Full English or Chinese with <code>-cn</code>."
+           data-zh="完整英文 / 中文输出，加 <code>-cn</code> 即可。">Full English or Chinese with <code>-cn</code>.</p>
+      </article>
+      <article class="feat">
+        <div class="tag">04</div>
+        <h3 data-en="JSON when you need it" data-zh="需要时输出 JSON">JSON when you need it</h3>
+        <p data-en="<code>--json</code> → one object on stdout. Pipe into jq or your CMDB."
+           data-zh="<code>--json</code> 在 stdout 打出一个对象，管道给 jq 或 CMDB。"><code>--json</code> → one object on stdout. Pipe into jq or your CMDB.</p>
+      </article>
+      <article class="feat">
+        <div class="tag">05</div>
+        <h3 data-en="Privacy-aware" data-zh="隐私友好">Privacy-aware</h3>
+        <p data-en="IP &amp; MAC masked by default. Serials kept full for inventory."
+           data-zh="默认脱敏 IP / MAC；序列号完整保留便于盘点。">IP &amp; MAC masked by default. Serials kept full for inventory.</p>
+      </article>
+      <article class="feat">
+        <div class="tag">06</div>
+        <h3 data-en="Friendly deps" data-zh="友好依赖">Friendly deps</h3>
+        <p data-en="Missing tools listed; installs only after Y/N. Or <code>-y</code> / <code>--no-install</code>."
+           data-zh="列出缺失工具，确认后再装。也可用 <code>-y</code> / <code>--no-install</code>。">Missing tools listed; installs only after Y/N. Or <code>-y</code> / <code>--no-install</code>.</p>
+      </article>
+    </div>
+  </div>
+</section>
 
-┌─ Report Overview ───────────────────────────────
-│ Version             : 3.0.0
-│ Mode                : Text
-│ Privacy             : IP/MAC masked
-│ Serials             : shown in full
-└──────────────────────────────────────────────────
-┌─ CPU Information ───────────────────────────────
-│ Model               : Intel(R) Xeon(R) W-1250 CPU @ 3.30GHz
-│ Cores               : 6
-│ Threads             : 12
-│ Frequency           : 3606.867 MHz
-│ Cache               : 12288 KB
-│ Usage               : 14.1%
-│ CPU Temperature     : +55.0°C
-└──────────────────────────────────────────────────
-┌─ Memory (RAM) Information ──────────────────────
-│ Total               : 62.67 GB
-│ Used                : 29Gi
-│ Available           : 33.54 GB
-│
-│ Memory Modules:
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Size     │ Type   │ Frequency    │ Manufacturer │ Serial           │ Model                  │
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 32 GB    │ DDR4   │ 2667 MT/s    │ Samsung      │ 03ED821A         │ M391A4G43MB1-CTD       │
-│ 32 GB    │ DDR4   │ 2667 MT/s    │ Samsung      │ 042F10F4         │ M391A4G43MB1-CTD       │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
-┌─ Disk Drive Information ────────────────────────
-│ Disk Summary (defects=reallocated/pending/offline)
-├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Device       │ Basic Info                         │ SMART  │ Hours    │ Temp   │ I/O                  │ Defects   │
-├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ /dev/sda     │ 25.5T ST28000NM000C-3WM103 ATA     │ PASS   │ 9225h    │ 38°C   │ R132.2T W8.99T       │ 0/0/0     │
-│ /dev/nvme0n1 │ 894.3G MZXLR960HBHQ-000H3          │ PASS   │ 20194h   │ 29°C   │ R717.4T W755.5T      │ -         │
-└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-┌─ NVMe Deep Health ──────────────────────────────
-│ Device         │ Model                      │ Temp    │ Used    │ Spare   │ Status  │
-│ /dev/nvme0n1   │ MZXLR960HBHQ-000H3         │ 29°C    │ 8%      │ 100%    │ OK      │
-┌─ Network Interface Information ─────────────────
-│ enp8s0       │ UP       │ 1000M/full   │ d0:50:99:XX:XX:XX  │ 104.250.XX.XX/30     │ Intel I210
-│   ⚠ enp8s0          rx_errors=4
-┌─ Motherboard Information ───────────────────────
-│ Vendor              : ASRockRack
-│ Model               : W480D4U/JAX
-│ BIOS Version        : L0.04
-└──────────────────────────────────────────────────</code></pre>
-    </section>
+<!-- Report coverage -->
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">02</span>
+      <div>
+        <h2 data-en="Report coverage" data-zh="报告覆盖">Report coverage</h2>
+        <p data-en="Every section is an aligned, status-colored block."
+           data-zh="每个板块都是对齐、按状态着色的区块。">Every section is an aligned, status-colored block.</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="report-map">
+      <div class="rm-item"><strong>System</strong><span data-en="Hostname, OS, kernel, uptime" data-zh="主机名、系统、内核、运行时间">Hostname, OS, kernel, uptime</span></div>
+      <div class="rm-item"><strong>CPU / Platform</strong><span data-en="Cores, freq, temp, NUMA, virt, microcode" data-zh="核心、频率、温度、NUMA、虚拟化、微码">Cores, freq, temp, NUMA, virt, microcode</span></div>
+      <div class="rm-item"><strong data-en="Memory" data-zh="内存">Memory</strong><span data-en="Totals + per-DIMM table" data-zh="总量 + 逐模组表格">Totals + per-DIMM table</span></div>
+      <div class="rm-item"><strong data-en="Disks / SMART" data-zh="磁盘 / SMART">Disks / SMART</strong><span data-en="df + health, hours, I/O, defects" data-zh="挂载表 + 健康、通电、读写、坏块">df + health, hours, I/O, defects</span></div>
+      <div class="rm-item"><strong>NVMe</strong><span data-en="Temp, endurance, spare, power loss" data-zh="温度、耐久、备用、异常掉电">Temp, endurance, spare, power loss</span></div>
+      <div class="rm-item"><strong>RAID</strong><span data-en="mdraid + HBA controllers" data-zh="mdraid + HBA 控制器">mdraid + HBA controllers</span></div>
+      <div class="rm-item"><strong data-en="Network" data-zh="网卡">Network</strong><span data-en="Link, speed, masked IP/MAC, errors" data-zh="链路、速率、脱敏地址、错误计数">Link, speed, masked IP/MAC, errors</span></div>
+      <div class="rm-item"><strong>GPU / Board</strong><span data-en="Class, model, BIOS" data-zh="类别、型号、BIOS">Class, model, BIOS</span></div>
+    </div>
+  </div>
+</section>
 
-    <!-- Privacy -->
-    <section>
-      <h2 data-en="Privacy" data-zh="隐私">Privacy</h2>
-      <p
-        data-en="The report masks IPv4/IPv6 (keeps the network prefix, hides host bits) and MAC addresses (keeps the vendor OUI, hides the device portion). Serial numbers (disk, memory, motherboard) are shown in full so you can inventory hardware — keep that in mind before sharing a report publicly."
-        data-zh="报告会对 IPv4/IPv6（保留网络前缀、隐藏主机位）与 MAC 地址（保留厂商 OUI、隐藏设备位）脱敏。序列号（硬盘、内存、主板）完整显示以便盘点硬件；公开分享报告前请注意这一点。">
-        The report masks IPv4/IPv6 (keeps the network prefix, hides host bits) and MAC addresses (keeps the vendor OUI,
-        hides the device portion). Serial numbers (disk, memory, motherboard) are shown in full so you can inventory
-        hardware — keep that in mind before sharing a report publicly.
-      </p>
-    </section>
+<!-- Colored sample output -->
+<section id="output">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">03</span>
+      <div>
+        <h2 data-en="Sample output" data-zh="输出示例">Sample output</h2>
+        <p data-en="Same palette as the real terminal: gold frames, sky values, mint PASS, amber warnings."
+           data-zh="与真实终端一致：金色边框、天蓝数值、薄荷绿 PASS、琥珀警告。">Same palette as the real terminal: gold frames, sky values, mint PASS, amber warnings.</p>
+      </div>
+    </div>
+    <div class="rule"></div>
 
-    <!-- Donations — KEEP wallet + Afdian -->
-    <div class="donations">
-      <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
-      <p
-        data-en="If SICK saved you a login and a squint at dmidecode, a small tip keeps it maintained. Thank you."
-        data-zh="如果 SICK 帮你省下了一次登录和盯着 dmidecode 眯眼的时间，一点点赞助能让它持续维护。谢谢你。">
-        If SICK saved you a login and a squint at dmidecode, a small tip keeps it maintained. Thank you.
-      </p>
+    <div class="term">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-title">root@pve:~ — sick -cn</span>
+      </div>
+      <div class="term-body">
+<pre><span class="c-prompt-u">root@pve</span>:<span class="c-prompt-p">~</span>$ curl -sL https://ba.sh/sick | bash -s -- -cn
 
-      <div class="wallet">
-        <div class="wallet-label">◆ USDT (TRC20)</div>
-        <div class="wallet-address" data-copy="TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5" title="Click to copy">
-          <code>TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
+<span class="c-bar">════════════════════════════════════════════════════════════════════════════════</span>
+<span class="c-title">                                    系统硬件信息报告</span>
+<span class="c-bar">════════════════════════════════════════════════════════════════════════════════</span>
+
+<span class="c-frame">┌─</span> <span class="c-title">报告概览</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">版本                :</span> <span class="c-val">3.0.0</span>
+<span class="c-frame">│</span> <span class="c-key">模式                :</span> <span class="c-val">文本</span>
+<span class="c-frame">│</span> <span class="c-key">隐私                :</span> <span class="c-val">IP/MAC 已脱敏</span>
+<span class="c-frame">│</span> <span class="c-key">序列号              :</span> <span class="c-val">明文显示</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+<span class="c-frame">┌─</span> <span class="c-title">系统信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">主机名              :</span> <span class="c-val">pve</span>
+<span class="c-frame">│</span> <span class="c-key">操作系统            :</span> <span class="c-val">Debian GNU/Linux 13 (trixie)</span>
+<span class="c-frame">│</span> <span class="c-key">内核版本            :</span> <span class="c-val">6.8.12-9-pve</span>
+<span class="c-frame">│</span> <span class="c-key">运行时间            :</span> <span class="c-val">up 38 weeks, 3 days, 21 hours, 36 minutes</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+<span class="c-frame">┌─</span> <span class="c-title">处理器信息</span> <span class="c-frame">────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">型号                :</span> <span class="c-val">Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz</span>
+<span class="c-frame">│</span> <span class="c-key">核心数              :</span> <span class="c-num">48</span>      <span class="c-key">线程数 :</span> <span class="c-num">96</span>
+<span class="c-frame">│</span> <span class="c-key">频率                :</span> <span class="c-num">2600.000 MHz</span>
+<span class="c-frame">│</span> <span class="c-key">缓存                :</span> <span class="c-num">36864 KB</span>
+<span class="c-frame">│</span> <span class="c-key">使用率              :</span> <span class="c-num">1.3%</span>
+<span class="c-frame">│</span> <span class="c-key">CPU温度             :</span> <span class="c-good">+53.0°C</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+<span class="c-frame">┌─</span> <span class="c-title">内存信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">总计                :</span> <span class="c-num">377.27 GB</span>
+<span class="c-frame">│</span> <span class="c-key">已用                :</span> <span class="c-num">43Gi</span>
+<span class="c-frame">│</span> <span class="c-key">可用                :</span> <span class="c-num">334.26 GB</span>
+<span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-title">内存模组:</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">大小</span>     <span class="c-frame">│</span> <span class="c-title">类型</span>   <span class="c-frame">│</span> <span class="c-title">频率</span>         <span class="c-frame">│</span> <span class="c-title">制造商</span>       <span class="c-frame">│</span> <span class="c-title">型号</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> HMA84GR7DJR4N-XN
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> HMA84GR7CJR4N-XN
+<span class="c-frame">│</span> <span class="c-dim">… 12 × 32 GB DDR4 3200 MT/s Hynix modules</span>
+<span class="c-frame">└─────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">┌─</span> <span class="c-title">硬盘信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-title">已挂载文件系统:</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">文件系统</span>                    <span class="c-frame">│</span> <span class="c-title">容量</span>   <span class="c-frame">│</span> <span class="c-title">已用</span>  <span class="c-frame">│</span> <span class="c-title">使用率</span> <span class="c-frame">│</span> <span class="c-title">挂载点</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/mapper/pve-root</span>        <span class="c-frame">│</span> <span class="c-num">102G</span>   <span class="c-frame">│</span> 26G   <span class="c-frame">│</span> <span class="c-good">27%</span>    <span class="c-frame">│</span> /
+<span class="c-frame">│</span> <span class="c-dev">/dev/md127</span>                  <span class="c-frame">│</span> <span class="c-num">7.0T</span>   <span class="c-frame">│</span> 903G  <span class="c-frame">│</span> <span class="c-good">13%</span>    <span class="c-frame">│</span> /data
+<span class="c-frame">└──────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-title">磁盘摘要</span> <span class="c-dim">(坏块=重映射/待处理/离线)</span>
+<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">设备</span>         <span class="c-frame">│</span> <span class="c-title">基本信息</span>                <span class="c-frame">│</span> <span class="c-title">SMART</span>  <span class="c-frame">│</span> <span class="c-title">温度</span>   <span class="c-frame">│</span> <span class="c-title">读写</span>
+<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/sda</span>     <span class="c-frame">│</span> 447G SSSTC ER2-GD480     <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">31°C</span>   <span class="c-frame">│</span> R2.90M W632K
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme0n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> R51.1T W3.31T
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme1n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> R50.7T W3.31T
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme2n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">38°C</span>   <span class="c-frame">│</span> R51.1T W3.36T
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme3n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">36°C</span>   <span class="c-frame">│</span> R50.8T W3.36T
+<span class="c-frame">└────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">┌─</span> <span class="c-title">NVMe 深度健康</span> <span class="c-frame">─────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme*</span>  <span class="c-frame">│</span> endurance <span class="c-num">0%</span>  spare <span class="c-ok">100%</span>  status <span class="c-ok">OK</span>
+<span class="c-frame">│</span>   <span class="c-info">ℹ 异常掉电(累计):</span> <span class="c-warn">nvme0n1=20 nvme1n1=20 nvme2n1=20 nvme3n1=20</span>
+<span class="c-frame">┌─</span> <span class="c-title">RAID控制器信息</span> <span class="c-frame">────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-dev">md127</span>     raid10    active    members <span class="c-num">4</span>    <span class="c-ok">OK</span>
+<span class="c-frame">│</span> HBA       Intel SATA Controller [RAID Mode]
+<span class="c-frame">┌─</span> <span class="c-title">网卡信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-dev">ens16f0</span>     <span class="c-up">UP</span>    <span class="c-num">1000M</span>/full    Intel I350
+<span class="c-frame">│</span> <span class="c-dev">ens3f0np0</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
+<span class="c-frame">│</span> <span class="c-dev">ens2f0np0</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
+<span class="c-frame">│</span> <span class="c-dev">ens2f1np1</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
+<span class="c-frame">│</span>   <span class="c-warn">⚠ ens16f0         rx_dropped=776686</span>
+<span class="c-frame">│</span>   <span class="c-warn">⚠ ens3f0np0       tx_errors=1 rx_dropped=1117229</span>
+<span class="c-frame">┌─</span> <span class="c-title">主板信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">厂商 :</span> <span class="c-val">H3C</span>   <span class="c-key">型号 :</span> <span class="c-val">RS35M2C16SB</span>
+<span class="c-frame">│</span> <span class="c-key">BIOS :</span> <span class="c-val">American Megatrends · 5.76</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+
+<span class="c-done">报告生成完成！</span>
+<span class="c-dim">Generated on: Mon Jul 20 02:22:57 PM CST 2026</span>
+</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Options -->
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">04</span>
+      <div>
+        <h2 data-en="Options" data-zh="参数">Options</h2>
+        <p data-en="All flags work through curl | bash -s -- …" data-zh="所有参数都可通过 curl | bash -s -- … 传入">All flags work through curl | bash -s -- …</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <table class="opts">
+      <thead>
+        <tr>
+          <th data-en="Flag" data-zh="参数">Flag</th>
+          <th data-en="Description" data-zh="说明">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>-cn, --chinese</td><td data-en="Output in Chinese" data-zh="中文输出">Output in Chinese</td></tr>
+        <tr><td>-us, --english</td><td data-en="Output in English (default)" data-zh="英文输出（默认）">Output in English (default)</td></tr>
+        <tr><td>-j, --json</td><td data-en="JSON object to stdout only" data-zh="仅向 stdout 打印 JSON">JSON object to stdout only</td></tr>
+        <tr><td>-y, --yes</td><td data-en="Install missing tools without prompting" data-zh="不询问，直接安装缺失工具">Install missing tools without prompting</td></tr>
+        <tr><td>--no-install</td><td data-en="Never install; use tools already present" data-zh="从不安装；只用现有工具">Never install; use tools already present</td></tr>
+        <tr><td>-h, --help</td><td data-en="Show help" data-zh="显示帮助">Show help</td></tr>
+        <tr><td>-v, --version</td><td data-en="Show version" data-zh="显示版本">Show version</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Compatibility -->
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">05</span>
+      <div>
+        <h2 data-en="Compatibility" data-zh="兼容性">Compatibility</h2>
+        <p data-en="Detects package managers and maps deps for you."
+           data-zh="自动识别包管理器并映射依赖。">Detects package managers and maps deps for you.</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="badges">
+      <span class="badge">Debian / Ubuntu / Mint <span class="pm">apt</span></span>
+      <span class="badge">RHEL / CentOS / Alma / Rocky <span class="pm">yum · dnf</span></span>
+      <span class="badge">Fedora <span class="pm">dnf</span></span>
+      <span class="badge">Arch / Manjaro <span class="pm">pacman</span></span>
+      <span class="badge">openSUSE / SLES <span class="pm">zypper</span></span>
+      <span class="badge">CloudLinux <span class="pm">dnf</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- Donate -->
+<section id="donate">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="idx">06</span>
+      <div>
+        <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
+        <p data-en="If SICK saved you a login and a squint at dmidecode — thank you."
+           data-zh="如果 SICK 帮你省下了一次登录和盯着 dmidecode 眯眼的时间，谢谢你。">If SICK saved you a login and a squint at dmidecode — thank you.</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="donate-grid">
+      <div class="donate-card">
+        <h3>USDT — TRC20</h3>
+        <p class="lead" data-en="Tron network (TRC20). Double-check the network before sending."
+           data-zh="Tron 网络 (TRC20)。转账前请再次确认网络。">Tron network (TRC20). Double-check the network before sending.</p>
+        <div class="addr">
+          <code id="usdt">TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
+          <button class="copy" type="button" onclick="copyText('TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5', this)" data-en="copy" data-zh="复制">copy</button>
         </div>
         <span class="net-tag">TRC20 · Tron</span>
       </div>
-
-      <div class="wallet">
-        <div class="wallet-label" data-en="◆ Afdian / 爱发电" data-zh="◆ 爱发电">◆ Afdian / 爱发电</div>
-        <p style="margin-bottom: 0.5rem; font-size: 0.85rem;"
-          data-en="Recurring or one-time support." data-zh="支持一次或持续赞助。">Recurring or one-time support.</p>
-        <a class="afdian-btn" href="https://afdian.com/a/ellye" target="_blank" rel="noopener">
+      <div class="donate-card" style="display:flex;flex-direction:column;justify-content:center">
+        <h3 data-en="Afdian / 爱发电" data-zh="爱发电">Afdian / 爱发电</h3>
+        <p class="lead" data-en="Recurring or one-time support." data-zh="支持一次或持续赞助。">Recurring or one-time support.</p>
+        <a class="afd-btn" href="https://afdian.com/a/ellye" target="_blank" rel="noopener">
           <span class="heart">♥</span>
           <span data-en="Support on Afdian" data-zh="在爱发电支持">Support on Afdian</span>
         </a>
       </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <p data-en="SICK — Make server checking no longer sick — but sick."
-        data-zh="SICK — 让服务器检查不再让人 sick（头疼），而是 sick（超酷）。">
-        SICK — Make server checking no longer sick — but sick.
-      </p>
-      <p>
-        <a href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">Source Code</a>
-        ·
-        <a href="https://catcat.blog" target="_blank" rel="noopener"
-          data-en="Made by Yuri NagaSaki · 猫猫博客" data-zh="由 Yuri NagaSaki 制作 · 猫猫博客">Made by Yuri NagaSaki · 猫猫博客</a>
-        · MIT
-      </p>
-    </footer>
   </div>
+</section>
 
-  <script>
-    // i18n
-    function applyLang(lang) {
-      document.documentElement.lang = lang;
-      document.querySelectorAll('[data-en]').forEach(el => {
-        const v = el.getAttribute('data-' + lang);
-        if (v !== null) el.innerHTML = v;
-      });
-      const btn = document.getElementById('langBtn');
-      if (btn) btn.textContent = (lang === 'zh') ? 'EN' : '中文';
-      try { localStorage.setItem('sick-lang', lang); } catch (e) { }
-    }
+<footer>
+  <div class="wrap foot-in">
+    <div>
+      <div class="foot-brand">SI<em>CK</em></div>
+      <p class="foot-tag" data-en="Make server checking no longer sick — but sick."
+         data-zh="让服务器检查不再让人 sick（头疼），而是 sick（超酷）。">
+        Make server checking no longer sick — but sick.
+      </p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">github.com/Yuri-NagaSaki/SICK</a><br>
+      <a href="https://catcat.blog" target="_blank" rel="noopener"
+         data-en="Made by Yuri NagaSaki · 猫猫博客"
+         data-zh="由 Yuri NagaSaki 制作 · 猫猫博客">Made by Yuri NagaSaki · 猫猫博客</a><br>
+      MIT License
+    </div>
+  </div>
+</footer>
 
-    function toggleLang() {
-      applyLang(document.documentElement.lang === 'zh' ? 'en' : 'zh');
-    }
-
-    (function initLang() {
-      let lang = 'en';
-      try {
-        const saved = localStorage.getItem('sick-lang');
-        if (saved) lang = saved;
-        else if ((navigator.language || '').toLowerCase().startsWith('zh')) lang = 'zh';
-      } catch (e) { }
-      if (lang !== 'en') applyLang(lang);
-    })();
-
-    // Copy helpers
-    const COPY_ICON = `
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-      </svg>
-      <span>Copy</span>`;
-    const COPIED_ICON = `
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-      </svg>
-      <span>Copied!</span>`;
-
-    async function copyToClipboard(text, btn) {
-      try {
-        await navigator.clipboard.writeText(text);
-        if (btn) {
-          btn.classList.add('copied');
-          btn.innerHTML = COPIED_ICON;
-          setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.innerHTML = COPY_ICON;
-          }, 2000);
-        }
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-    }
-
-    // Terminal headers + copy on pre blocks
-    document.querySelectorAll('pre').forEach(pre => {
-      const isOutput = pre.closest('.sample-output');
-      const header = document.createElement('div');
-      header.className = 'code-header';
-
-      const label = document.createElement('span');
-      label.className = 'code-label';
-      label.textContent = isOutput ? 'output' : 'terminal';
-      header.appendChild(label);
-
-      if (!isOutput) {
-        const btn = document.createElement('button');
-        btn.className = 'copy-btn';
-        btn.type = 'button';
-        btn.title = 'Copy to clipboard';
-        btn.innerHTML = COPY_ICON;
-        btn.addEventListener('click', () => {
-          const code = pre.querySelector('code');
-          const text = code ? code.textContent : pre.textContent;
-          copyToClipboard(text, btn);
-        });
-        header.appendChild(btn);
-      }
-
-      pre.insertBefore(header, pre.firstChild);
+<script>
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const prev = btn.textContent;
+      btn.textContent = (document.documentElement.lang === 'zh') ? '已复制' : 'copied';
+      btn.classList.add('ok');
+      setTimeout(() => {
+        btn.textContent = prev;
+        btn.classList.remove('ok');
+      }, 1400);
     });
+  }
 
-    // Wallet address click-to-copy
-    document.querySelectorAll('.wallet-address[data-copy]').forEach(el => {
-      const btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.type = 'button';
-      btn.title = 'Copy to clipboard';
-      btn.innerHTML = COPY_ICON;
-      el.appendChild(btn);
-
-      const doCopy = (e) => {
-        e.stopPropagation();
-        copyToClipboard(el.getAttribute('data-copy'), btn);
-      };
-      el.addEventListener('click', doCopy);
-      btn.addEventListener('click', doCopy);
+  function applyLang(lang) {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-en]').forEach(el => {
+      const v = el.getAttribute('data-' + lang);
+      if (v !== null) el.innerHTML = v;
     });
-  </script>
+    document.getElementById('langBtn').textContent = (lang === 'zh') ? 'EN' : '中文';
+    try { localStorage.setItem('sick-lang', lang); } catch (e) {}
+  }
+
+  function toggleLang() {
+    applyLang(document.documentElement.lang === 'zh' ? 'en' : 'zh');
+  }
+
+  (function () {
+    let lang = 'en';
+    try {
+      const saved = localStorage.getItem('sick-lang');
+      if (saved) lang = saved;
+      else if ((navigator.language || '').toLowerCase().startsWith('zh')) lang = 'zh';
+    } catch (e) {}
+    if (lang !== 'en') applyLang(lang);
+  })();
+</script>
 </body>
-
 </html>
