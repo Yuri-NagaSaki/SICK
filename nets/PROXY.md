@@ -9,7 +9,7 @@
 |------|----------------------|------------------------|
 | **脚本** | `https://catbash.net/nets` | `…/nets/nets.sh` 或 raw 见下 |
 | **脚本** | `https://ba.sh/nets` | 同上 |
-| **页面** | `https://catbash.net/nets/` 或 `https://catbash.net/nets.html` | `…/nets/index.html`（或你的页面路径） |
+| **页面** | `https://catbash.net/nets.html` | `…/nets.html` |
 | **页面** | `https://ba.sh/nets/`（可选） | 同上 |
 | **端点 JSON**（可选） | `https://catbash.net/nets/endpoints.json` | `…/nets/endpoints.json` |
 | **端点 Markdown**（可选） | `https://catbash.net/nets/endpoints.md` | `…/nets/endpoints.md` |
@@ -64,7 +64,7 @@ curl -sL https://ba.sh/nets | bash -s -- -r
 
 1. `https://catbash.net/nets` → `nets/nets.sh`  
 2. `https://ba.sh/nets` → 同一脚本  
-3. （可选）`https://catbash.net/nets/` → 说明页  
+3. （可选）`https://catbash.net/nets.html` → 说明页  
 
 `endpoints.json` 已打进仓库；脚本默认读**同目录** JSON。若只反代 `nets.sh` 单文件、不挂 JSON，需改脚本为内嵌列表或再反代：
 

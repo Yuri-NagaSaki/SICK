@@ -4,16 +4,19 @@
  * Pages (HTML):
  *   /           → 猫脚本 hub (index.html)
  *   /sick.html  → SICK intro
- *   /nets/      → NETS intro
+ *   /nets.html  → NETS intro
  *
  * Scripts (text/plain, curl|bash):
- *   /sick       → hardware_info.sh
- *   /nets       → nets/nets.sh
- *   /nets.sh    → nets/nets.sh
+ *   /sick  /sick/  → hardware_info.sh
+ *   /nets          → nets/nets.sh
+ *   /nets.sh       → nets/nets.sh
  *
- * External short links (configured on ba.sh, not here):
- *   https://ba.sh/sick → raw/main/hardware_info.sh (or this /sick)
- *   https://ba.sh/nets → raw/main/nets/nets.sh
+ * Note: do NOT serve HTML from /nets/index.html via ASSETS for /nets/ —
+ * Workers static assets 307 /nets/index.html → /nets/, which collides with
+ * the install short-link. Intro page lives at /nets.html instead.
+ *
+ * External short links (ba.sh):
+ *   https://ba.sh/sick · https://ba.sh/nets
  */
 function asScript(res) {
   const headers = new Headers(res.headers);
@@ -37,25 +40,23 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // SICK one-shot hardware script (page is /sick.html — no conflict)
+    // SICK one-shot hardware script (page is /sick.html)
     if (path === "/sick" || path === "/sick/") {
       return asScript(await asset(env, request, "/hardware_info.sh"));
     }
 
-    // NETS: bare /nets is always the shell script (curl|bash)
-    if (path === "/nets") {
+    // NETS: bare /nets and /nets/ are always the shell script (curl|bash)
+    // Trailing slash also script so accidental /nets/ still installs.
+    if (path === "/nets" || path === "/nets/") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 
-    // /nets/ → landing page
-    if (path === "/nets/") {
-      const page = await asset(env, request, "/nets/index.html");
-      if (page.status === 200) return page;
+    if (path === "/nets.sh") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 
-    // Convenience aliases
-    if (path === "/nets.sh" || path === "/nets/nets.sh") {
+    // Force script content-type for the raw file path too
+    if (path === "/nets/nets.sh") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 

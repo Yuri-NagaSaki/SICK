@@ -5,7 +5,7 @@
 | 项目 | 用途 | 运行 | 文档 |
 |------|------|------|------|
 | **[SICK](https://catbash.net/sick.html)** | 一次性硬件盘点 | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · 本 README |
-| **[NETS](https://catbash.net/nets/)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets/) · [nets/README.md](nets/README.md) |
+| **[NETS](https://catbash.net/nets.html)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
 
 短链（含 ba.sh）：`https://ba.sh/sick` · `https://ba.sh/nets`
 

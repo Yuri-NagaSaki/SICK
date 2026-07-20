@@ -5,7 +5,7 @@ Open-source Linux server scripts on **[catbash.net](https://catbash.net/)**:
 | Project | What it does | Run | Docs |
 |---------|--------------|-----|------|
 | **[SICK](https://catbash.net/sick.html)** | One-shot hardware inventory | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · this README |
-| **[NETS](https://catbash.net/nets/)** | Public iperf3 throughput sampler | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets/) · [nets/README.md](nets/README.md) |
+| **[NETS](https://catbash.net/nets.html)** | Public iperf3 throughput sampler | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets.html) · [nets/README.md](nets/README.md) |
 
 Short links (also on ba.sh): `https://ba.sh/sick` · `https://ba.sh/nets`
 

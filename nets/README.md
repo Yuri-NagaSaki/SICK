@@ -1,6 +1,6 @@
 # NETS — Network Endpoint Throughput Sampler
 
-Part of **[猫脚本 / Catbash](https://catbash.net/)** · [Docs page](https://catbash.net/nets/)
+Part of **[猫脚本 / Catbash](https://catbash.net/)** · [Docs page](https://catbash.net/nets.html)
 
 Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, Advin, InterServer, …) with **IPv4 and IPv6** send/recv tests.
 
