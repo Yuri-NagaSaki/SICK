@@ -1043,28 +1043,36 @@ install_packages() {
         return 1
     fi
 
-    # Decide whether to install: -y, or interactive Y/N, or skip when non-interactive
+    # Decide whether to install: -y, or Y/N from the real TTY (works under curl | bash)
     local do_install=false
     if [[ "$AUTO_YES" == true ]]; then
         do_install=true
-    elif [[ -t 0 ]]; then
+    else
         local prompt="Install these packages now? [y/N]: "
         [[ "$LANG_MODE" == "cn" ]] && prompt="现在安装这些软件包吗？[y/N]: "
         local reply=""
-        read -r -p "$prompt" reply
+        # Prefer /dev/tty so curl|bash can still prompt; fall back to stdin if it's a TTY
+        if [[ -r /dev/tty ]]; then
+            printf '%s' "$prompt" > /dev/tty 2>/dev/null || printf '%s' "$prompt"
+            # shellcheck disable=SC2162
+            IFS= read -r reply < /dev/tty || true
+        elif [[ -t 0 ]]; then
+            # shellcheck disable=SC2162
+            printf '%s' "$prompt"
+            IFS= read -r reply || true
+        else
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                echo "无法交互询问（无终端）。加 -y 可自动安装，或手动安装后重试。继续生成报告..."
+            else
+                echo "No TTY for Y/N prompt. Pass -y to auto-install, or install manually. Continuing..."
+            fi
+            echo
+            return 1
+        fi
         case "$reply" in
-            [Yy]*) do_install=true ;;
+            [Yy]|[Yy][Ee][Ss]) do_install=true ;;
             *) do_install=false ;;
         esac
-    else
-        # Non-interactive (e.g. curl | bash) and no -y: do not install silently
-        if [[ "$LANG_MODE" == "cn" ]]; then
-            echo "非交互式运行且未加 -y，跳过安装。加 -y 可自动安装。继续生成报告..."
-        else
-            echo "Non-interactive and no -y: skipping install. Pass -y to auto-install. Continuing..."
-        fi
-        echo
-        return 1
     fi
 
     if [[ "$do_install" != true ]]; then
@@ -1079,16 +1087,24 @@ install_packages() {
     [[ $EUID -ne 0 ]] && sudo_prefix=(sudo)
     local -a install_cmd=()
     case "$pkg_manager" in
-        apt)    "${sudo_prefix[@]}" apt-get update >/dev/null 2>&1 || true
+        apt)    [[ "$LANG_MODE" == "cn" ]] && echo "正在更新软件源..." || echo "Updating package index..."
+                "${sudo_prefix[@]}" apt-get update -qq 2>&1 || true
                 install_cmd=("${sudo_prefix[@]}" apt-get install -y) ;;
         dnf)    install_cmd=("${sudo_prefix[@]}" dnf install -y) ;;
         yum)    install_cmd=("${sudo_prefix[@]}" yum install -y) ;;
-        pacman) install_cmd=("${sudo_prefix[@]}" pacman -S --noconfirm) ;;
+        pacman) install_cmd=("${sudo_prefix[@]}" pacman -S --noconfirm --needed) ;;
         zypper) install_cmd=("${sudo_prefix[@]}" zypper install -y) ;;
+        *)
+            [[ "$LANG_MODE" == "cn" ]] && echo "未识别的包管理器，请手动安装: ${uniq_pkgs[*]}" \
+                || echo "Unknown package manager. Install manually: ${uniq_pkgs[*]}"
+            echo
+            return 1
+            ;;
     esac
 
     [[ "$LANG_MODE" == "cn" ]] && echo "正在安装: ${uniq_pkgs[*]}" || echo "Installing: ${uniq_pkgs[*]}"
-    if "${install_cmd[@]}" "${uniq_pkgs[@]}" >/dev/null 2>&1; then
+    # Show install output so user can see progress / sudo password prompts
+    if "${install_cmd[@]}" "${uniq_pkgs[@]}"; then
         [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "安装完成。" || print_color "$GREEN" "Installation complete."
     else
         [[ "$LANG_MODE" == "cn" ]] && print_color "$YELLOW" "部分软件包安装失败，继续生成报告。" \
