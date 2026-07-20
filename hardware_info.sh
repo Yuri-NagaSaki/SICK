@@ -2113,6 +2113,48 @@ smart_json_bad_blocks_tsv() {
     ' 2>/dev/null <<< "$json"
 }
 
+# Skip BMC/IPMI virtual media and other non-storage pseudo-disks.
+# Common on bare-metal with remote KVM: AMI "Virtual Floppy0" etc. as /dev/sdX, SIZE=0B.
+is_pseudo_or_virtual_media() {
+    local name="${1:-}" size="${2:-}" model="${3:-}" vendor="${4:-}"
+    local m v s
+    m=$(printf '%s' "$model" | tr '[:upper:]' '[:lower:]')
+    v=$(printf '%s' "$vendor" | tr '[:upper:]' '[:lower:]')
+    s=$(printf '%s' "$size" | tr '[:upper:]' '[:lower:]')
+
+    # Zero-capacity block devices (typical virtual floppy/CD stubs)
+    if [[ -z "$s" || "$s" == "0b" || "$s" == "0" || "$s" == "0.0b" ]]; then
+        return 0
+    fi
+
+    # Model / product strings from BMC virtual media
+    if [[ "$m" =~ virtual[[:space:]]*floppy|virtual[[:space:]]*cd|virtual[[:space:]]*dvd|virtual[[:space:]]*disk|virtual[[:space:]]*media ]]; then
+        return 0
+    fi
+    if [[ "$m" =~ ^(floppy|cdrom|cdrw|dvd|dvdram)$ ]]; then
+        return 0
+    fi
+    # AMI / ASPEED / Avocent / iDRAC virtual media often use these vendors
+    if [[ "$v" =~ ^(ami|american\ megatrends|aspeed|avocent|idrac|ilo)$ ]]; then
+        if [[ "$m" =~ virtual|floppy|cd|dvd|rom|media ]]; then
+            return 0
+        fi
+        # zero size already handled; tiny AMI stubs sometimes report odd sizes
+        if [[ "$m" =~ floppy ]]; then
+            return 0
+        fi
+    fi
+
+    # Name-based: never treat these as data disks
+    case "$name" in
+        fd[0-9]*|sr[0-9]*|scd[0-9]*|ram[0-9]*|loop[0-9]*|dm-[0-9]*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
 # Function to check if a disk is a RAID controller virtual disk
 is_raid_controller_disk() {
     local disk="$1"
@@ -3457,13 +3499,29 @@ get_disk_info() {
     fi
 
     # Cache disk names and basic info to avoid one lsblk call per disk.
+    # Filter BMC virtual floppies / zero-size stubs (not real storage).
     local disk_names=()
     if command -v lsblk >/dev/null 2>&1; then
-        while read -r disk disk_info; do
-            [[ -z "$disk" ]] && continue
-            disk_names+=("$disk")
-            DISK_BASIC_INFO_CACHE[$disk]="${disk_info//  / }"
-        done < <(lsblk -d -n -o NAME,SIZE,MODEL,VENDOR 2>/dev/null)
+        local _name _size _model _vendor _type _tran _entry
+        while IFS= read -r _entry; do
+            [[ -z "$_entry" ]] && continue
+            _name=$(sed -n 's/.*NAME="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _size=$(sed -n 's/.*SIZE="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _model=$(sed -n 's/.*MODEL="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _vendor=$(sed -n 's/.*VENDOR="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _type=$(sed -n 's/.*TYPE="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _tran=$(sed -n 's/.*TRAN="\([^"]*\)".*/\1/p' <<<"$_entry")
+            _name="${_name#/dev/}"
+            [[ -z "$_name" ]] && continue
+            case "${_type,,}" in
+                rom|floppy) continue ;;
+            esac
+            if is_pseudo_or_virtual_media "$_name" "$_size" "$_model" "$_vendor"; then
+                continue
+            fi
+            disk_names+=("$_name")
+            DISK_BASIC_INFO_CACHE[$_name]="$(printf '%s %s %s' "$_size" "$_model" "$_vendor" | sed 's/  */ /g;s/[[:space:]]*$//')"
+        done < <(lsblk -d -n -P -o NAME,SIZE,MODEL,VENDOR,TYPE,TRAN 2>/dev/null)
     fi
 
     if [[ "$smartctl_available" == true && "$use_json" == true && ${#disk_names[@]} -gt 0 ]]; then
