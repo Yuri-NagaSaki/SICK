@@ -2,7 +2,7 @@
 
 Part of **[猫脚本 / Catbash](https://catbash.net/)** · [Docs page](https://catbash.net/nets.html)
 
-Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, Advin, InterServer, …) with **IPv4 and IPv6** send/recv tests.
+Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, InterServer, …) with **IPv4 and IPv6** send/recv tests.
 
 > Shared public nodes are often **busy**. Numbers are comparative, not lab-grade capacity.
 
@@ -66,12 +66,12 @@ chmod +x nets.sh
 | `--send-only` / `--recv-only` | One direction only |
 | `-l` | List endpoints |
 
-## Endpoint policy (v2)
+## Endpoint policy (v3)
 
 - **NYC** PureVoltage · **LA** Clouvider + InterServer · **KC** Nocix · **Canada** Leaseweb MTL  
 - **UK** OnlyServers + Clouvider LON · **AMS** Eranium + RedSwitches **25G**  
-- **Japan / SE Asia** Advin only (Osaka + Johor) · **HKG / SYD / BOM** Leaseweb/OVH  
-- No FiberState; no Advin NA/EU; no Leaseweb NYC/LAX/SIN/TYO  
+- **APAC** Leaseweb HKG / SYD · OVH Mumbai (Advin JP/MY removed — public iperf down)  
+- Ports are tried internally; default table hides them. Summary shows **↑/↓ traffic** for the run.
 
 See [endpoints.md](endpoints.md). Full reverse-proxy URL list: [PROXY.md](PROXY.md).
 

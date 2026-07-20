@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,13 +34,13 @@ write_embedded_endpoints() {
   # Writes embedded catalog to $1
   cat >"$1" <<'NETS_ENDPOINTS_JSON'
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-07-20",
   "notes": [
-    "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
-    "port_range is inclusive. Script tries ports on busy/fail.",
+    "Public shared iperf3 endpoints \u2014 results may show busy and do not equal raw DC capacity.",
+    "port_range is inclusive. Script tries ports on busy/fail (ports not shown in UI).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v2 trim: one (or intentionally two) providers per metro; FiberState removed; Advin only JP+MY."
+    "v3: removed Advin Osaka/Johor (public iperf unreachable)."
   ],
   "endpoints": [
     {
@@ -49,7 +49,10 @@ write_embedded_endpoints() {
       "city": "New York, US",
       "region": "na",
       "host": "speedtest.nyc.purevoltage.com",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "40G",
       "stack": "IPv4",
       "source": "nws"
@@ -60,7 +63,10 @@ write_embedded_endpoints() {
       "city": "Los Angeles, US",
       "region": "na",
       "host": "la.speedtest.clouvider.net",
-      "port_range": [5200, 5209],
+      "port_range": [
+        5200,
+        5209
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "yabs"
@@ -71,7 +77,10 @@ write_embedded_endpoints() {
       "city": "Los Angeles, US",
       "region": "na",
       "host": "lax.speedtest.is.cc",
-      "port_range": [5201, 5209],
+      "port_range": [
+        5201,
+        5209
+      ],
       "speed": "10G",
       "stack": "IPv4",
       "source": "interserver.net/speedtest"
@@ -82,7 +91,10 @@ write_embedded_endpoints() {
       "city": "Kansas City, US",
       "region": "na",
       "host": "speedtest.nocix.net",
-      "port_range": [5201, 5205],
+      "port_range": [
+        5201,
+        5205
+      ],
       "speed": "200G",
       "stack": "IPv4|IPv6",
       "source": "nws"
@@ -93,7 +105,10 @@ write_embedded_endpoints() {
       "city": "Montreal, CA",
       "region": "na",
       "host": "speedtest.mtl2.ca.leaseweb.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "iperf3serverlist"
@@ -104,7 +119,10 @@ write_embedded_endpoints() {
       "city": "United Kingdom",
       "region": "eu",
       "host": "speedtest.onlyservers.com",
-      "port_range": [5201, 5201],
+      "port_range": [
+        5201,
+        5201
+      ],
       "speed": "10G",
       "stack": "IPv4",
       "source": "speedtest.onlyservers.com"
@@ -115,7 +133,10 @@ write_embedded_endpoints() {
       "city": "London, UK",
       "region": "eu",
       "host": "lon.speedtest.clouvider.net",
-      "port_range": [5200, 5209],
+      "port_range": [
+        5200,
+        5209
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "yabs"
@@ -126,7 +147,10 @@ write_embedded_endpoints() {
       "city": "Amsterdam, NL",
       "region": "eu",
       "host": "iperf-ams-nl.eranium.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "100G",
       "stack": "IPv4|IPv6",
       "source": "yabs"
@@ -137,7 +161,10 @@ write_embedded_endpoints() {
       "city": "Amsterdam (Iron Mountain), NL",
       "region": "eu",
       "host": "43.250.53.56",
-      "port_range": [5201, 5201],
+      "port_range": [
+        5201,
+        5201
+      ],
       "speed": "25G",
       "stack": "IPv4",
       "source": "lg.redswitches.com"
@@ -148,7 +175,10 @@ write_embedded_endpoints() {
       "city": "Paris, FR",
       "region": "eu",
       "host": "iperf.online.net",
-      "port_range": [5200, 5209],
+      "port_range": [
+        5200,
+        5209
+      ],
       "speed": "100G",
       "stack": "IPv4",
       "source": "nws"
@@ -159,32 +189,13 @@ write_embedded_endpoints() {
       "city": "Vienna, AT",
       "region": "eu",
       "host": "iperf3-vie-at.alwyzon.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "200G",
       "stack": "IPv4|IPv6",
       "source": "nws"
-    },
-    {
-      "id": "advin-kix",
-      "provider": "Advin Servers",
-      "city": "Osaka, JP",
-      "region": "apac",
-      "host": "lg-kix.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "lg.advinservers.com"
-    },
-    {
-      "id": "advin-jhb",
-      "provider": "Advin Servers",
-      "city": "Johor, MY",
-      "region": "apac",
-      "host": "lg-jhb.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "lg.advinservers.com"
     },
     {
       "id": "leaseweb-hkg",
@@ -192,7 +203,10 @@ write_embedded_endpoints() {
       "city": "Hong Kong, HK",
       "region": "apac",
       "host": "speedtest.hkg12.hk.leaseweb.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "iperf3serverlist"
@@ -203,7 +217,10 @@ write_embedded_endpoints() {
       "city": "Sydney, AU",
       "region": "apac",
       "host": "speedtest.syd12.au.leaseweb.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "nws"
@@ -214,7 +231,10 @@ write_embedded_endpoints() {
       "city": "Mumbai, IN",
       "region": "apac",
       "host": "bom.proof.ovh.net",
-      "port_range": [5201, 5210],
+      "port_range": [
+        5201,
+        5210
+      ],
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "nws"
@@ -227,8 +247,8 @@ write_embedded_endpoints() {
     "onlyservers-uk",
     "eranium-ams",
     "redswitches-ams25g",
-    "advin-kix",
-    "leaseweb-hkg"
+    "leaseweb-hkg",
+    "leaseweb-syd"
   ]
 }
 NETS_ENDPOINTS_JSON
@@ -247,16 +267,39 @@ LIST_ONLY=false
 CONNECT_TIMEOUT=5
 IPERF_BIN=""
 
-# Colors
+# Colors (TTY only; keep plain when piped)
 if [[ -t 1 ]]; then
   RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
-  CYAN=$'\033[0;36m'; WHITE=$'\033[1;37m'; DIM=$'\033[2m'; NC=$'\033[0m'
+  CYAN=$'\033[0;36m'; BLUE=$'\033[0;34m'; MAGENTA=$'\033[0;35m'
+  WHITE=$'\033[1;37m'; BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
+  # Semantic
+  C_UP=$'\033[38;5;81m'     # upload / send
+  C_DOWN=$'\033[38;5;114m'  # download / recv
+  C_OK=$'\033[38;5;114m'
+  C_BUSY=$'\033[38;5;221m'
+  C_FAIL=$'\033[38;5;203m'
+  C_META=$'\033[38;5;245m'
+  C_LOC=$'\033[38;5;252m'
+  C_PROV=$'\033[38;5;180m'
+  C_HDR=$'\033[1;38;5;222m'
+  C_BAR=$'\033[38;5;73m'
 else
-  RED=""; GREEN=""; YELLOW=""; CYAN=""; WHITE=""; DIM=""; NC=""
+  RED=""; GREEN=""; YELLOW=""; CYAN=""; BLUE=""; MAGENTA=""
+  WHITE=""; BOLD=""; DIM=""; NC=""
+  C_UP=""; C_DOWN=""; C_OK=""; C_BUSY=""; C_FAIL=""; C_META=""
+  C_LOC=""; C_PROV=""; C_HDR=""; C_BAR=""
 fi
 
 HAVE_IPV4=false
 HAVE_IPV6=false
+
+# Traffic totals for this run (bytes on the wire, approx. from iperf3)
+TOTAL_SEND_BYTES=0   # upload: client -> server
+TOTAL_RECV_BYTES=0   # download: server -> client
+TOTAL_OK=0
+TOTAL_BUSY=0
+TOTAL_FAIL=0
+TOTAL_TESTS=0
 
 usage() {
   cat <<EOF
@@ -446,22 +489,47 @@ PY
 }
 
 list_endpoints() {
-  printf '%b\n' "${WHITE}NETS endpoints (region=${REGION})${NC}"
-  printf '%-20s %-16s %-28s %-36s %s\n' "ID" "PROVIDER" "CITY" "HOST" "PORTS/STACK"
+  printf '%b\n' "${C_HDR}NETS endpoints${NC} ${C_META}(region=${REGION})${NC}"
+  printf '%b\n' "${C_BAR}──────────────────────────────────────────────────────────────────────────────${NC}"
+  printf '%b%-18s %-16s %-26s %-34s %s%b\n' \
+    "${DIM}" "ID" "PROVIDER" "CITY" "HOST" "STACK" "${NC}"
   local i
   for ((i = 0; i < ${#EP_ID[@]}; i++)); do
-    printf '%-20s %-16s %-28s %-36s %s-%s %s\n' \
-      "${EP_ID[$i]}" "${EP_PROVIDER[$i]}" "${EP_CITY[$i]}" "${EP_HOST[$i]}" \
-      "${EP_P0[$i]}" "${EP_P1[$i]}" "${EP_STACK[$i]}"
+    printf '%b%-18s%b %-16s %-26s %-34s %s\n' \
+      "${C_LOC}" "${EP_ID[$i]}" "${NC}" \
+      "${EP_PROVIDER[$i]}" "${EP_CITY[$i]}" "${EP_HOST[$i]}" "${EP_STACK[$i]}"
   done
-  printf '\n%d endpoint(s)\n' "${#EP_ID[@]}"
+  printf '\n%b%d endpoint(s)%b\n' "${C_META}" "${#EP_ID[@]}" "${NC}"
 }
 
-# Try iperf3 once; print result line to stdout: status|speed_mbps
+# Human-readable byte size
+human_bytes() {
+  awk -v b="${1:-0}" 'BEGIN{
+    if (b < 0) b = 0
+    if (b < 1024)          printf "%.0f B", b
+    else if (b < 1048576)  printf "%.2f KiB", b/1024
+    else if (b < 1073741824) printf "%.2f MiB", b/1048576
+    else                   printf "%.2f GiB", b/1073741824
+  }'
+}
+
+# Pad plain text then wrap color (ANSI-safe column width)
+cell() {
+  local width="$1" text="$2" color="${3:-}"
+  local plain
+  plain="$(printf '%-*s' "$width" "$text")"
+  if [[ -n "$color" ]]; then
+    printf '%b%s%b' "$color" "$plain" "$NC"
+  else
+    printf '%s' "$plain"
+  fi
+}
+
+# Try iperf3 once (JSON). Prints: status|speed_mbps|bytes
 # status: ok | busy | fail
 run_iperf_once() {
   local host="$1" port="$2" ipver="$3" reverse="$4"
-  local flags=()
+  local flags=(-J)
   [[ "$ipver" == "4" ]] && flags+=(-4)
   [[ "$ipver" == "6" ]] && flags+=(-6)
   [[ "$reverse" == "1" ]] && flags+=(-R)
@@ -476,88 +544,173 @@ run_iperf_once() {
       2>&1
   )" && rc=0 || rc=$?
 
-  if echo "$out" | grep -qiE 'busy|server is busy|the server is busy'; then
-    echo "busy|"
-    return 0
-  fi
-  if echo "$out" | grep -qiE 'unable to connect|connection refused|no route|failed to connect|timeout|timed out'; then
-    echo "fail|"
-    return 0
-  fi
-  # Prefer SUM receiver line (aggregate with -P)
-  local speed unit
-  speed="$(echo "$out" | grep -E 'SUM.*receiver|\[SUM\].*receiver' | tail -1 | awk '{print $(NF-2)}')"
-  unit="$(echo "$out" | grep -E 'SUM.*receiver|\[SUM\].*receiver' | tail -1 | awk '{print $(NF-1)}')"
-  if [[ -z "$speed" ]]; then
-    # single-stream fallback
-    speed="$(echo "$out" | grep -E 'receiver$' | tail -1 | awk '{print $(NF-2)}')"
-    unit="$(echo "$out" | grep -E 'receiver$' | tail -1 | awk '{print $(NF-1)}')"
-  fi
-  if [[ -z "$speed" || "$speed" == "0.00" ]]; then
-    if [[ $rc -ne 0 ]]; then
-      echo "fail|"
-    else
-      echo "busy|"
-    fi
-    return 0
-  fi
-  # Normalize to Mbps
-  local mbps
-  case "$unit" in
-    Gbits/sec|Gbit/s) mbps="$(awk -v s="$speed" 'BEGIN{printf "%.2f", s*1000}')" ;;
-    Mbits/sec|Mbit/s) mbps="$(awk -v s="$speed" 'BEGIN{printf "%.2f", s}')" ;;
-    Kbits/sec|Kbit/s) mbps="$(awk -v s="$speed" 'BEGIN{printf "%.2f", s/1000}')" ;;
-    *) mbps="$speed" ;;
-  esac
-  echo "ok|${mbps}"
+  # Prefer structured JSON parse via python3
+  local parsed
+  parsed="$(
+    REVERSE="$reverse" RC="$rc" python3 -c '
+import json, os, re, sys
+raw = sys.stdin.read()
+reverse = os.environ.get("REVERSE") == "1"
+rc = int(os.environ.get("RC") or "1")
+low = raw.lower()
+if "busy" in low and "server" in low:
+    print("busy||0"); sys.exit(0)
+# try JSON object (iperf3 -J)
+start = raw.find("{")
+if start >= 0:
+    try:
+        d = json.loads(raw[start:])
+    except Exception:
+        d = None
+    if isinstance(d, dict):
+        err = (d.get("error") or "")
+        if err:
+            el = err.lower()
+            if "busy" in el:
+                print("busy||0"); sys.exit(0)
+            print("fail||0"); sys.exit(0)
+        end = d.get("end") or {}
+        # Upload (client send): sum_sent; Download (-R): sum_received
+        if reverse:
+            s = end.get("sum_received") or end.get("sum_sent") or {}
+        else:
+            s = end.get("sum_sent") or end.get("sum_received") or {}
+        # streams aggregate fallback
+        if not s and end.get("streams"):
+            bps = bytes_ = 0
+            key = "receiver" if reverse else "sender"
+            for st in end["streams"]:
+                part = st.get(key) or st.get("receiver") or st.get("sender") or {}
+                bps += float(part.get("bits_per_second") or 0)
+                bytes_ += int(part.get("bytes") or 0)
+            if bps > 0:
+                print("ok|%.2f|%d" % (bps / 1e6, bytes_)); sys.exit(0)
+        bps = float(s.get("bits_per_second") or 0)
+        bytes_ = int(s.get("bytes") or 0)
+        if bps > 0:
+            print("ok|%.2f|%d" % (bps / 1e6, bytes_)); sys.exit(0)
+        print("busy||0" if rc == 0 else "fail||0"); sys.exit(0)
+# plaintext fallback
+if re.search(r"busy|server is busy", raw, re.I):
+    print("busy||0"); sys.exit(0)
+if re.search(r"unable to connect|connection refused|no route|failed to connect|timed out|timeout", raw, re.I):
+    print("fail||0"); sys.exit(0)
+line = ""
+for ln in raw.splitlines():
+    if re.search(r"SUM.*receiver|\[SUM\].*receiver", ln) or ln.rstrip().endswith("receiver"):
+        line = ln
+if not line:
+    print("fail||0" if rc != 0 else "busy||0"); sys.exit(0)
+parts = line.split()
+# … sec <amt> <unit> <speed> <speed_unit> receiver
+try:
+    # find "sec" then amount unit speed speed_unit
+    i = parts.index("sec")
+    amt = float(parts[i+1]); unit = parts[i+2]
+    spd = float(parts[i+3]); su = parts[i+4]
+except Exception:
+    print("fail||0"); sys.exit(0)
+mult = {"bits/sec":1e-6,"bit/s":1e-6,"Kbits/sec":1e-3,"Kbit/s":1e-3,
+        "Mbits/sec":1,"Mbit/s":1,"Gbits/sec":1e3,"Gbit/s":1e3}.get(su, 1)
+mbps = spd * mult
+bmult = {"Bytes":1,"KBytes":1024,"MBytes":1048576,"GBytes":1073741824,
+         "Kbytes":1024,"Mbytes":1048576,"Gbytes":1073741824}.get(unit, 1)
+bytes_ = int(amt * bmult)
+if mbps <= 0:
+    print("busy||0"); sys.exit(0)
+print("ok|%.2f|%d" % (mbps, bytes_))
+' <<<"$out"
+  )" || parsed="fail||0"
+
+  echo "${parsed}"
 }
 
 # Run direction trying ports in range until ok or exhausted.
-# Prints: status|mbps|port
+# Prints: status|mbps|bytes  (port not exposed)
 run_iperf_range() {
   local host="$1" p0="$2" p1="$3" ipver="$4" reverse="$5"
-  local p st mb
+  local p st mb by st_last="fail"
   for ((p = p0; p <= p1; p++)); do
-    IFS='|' read -r st mb <<<"$(run_iperf_once "$host" "$p" "$ipver" "$reverse")"
+    IFS='|' read -r st mb by <<<"$(run_iperf_once "$host" "$p" "$ipver" "$reverse")"
+    st_last="$st"
     if [[ "$st" == "ok" ]]; then
-      echo "ok|${mb}|${p}"
+      echo "ok|${mb}|${by:-0}"
       return 0
     fi
     if [[ "$st" == "fail" && "$p0" == "$p1" ]]; then
-      echo "fail||${p}"
+      echo "fail||0"
       return 0
     fi
-    # busy -> try next port; fail on multi-port also try next
   done
-  # last status
-  if [[ "${st:-}" == "busy" ]]; then
-    echo "busy||${p1}"
+  if [[ "$st_last" == "busy" ]]; then
+    echo "busy||0"
   else
-    echo "fail||${p1}"
+    echo "fail||0"
   fi
 }
 
-format_speed() {
+# Speed text for table (no color)
+format_speed_text() {
   local status="$1" mbps="$2"
   case "$status" in
-    ok)   printf '%s' "${mbps} Mbps" ;;
+    ok)
+      # Prefer Gbps when large
+      awk -v m="${mbps:-0}" 'BEGIN{
+        if (m >= 1000) printf "%.2f Gbps", m/1000
+        else printf "%.0f Mbps", m
+      }'
+      ;;
     busy) printf '%s' "busy" ;;
-    skip) printf '%s' "-" ;;
+    skip) printf '%s' "—" ;;
     *)    printf '%s' "fail" ;;
   esac
 }
 
+# Color for status cell
+speed_color() {
+  case "$1" in
+    ok)   [[ "$2" == "up" ]] && printf '%s' "$C_UP" || printf '%s' "$C_DOWN" ;;
+    busy) printf '%s' "$C_BUSY" ;;
+    fail) printf '%s' "$C_FAIL" ;;
+    *)    printf '%s' "$C_META" ;;
+  esac
+}
+
+track_result() {
+  local st="$1" bytes="$2" direction="$3"  # direction: up|down
+  TOTAL_TESTS=$((TOTAL_TESTS + 1))
+  case "$st" in
+    ok)
+      TOTAL_OK=$((TOTAL_OK + 1))
+      bytes="${bytes:-0}"
+      [[ -z "$bytes" || "$bytes" == "0" ]] && return 0
+      if [[ "$direction" == "up" ]]; then
+        TOTAL_SEND_BYTES=$((TOTAL_SEND_BYTES + bytes))
+      else
+        TOTAL_RECV_BYTES=$((TOTAL_RECV_BYTES + bytes))
+      fi
+      ;;
+    busy) TOTAL_BUSY=$((TOTAL_BUSY + 1)) ;;
+    fail) TOTAL_FAIL=$((TOTAL_FAIL + 1)) ;;
+  esac
+}
+
 print_header() {
-  printf '%b\n' "${CYAN}════════════════════════════════════════════════════════════════════════════${NC}"
-  printf '%b\n' "${WHITE}  NETS v${VERSION} — Network Endpoint Throughput Sampler${NC}"
-  printf '%b\n' "${CYAN}════════════════════════════════════════════════════════════════════════════${NC}"
-  printf ' Region     : %s\n' "$REGION"
-  printf ' Duration   : %ss / direction · Parallel: %s\n' "$TEST_TIME" "$PARALLEL"
-  printf ' IPv4       : %s\n' "$( $HAVE_IPV4 && echo yes || echo no )"
-  printf ' IPv6       : %s\n' "$( $HAVE_IPV6 && echo yes || echo no )"
-  printf ' Endpoints  : %d\n' "${#EP_ID[@]}"
-  printf ' iperf3     : %s\n' "$IPERF_BIN"
-  printf '%b\n' "${DIM} Public shared servers — busy is normal; not equal to bare-metal capacity.${NC}"
+  printf '%b\n' "${C_BAR}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+  printf '%b\n' "${C_BAR}║${NC}  ${C_HDR}NETS v${VERSION}${NC}  ${C_META}— Network Endpoint Throughput Sampler${NC}              ${C_BAR}║${NC}"
+  printf '%b\n' "${C_BAR}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+  printf '  %bRegion%b      %s\n' "${BOLD}" "${NC}" "$REGION"
+  printf '  %bDuration%b    %ss / direction · parallel %s\n' "${BOLD}" "${NC}" "$TEST_TIME" "$PARALLEL"
+  printf '  %bStack%b       IPv4 %b%s%b · IPv6 %b%s%b\n' \
+    "${BOLD}" "${NC}" \
+    "$( $HAVE_IPV4 && printf '%s' "$C_OK" || printf '%s' "$C_FAIL" )" \
+    "$( $HAVE_IPV4 && echo on || echo off )" "${NC}" \
+    "$( $HAVE_IPV6 && printf '%s' "$C_OK" || printf '%s' "$C_META" )" \
+    "$( $HAVE_IPV6 && echo on || echo off )" "${NC}"
+  printf '  %bEndpoints%b   %d · iperf3 %s\n' "${BOLD}" "${NC}" "${#EP_ID[@]}" "$IPERF_BIN"
+  printf '  %bLegend%b      %b↑ Send (upload)%b  %b↓ Recv (download)%b  %bbusy%b  %bfail%b\n' \
+    "${BOLD}" "${NC}" "${C_UP}" "${NC}" "${C_DOWN}" "${NC}" "${C_BUSY}" "${NC}" "${C_FAIL}" "${NC}"
+  printf '%b  Public shared servers — busy is normal; not bare-metal capacity.%b\n' "${DIM}" "${NC}"
   echo
 }
 
@@ -577,14 +730,21 @@ run_mode_table() {
     return 0
   fi
 
-  printf '%b\n' "${WHITE}── iperf3 (${mode_label}) ──────────────────────────────────────────────────${NC}"
-  printf '%-16s %-18s %-6s %-14s %-14s %s\n' \
-    "Location" "Provider" "Port" "Send (up)" "Recv (down)" "Link"
-  printf '%-16s %-18s %-6s %-14s %-14s %s\n' \
-    "----------------" "------------------" "------" "--------------" "--------------" "------"
+  printf '%b\n' "${C_BAR}── ${C_HDR}iperf3 ${mode_label}${C_BAR} ────────────────────────────────────────────────────${NC}"
+  # Headers: no Port column
+  printf '  %b%b  %b  %b  %b  %b%b\n' \
+    "${DIM}" \
+    "$(printf '%-18s' 'Location')" \
+    "$(printf '%-16s' 'Provider')" \
+    "$(printf '%-12s' '↑ Send')" \
+    "$(printf '%-12s' '↓ Recv')" \
+    "$(printf '%-6s' 'Link')" \
+    "${NC}"
+  printf '  %b%b%b\n' "${C_META}" \
+    "──────────────────  ────────────────  ────────────  ────────────  ──────" "${NC}"
 
   local i host p0 p1 stack city prov speed_meta
-  local do_test port send_st send_mb recv_st recv_mb send_s recv_s sport rport
+  local do_test send_st send_mb send_by recv_st recv_mb recv_by send_s recv_s
   for ((i = 0; i < ${#EP_ID[@]}; i++)); do
     host="${EP_HOST[$i]}"
     p0="${EP_P0[$i]}"; p1="${EP_P1[$i]}"
@@ -606,30 +766,65 @@ run_mode_table() {
     fi
 
     local city_short="$city"
-    ((${#city_short} > 16)) && city_short="${city_short:0:15}…"
+    ((${#city_short} > 18)) && city_short="${city_short:0:17}…"
     local prov_short="$prov"
-    ((${#prov_short} > 18)) && prov_short="${prov_short:0:17}…"
+    ((${#prov_short} > 16)) && prov_short="${prov_short:0:15}…"
 
-    send_st="skip"; send_mb=""; recv_st="skip"; recv_mb=""
-    port="$p0"
+    send_st="skip"; send_mb=""; send_by=0
+    recv_st="skip"; recv_mb=""; recv_by=0
 
     if ! $SKIP_SEND; then
-      IFS='|' read -r send_st send_mb sport <<<"$(run_iperf_range "$host" "$p0" "$p1" "$ipver" 0)"
-      [[ -n "${sport:-}" ]] && port="$sport"
+      IFS='|' read -r send_st send_mb send_by <<<"$(run_iperf_range "$host" "$p0" "$p1" "$ipver" 0)"
+      track_result "$send_st" "${send_by:-0}" "up"
     fi
     if ! $SKIP_RECV; then
-      IFS='|' read -r recv_st recv_mb rport <<<"$(run_iperf_range "$host" "$p0" "$p1" "$ipver" 1)"
-      [[ -n "${rport:-}" ]] && port="$rport"
+      IFS='|' read -r recv_st recv_mb recv_by <<<"$(run_iperf_range "$host" "$p0" "$p1" "$ipver" 1)"
+      track_result "$recv_st" "${recv_by:-0}" "down"
     fi
 
-    send_s="$(format_speed "$send_st" "$send_mb")"
-    recv_s="$(format_speed "$recv_st" "$recv_mb")"
+    send_s="$(format_speed_text "$send_st" "$send_mb")"
+    recv_s="$(format_speed_text "$recv_st" "$recv_mb")"
 
-    # Plain table (no ANSI inside columns — keeps alignment)
-    printf '%-16s %-18s %-6s %-14s %-14s %s\n' \
-      "$city_short" "$prov_short" "$port" "$send_s" "$recv_s" "$speed_meta"
+    printf '  '
+    cell 18 "$city_short" "$C_LOC"
+    printf '  '
+    cell 16 "$prov_short" "$C_PROV"
+    printf '  '
+    cell 12 "$send_s" "$(speed_color "$send_st" up)"
+    printf '  '
+    cell 12 "$recv_s" "$(speed_color "$recv_st" down)"
+    printf '  '
+    cell 6 "$speed_meta" "$C_META"
+    printf '\n'
   done
   echo
+}
+
+print_summary() {
+  local elapsed="$1"
+  local total_bytes=$((TOTAL_SEND_BYTES + TOTAL_RECV_BYTES))
+  local up_h down_h tot_h
+  up_h="$(human_bytes "$TOTAL_SEND_BYTES")"
+  down_h="$(human_bytes "$TOTAL_RECV_BYTES")"
+  tot_h="$(human_bytes "$total_bytes")"
+
+  printf '%b\n' "${C_BAR}── ${C_HDR}Summary${C_BAR} ──────────────────────────────────────────────────────────${NC}"
+  printf '  %bElapsed%b     %ss\n' "${BOLD}" "${NC}" "$elapsed"
+  printf '  %bTests%b       %b%d ok%b · %b%d busy%b · %b%d fail%b · %d total\n' \
+    "${BOLD}" "${NC}" \
+    "${C_OK}" "$TOTAL_OK" "${NC}" \
+    "${C_BUSY}" "$TOTAL_BUSY" "${NC}" \
+    "${C_FAIL}" "$TOTAL_FAIL" "${NC}" \
+    "$TOTAL_TESTS"
+  printf '  %bTraffic%b     %b↑ upload %s%b  ·  %b↓ download %s%b  ·  total %s\n' \
+    "${BOLD}" "${NC}" \
+    "${C_UP}" "$up_h" "${NC}" \
+    "${C_DOWN}" "$down_h" "${NC}" \
+    "$tot_h"
+  printf '  %b            (this run only — iperf3 payload transfer)%b\n' "${DIM}" "${NC}"
+  printf '%b\n' "${C_BAR}────────────────────────────────────────────────────────────────────────────${NC}"
+  ok "Done · NETS v${VERSION}"
+  printf '%b\n' "${DIM}  catalog: ${ENDPOINTS_JSON}${NC}"
 }
 
 parse_args() {
@@ -682,9 +877,7 @@ main() {
   fi
 
   end="$(date +%s)"
-  printf '%b\n' "${CYAN}────────────────────────────────────────────────────────────────────────────${NC}"
-  ok "Done in $((end - start))s · NETS v${VERSION}"
-  printf '%b\n' "${DIM}Endpoint catalog: ${ENDPOINTS_JSON}${NC}"
+  print_summary "$((end - start))"
 }
 
 main "$@"
