@@ -24,35 +24,29 @@
     --brass: oklch(72% 0.09 75);
     --mint: oklch(72% 0.12 155);
     --mint-dim: oklch(55% 0.1 155);
-    --coral: oklch(68% 0.14 25);
     --sky: oklch(76% 0.07 220);
-    --sky-dim: oklch(62% 0.06 220);
-    --warn: oklch(80% 0.13 85);
-    --glow-amber: 0 0 40px oklch(70% 0.14 70 / 0.18);
-    --shadow-lg: 0 28px 60px -28px oklch(0% 0 0 / 0.65), 0 0 0 1px var(--line-soft);
-    --radius: 14px;
-    --radius-sm: 10px;
+    --glow-amber: 0 0 32px oklch(70% 0.14 70 / 0.14);
+    --shadow-lg: 0 24px 48px -28px oklch(0% 0 0 / 0.6), 0 0 0 1px var(--line-soft);
+    --radius: 12px;
+    --radius-sm: 9px;
     --font-display: "Bricolage Grotesque", system-ui, sans-serif;
     --font-mono: "Azeret Mono", ui-monospace, monospace;
-    --space: clamp(1rem, 2.5vw, 1.5rem);
-    --max: 1120px;
+    --max: 1040px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   html { scroll-behavior: smooth; }
 
   body {
     font-family: var(--font-mono);
-    font-size: 14.5px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.6;
     color: var(--ink);
     background: var(--bg);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Warm vignette + soft noise grain — not a cyan grid */
   body::before {
     content: "";
     position: fixed;
@@ -60,79 +54,55 @@
     z-index: -2;
     pointer-events: none;
     background:
-      radial-gradient(900px 520px at 12% -10%, oklch(55% 0.1 70 / 0.12), transparent 60%),
-      radial-gradient(700px 480px at 95% 15%, oklch(40% 0.05 155 / 0.08), transparent 55%),
-      radial-gradient(600px 400px at 50% 100%, oklch(30% 0.04 70 / 0.1), transparent 50%),
-      linear-gradient(180deg, var(--bg-deep), var(--bg) 40%, oklch(15% 0.012 70));
-  }
-
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.035;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      radial-gradient(820px 480px at 8% -8%, oklch(55% 0.1 70 / 0.1), transparent 58%),
+      radial-gradient(640px 420px at 96% 12%, oklch(40% 0.04 155 / 0.07), transparent 55%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg) 45%, oklch(15% 0.012 70));
   }
 
   a { color: var(--amber); text-decoration: none; transition: color .15s; }
   a:hover { color: var(--brass); }
 
   .wrap {
-    width: min(100% - 2.5rem, var(--max));
+    width: min(100% - 2.25rem, var(--max));
     margin-inline: auto;
   }
 
-  /* ── Nav ── */
+  /* Nav */
   .nav {
     position: sticky;
     top: 0;
     z-index: 40;
-    backdrop-filter: blur(14px) saturate(1.2);
-    background: oklch(16% 0.012 75 / 0.78);
+    backdrop-filter: blur(14px) saturate(1.15);
+    background: oklch(16% 0.012 75 / 0.82);
     border-bottom: 1px solid var(--line-soft);
   }
   .nav-in {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 58px;
+    height: 52px;
     gap: 1rem;
   }
   .brand {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     letter-spacing: -0.03em;
     color: var(--ink);
-    display: flex;
-    align-items: baseline;
-    gap: 0.45rem;
   }
-  .brand em {
-    font-style: normal;
-    color: var(--amber);
-  }
-  .brand small {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-  }
+  .brand em { font-style: normal; color: var(--amber); }
   .nav-links {
     display: flex;
     align-items: center;
-    gap: 1.1rem;
-    font-size: 0.78rem;
+    gap: 1rem;
+    font-size: 0.76rem;
   }
   .nav-links a { color: var(--ink-soft); }
   .nav-links a:hover { color: var(--amber); }
   .lang {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    padding: 0.3rem 0.65rem;
+    font-size: 0.7rem;
+    padding: 0.28rem 0.6rem;
     border: 1px solid var(--line);
     border-radius: 6px;
     background: transparent;
@@ -140,43 +110,35 @@
     cursor: pointer;
     transition: .15s;
   }
-  .lang:hover {
-    border-color: var(--amber-dim);
-    color: var(--amber);
-  }
+  .lang:hover { border-color: var(--amber-dim); color: var(--amber); }
   @media (max-width: 640px) {
     .nav-links a:not(.gh) { display: none; }
   }
 
-  /* ── Hero ── */
+  /* Hero */
   .hero {
-    padding: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(2rem, 4vw, 3rem);
+    padding: clamp(2rem, 5vw, 3rem) 0 1.75rem;
     display: grid;
-    grid-template-columns: 1.15fr 0.85fr;
-    gap: clamp(1.5rem, 4vw, 3rem);
-    align-items: end;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: clamp(1.25rem, 3vw, 2.25rem);
+    align-items: center;
   }
   @media (max-width: 860px) {
-    .hero { grid-template-columns: 1fr; align-items: start; }
+    .hero { grid-template-columns: 1fr; }
   }
-
-  .eyebrow {
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 1rem;
-  }
-  .eyebrow span { color: var(--amber); }
 
   h1 {
     font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(3.2rem, 9vw, 5.6rem);
-    line-height: 0.92;
-    letter-spacing: -0.045em;
+    font-weight: 700;
+    font-size: clamp(1.45rem, 3.2vw, 1.85rem);
+    line-height: 1.25;
+    letter-spacing: -0.03em;
     color: var(--ink);
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
+    white-space: nowrap;
+  }
+  @media (max-width: 420px) {
+    h1 { white-space: normal; font-size: 1.3rem; }
   }
   h1 .mark {
     color: var(--amber);
@@ -184,22 +146,22 @@
   }
 
   .lede {
-    font-size: 1rem;
+    font-size: 0.88rem;
     color: var(--ink-soft);
-    max-width: 38ch;
-    margin-bottom: 1.4rem;
-    line-height: 1.7;
+    max-width: 42ch;
+    margin-bottom: 1.1rem;
+    line-height: 1.65;
   }
   .lede strong { color: var(--ink); font-weight: 600; }
 
   .pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
   .pill {
-    font-size: 0.72rem;
-    padding: 0.35rem 0.75rem;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
     border-radius: 999px;
     border: 1px solid var(--line);
     background: var(--bg-elev);
@@ -207,51 +169,52 @@
   }
   .pill b { color: var(--mint); font-weight: 600; }
 
-  /* Command panel — elevated layer */
   .cmd-panel {
     background: var(--bg-panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
-    position: relative;
   }
   .cmd-panel::before {
     content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--amber), var(--mint-dim), transparent 70%);
+    display: block;
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber), var(--mint-dim), transparent 72%);
   }
   .cmd-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.85rem 1.1rem;
+    padding: 0.7rem 1rem;
     border-bottom: 1px solid var(--line-soft);
     background: oklch(18% 0.012 70);
   }
   .cmd-head .label {
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .cmd-body { padding: 1.1rem; display: flex; flex-direction: column; gap: 0.65rem; }
-
+  .cmd-body {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
   .cmd-row {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.55rem;
     background: var(--bg-deep);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-sm);
-    padding: 0.75rem 0.9rem;
+    padding: 0.65rem 0.8rem;
   }
   .cmd-row .prompt { color: var(--amber); user-select: none; flex-shrink: 0; }
   .cmd-row code {
     flex: 1;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     color: var(--ink);
     white-space: nowrap;
     overflow-x: auto;
@@ -259,9 +222,9 @@
   .copy {
     flex-shrink: 0;
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    padding: 0.35rem 0.6rem;
-    border-radius: 6px;
+    font-size: 0.65rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 5px;
     border: 1px solid var(--line);
     background: transparent;
     color: var(--muted);
@@ -270,250 +233,189 @@
   }
   .copy:hover { color: var(--amber); border-color: var(--amber-dim); }
   .copy.ok { color: var(--mint); border-color: var(--mint-dim); }
-
   .cmd-hint {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     color: var(--muted);
-    padding: 0 0.15rem;
+    line-height: 1.5;
   }
-  .cmd-hint code {
-    color: var(--sky);
-    font-size: 0.72rem;
-  }
+  .cmd-hint code { color: var(--sky); font-size: 0.68rem; }
 
-  /* ── Sections ── */
-  section {
-    padding: clamp(2.2rem, 5vw, 3.5rem) 0;
-  }
-  .section-head {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.75rem 1.25rem;
-    align-items: end;
-    margin-bottom: 1.75rem;
-  }
-  .section-head .idx {
+  /* Sections */
+  section { padding: 1.75rem 0; }
+  section + section { border-top: 1px solid var(--line-soft); }
+
+  h2 {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 2rem;
-    line-height: 1;
-    color: oklch(35% 0.03 70);
-    letter-spacing: -0.03em;
-  }
-  .section-head h2 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     letter-spacing: -0.02em;
     color: var(--ink);
-  }
-  .section-head p {
-    grid-column: 2;
-    color: var(--muted);
-    font-size: 0.85rem;
-    max-width: 52ch;
-  }
-  .rule {
-    height: 1px;
-    background: linear-gradient(90deg, var(--line), transparent);
-    margin-bottom: 1.75rem;
-  }
-
-  /* Feature grid — layered, not left-stripe cards */
-  .feat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.85rem;
-  }
-  @media (max-width: 900px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .feat-grid { grid-template-columns: 1fr; } }
-
-  .feat {
-    background: var(--bg-elev);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-sm);
-    padding: 1.2rem 1.15rem;
-    position: relative;
-    transition: border-color .2s, transform .2s, box-shadow .2s;
-  }
-  .feat:hover {
-    border-color: oklch(45% 0.04 70);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px -20px oklch(0% 0 0 / 0.7);
-  }
-  .feat .tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--amber-dim);
-    margin-bottom: 0.55rem;
-  }
-  .feat h3 {
-    font-family: var(--font-display);
-    font-weight: 650;
-    font-size: 1rem;
-    letter-spacing: -0.01em;
-    color: var(--ink);
-    margin-bottom: 0.45rem;
-  }
-  .feat p {
-    font-size: 0.8rem;
-    color: var(--ink-soft);
-    line-height: 1.55;
-  }
-  .feat p code {
-    font-size: 0.75rem;
-    color: var(--sky);
-    background: var(--bg-deep);
-    padding: 0.05rem 0.3rem;
-    border-radius: 3px;
+    margin-bottom: 1rem;
+    white-space: nowrap;
   }
 
   /* Report map */
   .report-map {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.65rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.55rem;
   }
+  @media (max-width: 800px) { .report-map { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px) { .report-map { grid-template-columns: 1fr; } }
+
   .rm-item {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.9rem 1rem;
-    background: var(--bg-deep);
+    gap: 0.2rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--bg-elev);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
   }
   .rm-item strong {
     font-family: var(--font-display);
     font-weight: 650;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--brass);
   }
   .rm-item span {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--muted);
-    line-height: 1.45;
+    line-height: 1.4;
   }
 
-  /* Terminal demo */
+  /* Terminal */
   .term {
     background: var(--bg-deep);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-lg), inset 0 1px 0 oklch(100% 0 0 / 0.04);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 oklch(100% 0 0 / 0.03);
     overflow: hidden;
   }
   .term-bar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1rem;
+    gap: 0.45rem;
+    padding: 0.6rem 0.9rem;
     background: oklch(18% 0.012 70);
     border-bottom: 1px solid var(--line-soft);
   }
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
   .dot.r { background: #e06c6c; }
   .dot.y { background: #e0a84e; }
   .dot.g { background: #6fbf8a; }
   .term-title {
-    margin-left: 0.4rem;
-    font-size: 0.7rem;
+    margin-left: 0.35rem;
+    font-size: 0.68rem;
     color: var(--muted);
   }
   .term-body {
-    padding: 1.1rem 1.15rem 1.3rem;
+    padding: 1rem 1.05rem 1.15rem;
     overflow-x: auto;
-    max-height: min(70vh, 640px);
+    max-height: min(62vh, 560px);
     overflow-y: auto;
   }
   .term-body pre {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.48;
     white-space: pre;
     color: var(--ink-soft);
   }
 
-  /* Syntax colors matching script palette (YELLOW frames, CYAN titles, GREEN pass…) */
-  .c-frame { color: oklch(78% 0.14 95); }       /* yellow box chrome */
-  .c-title { color: oklch(96% 0.01 90); font-weight: 600; } /* white titles */
-  .c-bar   { color: oklch(72% 0.08 210); }      /* cyan ═ bars */
-  .c-key   { color: oklch(70% 0.02 80); }       /* labels */
-  .c-val   { color: oklch(88% 0.04 200); }      /* values sky */
-  .c-dev   { color: oklch(78% 0.1 210); }       /* device paths */
+  .c-frame { color: oklch(78% 0.14 95); }
+  .c-title { color: oklch(96% 0.01 90); font-weight: 600; }
+  .c-bar   { color: oklch(72% 0.08 210); }
+  .c-key   { color: oklch(70% 0.02 80); }
+  .c-val   { color: oklch(88% 0.04 200); }
+  .c-dev   { color: oklch(78% 0.1 210); }
   .c-ok    { color: oklch(74% 0.14 150); font-weight: 600; }
   .c-warn  { color: oklch(80% 0.14 75); }
   .c-info  { color: oklch(72% 0.08 230); }
-  .c-num   { color: oklch(82% 0.1 70); }        /* sizes / temps amber-ish */
+  .c-num   { color: oklch(82% 0.1 70); }
   .c-dim   { color: oklch(48% 0.02 75); }
   .c-good  { color: oklch(74% 0.14 150); }
   .c-up    { color: oklch(74% 0.14 150); }
-  .c-down  { color: oklch(55% 0.04 75); }
   .c-done  { color: oklch(74% 0.14 150); font-weight: 600; }
   .c-prompt-u { color: var(--amber); }
   .c-prompt-p { color: var(--sky); }
 
-  /* Options table */
+  /* Options */
   .opts {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-sm);
     overflow: hidden;
   }
   .opts th {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 0.9rem;
     background: var(--bg-panel);
     color: var(--amber-dim);
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     border-bottom: 1px solid var(--line);
   }
   .opts td {
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 0.9rem;
     border-bottom: 1px solid var(--line-soft);
     color: var(--ink-soft);
-    vertical-align: top;
   }
   .opts tr:last-child td { border-bottom: none; }
-  .opts tr:hover td { background: oklch(22% 0.014 70 / 0.5); }
+  .opts tr:hover td { background: oklch(22% 0.014 70 / 0.45); }
   .opts td:first-child {
     color: var(--sky);
     white-space: nowrap;
     font-weight: 500;
-    width: 11rem;
+    width: 10.5rem;
   }
 
-  /* Distro chips */
-  .badges {
+  /* Distro icons */
+  .distros {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.65rem;
   }
-  .badge {
-    padding: 0.5rem 0.85rem;
-    border-radius: 8px;
-    border: 1px solid var(--line-soft);
+  .distro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 88px;
+    height: 88px;
+    padding: 0.65rem 0.4rem;
     background: var(--bg-elev);
-    font-size: 0.78rem;
-    color: var(--ink-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    transition: border-color .15s, transform .15s, background .15s;
   }
-  .badge .pm {
+  .distro:hover {
+    border-color: oklch(45% 0.04 70);
+    background: var(--bg-panel);
+    transform: translateY(-2px);
+  }
+  .distro img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+  .distro span {
+    font-size: 0.65rem;
     color: var(--muted);
-    font-size: 0.68rem;
-    margin-left: 0.3rem;
+    text-align: center;
+    line-height: 1.2;
   }
 
-  /* Donate — two layers */
+  /* Donate */
   .donate-grid {
     display: grid;
     grid-template-columns: 1.3fr 1fr;
-    gap: 0.9rem;
+    gap: 0.75rem;
   }
   @media (max-width: 720px) { .donate-grid { grid-template-columns: 1fr; } }
 
@@ -521,133 +423,122 @@
     background: var(--bg-panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 1.4rem 1.35rem;
-    box-shadow: 0 16px 40px -28px oklch(0% 0 0 / 0.6);
+    padding: 1.15rem 1.2rem;
+    box-shadow: 0 12px 32px -24px oklch(0% 0 0 / 0.55);
   }
   .donate-card h3 {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
   }
   .donate-card .lead {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     color: var(--muted);
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
   }
   .addr {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.55rem;
     background: var(--bg-deep);
     border: 1px dashed var(--line);
     border-radius: 8px;
-    padding: 0.75rem 0.9rem;
+    padding: 0.65rem 0.8rem;
   }
   .addr code {
     flex: 1;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--sky);
     word-break: break-all;
   }
   .net-tag {
     display: inline-block;
-    margin-top: 0.65rem;
-    font-size: 0.65rem;
-    letter-spacing: 0.06em;
+    margin-top: 0.55rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
     color: var(--amber-dim);
     border: 1px solid oklch(50% 0.08 70 / 0.4);
-    padding: 0.2rem 0.55rem;
+    padding: 0.18rem 0.5rem;
     border-radius: 4px;
   }
   .afd-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.4rem;
     width: 100%;
-    margin-top: 0.25rem;
-    padding: 0.9rem 1rem;
-    border-radius: 10px;
+    margin-top: 0.15rem;
+    padding: 0.8rem 1rem;
+    border-radius: 9px;
     background: linear-gradient(160deg, oklch(58% 0.2 300), oklch(48% 0.18 295));
     color: #fff;
     font-family: var(--font-display);
     font-weight: 650;
-    font-size: 0.95rem;
-    border: none;
-    transition: filter .15s, transform .15s, box-shadow .15s;
-    box-shadow: 0 12px 28px -14px oklch(50% 0.2 300 / 0.7);
+    font-size: 0.9rem;
+    transition: filter .15s, transform .15s;
+    box-shadow: 0 10px 24px -12px oklch(50% 0.2 300 / 0.65);
   }
-  .afd-btn:hover {
-    color: #fff;
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-  }
+  .afd-btn:hover { color: #fff; filter: brightness(1.08); transform: translateY(-1px); }
   .heart { color: #ff9bb8; }
 
   /* Footer */
   footer {
     border-top: 1px solid var(--line-soft);
-    padding: 2.5rem 0 3.5rem;
-    margin-top: 1rem;
+    padding: 2rem 0 2.75rem;
+    margin-top: 0.5rem;
   }
   .foot-in {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1rem;
     align-items: start;
   }
   .foot-brand {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     letter-spacing: -0.03em;
   }
   .foot-brand em { font-style: normal; color: var(--amber); }
   .foot-tag {
-    margin-top: 0.4rem;
-    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
     color: var(--muted);
     max-width: 36ch;
   }
   .foot-links {
     text-align: right;
-    font-size: 0.8rem;
-    line-height: 1.9;
+    font-size: 0.76rem;
+    line-height: 1.85;
     color: var(--muted);
   }
   .foot-links a { color: var(--ink-soft); }
   .foot-links a:hover { color: var(--amber); }
 
-  /* Motion */
   .rise {
     opacity: 0;
-    transform: translateY(14px);
-    animation: rise .65s cubic-bezier(.2,.7,.2,1) forwards;
+    transform: translateY(10px);
+    animation: rise .55s cubic-bezier(.2,.7,.2,1) forwards;
   }
   @keyframes rise { to { opacity: 1; transform: none; } }
-  .d1 { animation-delay: .05s; }
-  .d2 { animation-delay: .12s; }
-  .d3 { animation-delay: .2s; }
-  .d4 { animation-delay: .28s; }
-  .d5 { animation-delay: .36s; }
+  .d1 { animation-delay: .04s; }
+  .d2 { animation-delay: .1s; }
+  .d3 { animation-delay: .16s; }
+  .d4 { animation-delay: .22s; }
 
   @media (prefers-reduced-motion: reduce) {
     .rise { animation: none; opacity: 1; transform: none; }
   }
 
   ::selection {
-    background: oklch(70% 0.12 70 / 0.45);
+    background: oklch(70% 0.12 70 / 0.4);
     color: var(--ink);
   }
-
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: var(--bg-deep); }
-  ::-webkit-scrollbar-thumb {
-    background: var(--line);
-    border-radius: 4px;
-  }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
 </style>
 </head>
@@ -655,11 +546,11 @@
 
 <nav class="nav">
   <div class="wrap nav-in">
-    <div class="brand">SI<em>CK</em><small>v3.0.0</small></div>
+    <div class="brand">SI<em>CK</em></div>
     <div class="nav-links">
-      <a href="#features" data-en="Features" data-zh="特性">Features</a>
-      <a href="#output" data-en="Output" data-zh="输出">Output</a>
       <a href="#install" data-en="Install" data-zh="安装">Install</a>
+      <a href="#coverage" data-en="Coverage" data-zh="覆盖">Coverage</a>
+      <a href="#output" data-en="Output" data-zh="输出">Output</a>
       <a href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
       <a class="gh" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">GitHub ↗</a>
       <button class="lang" id="langBtn" type="button" onclick="toggleLang()">中文</button>
@@ -669,12 +560,11 @@
 
 <header class="wrap hero">
   <div>
-    <p class="eyebrow rise d1"><span>S</span>erver <span>I</span>nfo &amp; <span>C</span>heck <span>K</span>it</p>
-    <h1 class="rise d1">Hardware<br>without the <span class="mark">sick</span>.</h1>
+    <h1 class="rise d1">Hardware without the <span class="mark">sick</span>.</h1>
     <p class="lede rise d2"
-       data-en="One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or a single JSON blob. No daemon. No disk writes. No monitoring bloat."
-       data-zh="一条命令，完整盘点。<strong>彩色对齐表格</strong>覆盖 CPU、内存、SMART、NVMe、RAID、网卡与显卡——也可输出 JSON。不装守护进程、不写盘、不做监控。">
-      One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or a single JSON blob. No daemon. No disk writes. No monitoring bloat.
+       data-en="One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or JSON. No daemon. No footprint."
+       data-zh="一条命令，完整盘点。<strong>彩色对齐表格</strong>覆盖 CPU、内存、SMART、NVMe、RAID、网卡与显卡，也可输出 JSON。零残留。">
+      One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or JSON. No daemon. No footprint.
     </p>
     <div class="pills rise d3">
       <span class="pill" data-en="<b>one-shot</b> · zero footprint" data-zh="<b>一次性</b> · 零残留"><b>one-shot</b> · zero footprint</span>
@@ -692,7 +582,7 @@
     <div class="cmd-body">
       <div class="cmd-row">
         <span class="prompt">$</span>
-        <code id="cmd-main">curl -sL https://ba.sh/sick | bash</code>
+        <code>curl -sL https://ba.sh/sick | bash</code>
         <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash', this)" data-en="copy" data-zh="复制">copy</button>
       </div>
       <div class="cmd-row">
@@ -701,105 +591,33 @@
         <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash -s -- -cn', this)" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="Flags: <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · pass via <code>bash -s -- …</code>"
-         data-zh="参数：<code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> 机器可读 · 用 <code>bash -s -- …</code> 传参">
-        Flags: <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · pass via <code>bash -s -- …</code>
+         data-en="<code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · <code>bash -s -- …</code>"
+         data-zh="<code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> 机器可读 · <code>bash -s -- …</code>">
+        <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · <code>bash -s -- …</code>
       </p>
     </div>
   </div>
 </header>
 
-<!-- Features -->
-<section id="features">
+<section id="coverage">
   <div class="wrap">
-    <div class="section-head">
-      <span class="idx">01</span>
-      <div>
-        <h2 data-en="What you get" data-zh="你能得到什么">What you get</h2>
-        <p data-en="Built for operators who need a truthful picture of the box — not another agent."
-           data-zh="给需要看清机器真实状态的运维用——不是再装一个 agent。">Built for operators who need a truthful picture of the box — not another agent.</p>
-      </div>
-    </div>
-    <div class="rule"></div>
-    <div class="feat-grid">
-      <article class="feat">
-        <div class="tag">01</div>
-        <h3 data-en="One-shot, zero footprint" data-zh="一次性，零占用">One-shot, zero footprint</h3>
-        <p data-en="Collect and render. Nothing written to disk. No service left behind."
-           data-zh="只采集与渲染。不写盘，不留下任何服务。">Collect and render. Nothing written to disk. No service left behind.</p>
-      </article>
-      <article class="feat">
-        <div class="tag">02</div>
-        <h3 data-en="Colorized tables" data-zh="彩色对齐表格">Colorized tables</h3>
-        <p data-en="Frames, status, temps and defects use terminal colors — readable even with CJK."
-           data-zh="边框、状态、温度与坏块用终端色区分，中英文混排也能对齐。">Frames, status, temps and defects use terminal colors — readable even with CJK.</p>
-      </article>
-      <article class="feat">
-        <div class="tag">03</div>
-        <h3 data-en="Bilingual" data-zh="中英双语">Bilingual</h3>
-        <p data-en="Full English or Chinese with <code>-cn</code>."
-           data-zh="完整英文 / 中文输出，加 <code>-cn</code> 即可。">Full English or Chinese with <code>-cn</code>.</p>
-      </article>
-      <article class="feat">
-        <div class="tag">04</div>
-        <h3 data-en="JSON when you need it" data-zh="需要时输出 JSON">JSON when you need it</h3>
-        <p data-en="<code>--json</code> → one object on stdout. Pipe into jq or your CMDB."
-           data-zh="<code>--json</code> 在 stdout 打出一个对象，管道给 jq 或 CMDB。"><code>--json</code> → one object on stdout. Pipe into jq or your CMDB.</p>
-      </article>
-      <article class="feat">
-        <div class="tag">05</div>
-        <h3 data-en="Privacy-aware" data-zh="隐私友好">Privacy-aware</h3>
-        <p data-en="IP &amp; MAC masked by default. Serials kept full for inventory."
-           data-zh="默认脱敏 IP / MAC；序列号完整保留便于盘点。">IP &amp; MAC masked by default. Serials kept full for inventory.</p>
-      </article>
-      <article class="feat">
-        <div class="tag">06</div>
-        <h3 data-en="Friendly deps" data-zh="友好依赖">Friendly deps</h3>
-        <p data-en="Missing tools listed; installs only after Y/N. Or <code>-y</code> / <code>--no-install</code>."
-           data-zh="列出缺失工具，确认后再装。也可用 <code>-y</code> / <code>--no-install</code>。">Missing tools listed; installs only after Y/N. Or <code>-y</code> / <code>--no-install</code>.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- Report coverage -->
-<section>
-  <div class="wrap">
-    <div class="section-head">
-      <span class="idx">02</span>
-      <div>
-        <h2 data-en="Report coverage" data-zh="报告覆盖">Report coverage</h2>
-        <p data-en="Every section is an aligned, status-colored block."
-           data-zh="每个板块都是对齐、按状态着色的区块。">Every section is an aligned, status-colored block.</p>
-      </div>
-    </div>
-    <div class="rule"></div>
+    <h2 data-en="Report coverage" data-zh="报告覆盖">Report coverage</h2>
     <div class="report-map">
       <div class="rm-item"><strong>System</strong><span data-en="Hostname, OS, kernel, uptime" data-zh="主机名、系统、内核、运行时间">Hostname, OS, kernel, uptime</span></div>
-      <div class="rm-item"><strong>CPU / Platform</strong><span data-en="Cores, freq, temp, NUMA, virt, microcode" data-zh="核心、频率、温度、NUMA、虚拟化、微码">Cores, freq, temp, NUMA, virt, microcode</span></div>
+      <div class="rm-item"><strong>CPU / Platform</strong><span data-en="Cores, freq, temp, NUMA, virt" data-zh="核心、频率、温度、NUMA、虚拟化">Cores, freq, temp, NUMA, virt</span></div>
       <div class="rm-item"><strong data-en="Memory" data-zh="内存">Memory</strong><span data-en="Totals + per-DIMM table" data-zh="总量 + 逐模组表格">Totals + per-DIMM table</span></div>
-      <div class="rm-item"><strong data-en="Disks / SMART" data-zh="磁盘 / SMART">Disks / SMART</strong><span data-en="df + health, hours, I/O, defects" data-zh="挂载表 + 健康、通电、读写、坏块">df + health, hours, I/O, defects</span></div>
-      <div class="rm-item"><strong>NVMe</strong><span data-en="Temp, endurance, spare, power loss" data-zh="温度、耐久、备用、异常掉电">Temp, endurance, spare, power loss</span></div>
+      <div class="rm-item"><strong data-en="Disks / SMART" data-zh="磁盘 / SMART">Disks / SMART</strong><span data-en="Health, hours, I/O, defects" data-zh="健康、通电、读写、坏块">Health, hours, I/O, defects</span></div>
+      <div class="rm-item"><strong>NVMe</strong><span data-en="Temp, endurance, spare" data-zh="温度、耐久、备用">Temp, endurance, spare</span></div>
       <div class="rm-item"><strong>RAID</strong><span data-en="mdraid + HBA controllers" data-zh="mdraid + HBA 控制器">mdraid + HBA controllers</span></div>
-      <div class="rm-item"><strong data-en="Network" data-zh="网卡">Network</strong><span data-en="Link, speed, masked IP/MAC, errors" data-zh="链路、速率、脱敏地址、错误计数">Link, speed, masked IP/MAC, errors</span></div>
+      <div class="rm-item"><strong data-en="Network" data-zh="网卡">Network</strong><span data-en="Link, speed, errors" data-zh="链路、速率、错误计数">Link, speed, errors</span></div>
       <div class="rm-item"><strong>GPU / Board</strong><span data-en="Class, model, BIOS" data-zh="类别、型号、BIOS">Class, model, BIOS</span></div>
     </div>
   </div>
 </section>
 
-<!-- Colored sample output -->
 <section id="output">
   <div class="wrap">
-    <div class="section-head">
-      <span class="idx">03</span>
-      <div>
-        <h2 data-en="Sample output" data-zh="输出示例">Sample output</h2>
-        <p data-en="Same palette as the real terminal: gold frames, sky values, mint PASS, amber warnings."
-           data-zh="与真实终端一致：金色边框、天蓝数值、薄荷绿 PASS、琥珀警告。">Same palette as the real terminal: gold frames, sky values, mint PASS, amber warnings.</p>
-      </div>
-    </div>
-    <div class="rule"></div>
-
+    <h2 data-en="Sample output" data-zh="输出示例">Sample output</h2>
     <div class="term">
       <div class="term-bar">
         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
@@ -895,17 +713,9 @@
   </div>
 </section>
 
-<!-- Options -->
-<section>
+<section id="options">
   <div class="wrap">
-    <div class="section-head">
-      <span class="idx">04</span>
-      <div>
-        <h2 data-en="Options" data-zh="参数">Options</h2>
-        <p data-en="All flags work through curl | bash -s -- …" data-zh="所有参数都可通过 curl | bash -s -- … 传入">All flags work through curl | bash -s -- …</p>
-      </div>
-    </div>
-    <div class="rule"></div>
+    <h2 data-en="Options" data-zh="参数">Options</h2>
     <table class="opts">
       <thead>
         <tr>
@@ -926,48 +736,56 @@
   </div>
 </section>
 
-<!-- Compatibility -->
-<section>
+<section id="compat">
   <div class="wrap">
-    <div class="section-head">
-      <span class="idx">05</span>
-      <div>
-        <h2 data-en="Compatibility" data-zh="兼容性">Compatibility</h2>
-        <p data-en="Detects package managers and maps deps for you."
-           data-zh="自动识别包管理器并映射依赖。">Detects package managers and maps deps for you.</p>
+    <h2 data-en="Compatibility" data-zh="兼容性">Compatibility</h2>
+    <div class="distros">
+      <div class="distro" title="Debian">
+        <img src="https://cdn.simpleicons.org/debian/A81D33" alt="Debian" width="32" height="32" loading="lazy">
+        <span>Debian</span>
       </div>
-    </div>
-    <div class="rule"></div>
-    <div class="badges">
-      <span class="badge">Debian / Ubuntu / Mint <span class="pm">apt</span></span>
-      <span class="badge">RHEL / CentOS / Alma / Rocky <span class="pm">yum · dnf</span></span>
-      <span class="badge">Fedora <span class="pm">dnf</span></span>
-      <span class="badge">Arch / Manjaro <span class="pm">pacman</span></span>
-      <span class="badge">openSUSE / SLES <span class="pm">zypper</span></span>
-      <span class="badge">CloudLinux <span class="pm">dnf</span></span>
+      <div class="distro" title="Ubuntu">
+        <img src="https://cdn.simpleicons.org/ubuntu/E95420" alt="Ubuntu" width="32" height="32" loading="lazy">
+        <span>Ubuntu</span>
+      </div>
+      <div class="distro" title="Fedora">
+        <img src="https://cdn.simpleicons.org/fedora/51A2DA" alt="Fedora" width="32" height="32" loading="lazy">
+        <span>Fedora</span>
+      </div>
+      <div class="distro" title="RHEL / Alma / Rocky">
+        <img src="https://cdn.simpleicons.org/redhat/EE0000" alt="RHEL" width="32" height="32" loading="lazy">
+        <span>RHEL</span>
+      </div>
+      <div class="distro" title="CentOS">
+        <img src="https://cdn.simpleicons.org/centos/262577" alt="CentOS" width="32" height="32" loading="lazy">
+        <span>CentOS</span>
+      </div>
+      <div class="distro" title="Arch Linux">
+        <img src="https://cdn.simpleicons.org/archlinux/1793D1" alt="Arch" width="32" height="32" loading="lazy">
+        <span>Arch</span>
+      </div>
+      <div class="distro" title="openSUSE">
+        <img src="https://cdn.simpleicons.org/opensuse/73BA25" alt="openSUSE" width="32" height="32" loading="lazy">
+        <span>openSUSE</span>
+      </div>
+      <div class="distro" title="Linux Mint">
+        <img src="https://cdn.simpleicons.org/linuxmint/86BE43" alt="Linux Mint" width="32" height="32" loading="lazy">
+        <span>Mint</span>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Donate -->
 <section id="donate">
   <div class="wrap">
-    <div class="section-head">
-      <span class="idx">06</span>
-      <div>
-        <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
-        <p data-en="If SICK saved you a login and a squint at dmidecode — thank you."
-           data-zh="如果 SICK 帮你省下了一次登录和盯着 dmidecode 眯眼的时间，谢谢你。">If SICK saved you a login and a squint at dmidecode — thank you.</p>
-      </div>
-    </div>
-    <div class="rule"></div>
+    <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
     <div class="donate-grid">
       <div class="donate-card">
         <h3>USDT — TRC20</h3>
         <p class="lead" data-en="Tron network (TRC20). Double-check the network before sending."
            data-zh="Tron 网络 (TRC20)。转账前请再次确认网络。">Tron network (TRC20). Double-check the network before sending.</p>
         <div class="addr">
-          <code id="usdt">TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
+          <code>TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
           <button class="copy" type="button" onclick="copyText('TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5', this)" data-en="copy" data-zh="复制">copy</button>
         </div>
         <span class="net-tag">TRC20 · Tron</span>
