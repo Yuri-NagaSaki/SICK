@@ -1765,7 +1765,7 @@ get_nvme_deep_info() {
         local controller_dev="/dev/$controller"
         local smart_json="" error_json="" id_json=""
         local model="" serial="" firmware="" temperature="" critical_warning="" media_errors="" error_entries=""
-        local unsafe_shutdowns="" percentage_used="" available_spare="" warning_temp_time="" critical_temp_time="" nonzero_error_entries=""
+        local unsafe_shutdowns="" percentage_used="" available_spare="" spare_threshold="" warning_temp_time="" critical_temp_time="" nonzero_error_entries=""
         local temperature_c=""
         local nvme_kv=()
 
@@ -1801,6 +1801,7 @@ get_nvme_deep_info() {
                     unsafe_shutdowns) unsafe_shutdowns="$value" ;;
                     percentage_used) percentage_used="$value" ;;
                     available_spare) available_spare="$value" ;;
+                    spare_threshold) spare_threshold="$value" ;;
                     warning_temp_time) warning_temp_time="$value" ;;
                     critical_temp_time) critical_temp_time="$value" ;;
                 esac
@@ -1819,13 +1820,22 @@ get_nvme_deep_info() {
             fi
         fi
 
+        # nvme-cli space-pads id-ctrl fields (mn/sn/fr) to fixed width — trim.
+        model="${model%"${model##*[![:space:]]}"}"
+        serial="${serial%"${serial##*[![:space:]]}"}"
+        firmware="${firmware%"${firmware##*[![:space:]]}"}"
+
         local nvme_status="OK"
         local nvme_warn=()
+        # WARN only on genuine health signals. Historical counters (error-log
+        # entries, cumulative warning/critical temp time, unsafe shutdowns) are
+        # informational and must NOT flag a healthy drive.
         [[ "$critical_warning" =~ ^[0-9]+$ && "$critical_warning" -ne 0 ]] && nvme_warn+=("critical_warning=$critical_warning")
-        [[ "$media_errors" =~ ^[0-9]+$ && "$media_errors" -ne 0 ]] && nvme_warn+=("media_errors=$media_errors")
-        [[ "$nonzero_error_entries" =~ ^[0-9]+$ && "$nonzero_error_entries" -ne 0 ]] && nvme_warn+=("error_log_slots=$nonzero_error_entries")
-        [[ "$warning_temp_time" =~ ^[0-9]+$ && "$warning_temp_time" -ne 0 ]] && nvme_warn+=("warning_temp_time=$warning_temp_time")
-        [[ "$critical_temp_time" =~ ^[0-9]+$ && "$critical_temp_time" -ne 0 ]] && nvme_warn+=("critical_temp_time=$critical_temp_time")
+        [[ "$media_errors" =~ ^[0-9]+$ && "$media_errors" -gt 0 ]] && nvme_warn+=("media_errors=$media_errors")
+        if [[ "$available_spare" =~ ^[0-9]+$ && "$spare_threshold" =~ ^[0-9]+$ && "$available_spare" -lt "$spare_threshold" ]]; then
+            nvme_warn+=("spare ${available_spare}%<${spare_threshold}%")
+        fi
+        [[ "$percentage_used" =~ ^[0-9]+$ && "$percentage_used" -ge 90 ]] && nvme_warn+=("used=${percentage_used}%")
         [[ ${#nvme_warn[@]} -gt 0 ]] && nvme_status="WARN"
 
         # Row for the table
@@ -2014,8 +2024,9 @@ nvme_health_tsv() {
             ["error_log_entries", s($n.num_err_log_entries // $n.error_log_entries // .num_err_log_entries)],
             ["nonzero_error_log_slots", s(([.nvme_error_information_log.table[]? | select((.error_count // 0) != 0)] | length))],
             ["unsafe_shutdowns", s($n.unsafe_shutdowns // .unsafe_shutdowns)],
-            ["percentage_used", s($n.percentage_used // .percentage_used)],
-            ["available_spare", s($n.available_spare // .available_spare)],
+            ["percentage_used", s($n.percentage_used // $n.percent_used // .percentage_used // .percent_used)],
+            ["available_spare", s($n.available_spare // $n.avail_spare // .available_spare // .avail_spare)],
+            ["spare_threshold", s($n.available_spare_threshold // $n.spare_thresh // .spare_thresh)],
             ["warning_temp_time", s($n.warning_temp_time // .warning_temp_time)],
             ["critical_temp_time", s($n.critical_comp_time // $n.critical_temp_time // .critical_temp_time)]
         ][] | @tsv
@@ -2177,25 +2188,6 @@ get_raid_member_devices() {
 }
 
 # Function to get unique RAID controller device paths
-# Returns newline-separated list of unique controller devices (e.g., /dev/bus/6, /dev/bus/10)
-get_raid_controller_devices() {
-    get_raid_member_devices ""
-    local raid_devs="$RAID_MEMBER_RESULT"
-    local controllers=()
-    local -A seen_controllers=()
-    
-    while IFS= read -r entry; do
-        [[ -z "$entry" ]] && continue
-        local device="${entry%%:*}"
-        # Check if we've already seen this controller device
-        if [[ -z "${seen_controllers[$device]+x}" ]]; then
-            controllers+=("$device")
-            seen_controllers[$device]=1
-        fi
-    done <<< "$raid_devs"
-    
-    RAID_CONTROLLER_RESULT=$(printf '%s\n' "${controllers[@]}")
-}
 
 # Backward compatibility alias
 get_megaraid_devices() {
@@ -2560,133 +2552,6 @@ parse_smart_json_sas() {
 # Parameters:
 #   $1 - parent_disk (unused, kept for compatibility)
 #   $2 - controller_device (optional): Only show disks from this controller (e.g., /dev/bus/6)
-#                                      If empty, show all RAID member disks
-display_megaraid_disks() {
-    local parent_disk="$1"
-    local controller_filter="$2"
-
-    # Get RAID member devices
-    get_raid_member_devices "$parent_disk"
-    local raid_devs="$RAID_MEMBER_RESULT"
-
-    if [[ -z "$raid_devs" ]]; then
-        if [[ "$LANG_MODE" == "cn" ]]; then
-            echo "│   阵列成员: 无法检测到阵列成员磁盘"
-            echo "│   → 请尝试: smartctl --scan"
-        else
-            echo "│   RAID Members: Unable to detect member disks"
-            echo "│   → Try: smartctl --scan"
-        fi
-        return 1
-    fi
-
-    echo "│"
-    if [[ "$LANG_MODE" == "cn" ]]; then
-        print_color "$YELLOW" "│   ══ 阵列成员磁盘 ══"
-    else
-        print_color "$YELLOW" "│   ══ RAID Member Disks ══"
-    fi
-
-    local disk_count=0
-    while IFS= read -r entry; do
-        [[ -z "$entry" ]] && continue
-
-        # Parse format: device:raid_type:raid_id
-        local device="" raid_type="" raid_id=""
-        IFS=: read -r device raid_type raid_id <<< "$entry"
-
-        # If controller filter is specified, skip devices from other controllers
-        if [[ -n "$controller_filter" && "$device" != "$controller_filter" ]]; then
-            continue
-        fi
-
-        ((disk_count++))
-        echo "│"
-        print_color "$CYAN" "│   ─── Disk $disk_count ($raid_type,$raid_id) ───"
-
-        disk_smart_reset
-        DISK_JSON_EXTRA=()
-        disk_extra_add "raid_type" "$raid_type"
-        disk_extra_add "raid_id" "$raid_id"
-        disk_extra_add "controller_device" "$device"
-
-        # Get SMART data for this RAID member disk
-        get_smart_json_raid "$device" "$raid_type" "$raid_id"
-        local json_data="$SMART_JSON_RAID_RESULT"
-
-        if [[ -n "$json_data" ]]; then
-            parse_smart_json_sas "$json_data" "$raid_type,$raid_id"
-        else
-            # Try text-based parsing as fallback
-            local smart_text=$(run_smartctl -a -d "$raid_type","$raid_id" "$device" 2>/dev/null)
-            if [[ -n "$smart_text" ]]; then
-                # Extract basic info from text output (works for both SAS and SATA)
-                local vendor=$(echo "$smart_text" | grep "^Vendor:" | awk '{print $2}')
-                local product=$(echo "$smart_text" | grep "^Product:" | awk '{print $2}')
-                local model=$(echo "$smart_text" | grep "^Device Model:" | sed 's/^Device Model:\s*//')
-                local serial=$(echo "$smart_text" | grep -E "^Serial [Nn]umber:" | awk '{print $3}')
-                local health=$(echo "$smart_text" | grep -E "SMART (overall-health|Health Status):" | awk -F': ' '{print $2}')
-                local temp=$(echo "$smart_text" | grep -E "Current Drive Temperature:|^Temperature:" | grep -oE '[0-9]+' | head -1)
-                local power_hours=$(echo "$smart_text" | grep -E "Accumulated power on time|Power_On_Hours" | grep -oE '[0-9]+' | head -1)
-
-                # Display model (SAS format: Vendor Product, SATA format: Device Model)
-                if [[ -n "$vendor" && -n "$product" ]]; then
-                    echo "│   Model: $vendor $product"
-                    disk_extra_add "model" "$vendor $product"
-                elif [[ -n "$model" ]]; then
-                    echo "│   Model: $model"
-                    disk_extra_add "model" "$model"
-                fi
-                if [[ -n "$serial" ]]; then
-                    echo "│   Serial: $serial"
-                    disk_extra_add "serial" "$serial"
-                fi
-
-                if [[ -n "$health" ]]; then
-                    if [[ "$health" == "OK" || "$health" == "PASSED" ]]; then
-                        echo "│   $(get_label "smart_status"): PASSED"
-                        disk_smart_add "smart_status" "PASSED"
-                    else
-                        echo "│   $(get_label "smart_status"): ${RED}${health}${NC}"
-                        disk_smart_add "smart_status" "$health"
-                    fi
-                fi
-
-                if [[ -n "$power_hours" ]]; then
-                    echo "│   $(get_label "power_on_hours"): ${power_hours} hours"
-                    disk_smart_add "power_on_hours" "$power_hours"
-                fi
-                if [[ -n "$temp" && "$temp" != "0" ]]; then
-                    echo "│   $(get_label "temperature"): ${temp}°C"
-                    disk_smart_add "temperature" "${temp}°C"
-                fi
-
-                # ==========================================================================
-                # Bad Blocks Detection for RAID member disks (text fallback)
-                # ==========================================================================
-                # Call the universal bad blocks detection function with text input
-                # ==========================================================================
-                detect_bad_blocks "text" "$smart_text"
-            else
-                if [[ "$LANG_MODE" == "cn" ]]; then
-                    echo "│   SMART状态: 无法读取"
-                else
-                    echo "│   SMART Status: Unable to read"
-                fi
-            fi
-        fi
-
-        disk_json_add "raid_member" "$device" ""
-    done <<< "$raid_devs"
-
-    if [[ "$LANG_MODE" == "cn" ]]; then
-        echo "│   ─── 共检测到 $disk_count 块成员磁盘 ───"
-    else
-        echo "│   ─── Total: $disk_count member disk(s) ───"
-    fi
-
-    return 0
-}
 
 # Function to get SMART data using JSON output (smartctl 7.0+)
 get_smart_json() {
@@ -3475,7 +3340,7 @@ disk_summary_note_color() {
 }
 
 print_disk_summary_row() {
-    local disk="$1"
+    local label="$1"
     local basic_info="$2"
     local w_device=12 w_basic=34 w_smart=6 w_hours=8 w_temp=6 w_io=16 w_bad=9 w_note=20
     local smart_color="" temp_color="" io_color="" bad_color="" note_color=""
@@ -3487,7 +3352,7 @@ print_disk_summary_row() {
     note_color="$(disk_summary_note_color)"
 
     printf "│ "
-    print_colored_fixed_cell "/dev/$disk" "$w_device" "$CYAN"; printf " │ "
+    print_colored_fixed_cell "$label" "$w_device" "$CYAN"; printf " │ "
     print_fixed_cell "$basic_info" "$w_basic"; printf " │ "
     print_colored_fixed_cell "$DISK_SUMMARY_SMART" "$w_smart" "$smart_color"; printf " │ "
     print_fixed_cell "$DISK_SUMMARY_HOURS" "$w_hours"; printf " │ "
@@ -3536,270 +3401,106 @@ get_disk_info() {
     fi
 
     # ==========================================================================
-    # PART 1: RAID Controllers and Member Disks
+    # Unified disk summary table
+    # Direct disks (sd*/nvme/mmc) plus RAID controller member disks that are not
+    # already visible as a direct device. De-duplicated by serial so the same
+    # physical drive (e.g. HBA passthrough visible both as /dev/sdX and
+    # megaraid,N) is listed exactly once. RAID controller identity itself lives
+    # in the "RAID Controller Information" section.
     # ==========================================================================
-    # Get unique RAID controller devices first
-    local controller_devices=""
-    if [[ "$smartctl_available" == true ]]; then
-        get_raid_controller_devices
-        controller_devices="$RAID_CONTROLLER_RESULT"
-    fi
-
-    if [[ -n "$controller_devices" ]]; then
-        echo "│"
-        if [[ "$LANG_MODE" == "cn" ]]; then
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-            print_color "$GREEN" "│ RAID 控制器及成员磁盘"
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        else
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-            print_color "$GREEN" "│ RAID Controllers & Member Disks"
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        fi
-
-        local controller_num=0
-        while IFS= read -r controller_dev; do
-            [[ -z "$controller_dev" ]] && continue
-            ((controller_num++))
-
-            # Try to get controller info from any RAID member
-            get_raid_member_devices ""
-            local raid_devs="$RAID_MEMBER_RESULT"
-            local controller_vendor=""
-            local controller_product=""
-
-            # Find first device belonging to this controller to get info
-            while IFS= read -r entry; do
-                [[ -z "$entry" ]] && continue
-                local device="" raid_type="" raid_id=""
-                IFS=: read -r device raid_type raid_id <<< "$entry"
-
-                if [[ "$device" == "$controller_dev" ]]; then
-                    # Get controller info from this device
-                    get_smart_json_raid "$device" "$raid_type" "$raid_id"
-                    local json_data="$SMART_JSON_RAID_RESULT"
-                    if [[ -n "$json_data" ]]; then
-                        controller_vendor=$(json_query '.scsi_vendor' "$json_data" || true)
-                        controller_product=$(json_query '.scsi_product' "$json_data" || true)
-                        [[ -z "$controller_vendor" ]] && controller_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-                        [[ -z "$controller_product" ]] && controller_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
-                    fi
-                    break
-                fi
-            done <<< "$raid_devs"
-
-            # Display controller header
-            echo "│"
-            if [[ "$LANG_MODE" == "cn" ]]; then
-                if [[ -n "$controller_vendor" || -n "$controller_product" ]]; then
-                    print_color "$YELLOW" "│ ══ RAID 控制器 $controller_num: $controller_vendor $controller_product ══"
-                else
-                    print_color "$YELLOW" "│ ══ RAID 控制器 $controller_num: $controller_dev ══"
-                fi
-                echo "│   设备路径: $controller_dev"
-            else
-                if [[ -n "$controller_vendor" || -n "$controller_product" ]]; then
-                    print_color "$YELLOW" "│ ══ RAID Controller $controller_num: $controller_vendor $controller_product ══"
-                else
-                    print_color "$YELLOW" "│ ══ RAID Controller $controller_num: $controller_dev ══"
-                fi
-                echo "│   Device Path: $controller_dev"
-            fi
-
-            local controller_kv=(
-                "$(json_kv "device" "$controller_dev")"
-            )
-            [[ -n "$controller_vendor" ]] && controller_kv+=("$(json_kv "vendor" "$controller_vendor")")
-            [[ -n "$controller_product" ]] && controller_kv+=("$(json_kv "product" "$controller_product")")
-            JSON_RAID_CONTROLLERS+=("$(json_obj "${controller_kv[@]}")")
-
-            # Display member disks for this controller
-            display_megaraid_disks "" "$controller_dev"
-
-        done <<< "$controller_devices"
-    fi
-
-    # ==========================================================================
-    # PART 2: System/Virtual Disks (RAID VDs)
-    # ==========================================================================
-    # Collect RAID virtual disk list (for display)
-    local raid_vd_list=""
-    for disk in "${disk_names[@]}"; do
-        if [[ ! "$disk" =~ ^[sv]d[a-z]+$ ]]; then
-            continue
-        fi
-        if [[ "$smartctl_available" == true && "$use_json" == true ]]; then
-            get_smart_json "$disk"
-            local json_data="$SMART_JSON_RESULT"
-            if [[ -n "$json_data" ]] && is_raid_controller_disk "$disk" "$json_data"; then
-                raid_vd_list="$raid_vd_list $disk"
-            fi
-        fi
-    done
-
-    # Only show this section if there are RAID VDs
-    if [[ -n "$raid_vd_list" ]]; then
-        echo "│"
-        if [[ "$LANG_MODE" == "cn" ]]; then
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-            print_color "$GREEN" "│ RAID 虚拟磁盘 (VD/直通)"
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        else
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-            print_color "$GREEN" "│ RAID Virtual Disks (VD/Passthrough)"
-            print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        fi
-
-        for disk in $raid_vd_list; do
-            echo "│"
-            print_color "$CYAN" "│ ─── /dev/$disk ───"
-
-            # Basic disk information
-            local disk_info="${DISK_BASIC_INFO_CACHE[$disk]}"
-            echo "│   Basic Info: $disk_info"
-
-            get_smart_json "$disk"
-            local json_data="$SMART_JSON_RESULT"
-            local scsi_vendor=$(json_query '.scsi_vendor' "$json_data" || true)
-            local scsi_product=$(json_query '.scsi_product' "$json_data" || true)
-            [[ -z "$scsi_vendor" ]] && scsi_vendor=$(echo "$json_data" | grep -oP '"scsi_vendor"\s*:\s*"\K[^"]*' | head -1)
-            [[ -z "$scsi_product" ]] && scsi_product=$(echo "$json_data" | grep -oP '"scsi_product"\s*:\s*"\K[^"]*' | head -1)
-
-            if [[ "$LANG_MODE" == "cn" ]]; then
-                echo "│   控制器: $scsi_vendor $scsi_product"
-            else
-                echo "│   Controller: $scsi_vendor $scsi_product"
-            fi
-
-            DISK_JSON_EXTRA=()
-            disk_smart_reset
-            disk_extra_add "controller_vendor" "$scsi_vendor"
-            disk_extra_add "controller_product" "$scsi_product"
-            disk_json_add "raid_virtual" "/dev/$disk" "$disk_info"
-        done
-    fi
-
-    # ==========================================================================
-    # PART 3: Other Disks (NVMe, non-RAID SATA/SAS, MMC, etc.)
-    # ==========================================================================
-    echo "│"
-    if [[ "$LANG_MODE" == "cn" ]]; then
-        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        print_color "$GREEN" "│ 其他磁盘 (NVMe / SATA / SAS)"
-        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-    else
-        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-        print_color "$GREEN" "│ Other Disks (NVMe / SATA / SAS)"
-        print_color "$GREEN" "│ ═══════════════════════════════════════════════════"
-    fi
-
-    local other_disk_count=0
+    local -A seen_serials=()
     local disk_summary_table_started=false
     local other_disk_regex='^[sv]d[a-z]+$|^nvme[0-9]+n[0-9]+$|^mmcblk[0-9]+$'
 
-    # Physical disk information with enhanced details
+    # ---- Direct disks first (they carry I/O stats) ----
     for disk in "${disk_names[@]}"; do
-        if [[ ! "$disk" =~ $other_disk_regex ]]; then
-            continue
-        fi
-        # Skip RAID virtual disks (already shown in Part 2)
-        if [[ " $raid_vd_list " =~ " $disk " ]]; then
-            continue
-        fi
-
-        ((other_disk_count++))
+        [[ "$disk" =~ $other_disk_regex ]] || continue
         local disk_info="${DISK_BASIC_INFO_CACHE[$disk]}"
+        DISK_JSON_EXTRA=(); disk_smart_reset; disk_summary_reset
+        local parsed=false json_data=""
 
-        DISK_JSON_EXTRA=()
-        disk_smart_reset
-
-        if [[ "$QUIET_MODE" != true ]]; then
-            disk_summary_reset
-            local parsed=false
-
-            if [[ "$smartctl_available" == true ]]; then
-                if [[ "$use_json" == true ]]; then
-                    get_smart_json "$disk"
-                    local json_data="$SMART_JSON_RESULT"
-                    if [[ -n "$json_data" ]]; then
-                        parse_smart_json "$disk" "$json_data" >/dev/null && parsed=true
-                    fi
-                fi
-
-                if [[ "$parsed" == false ]]; then
-                    parse_smart_text "$disk" >/dev/null && parsed=true
-                fi
-
-                if [[ "$parsed" == true ]]; then
-                    disk_summary_from_fields "$disk"
-                else
-                    DISK_SUMMARY_SMART="-"
-                    if [[ "$LANG_MODE" == "cn" ]]; then
-                        DISK_SUMMARY_NOTE="无SMART信息"
-                    else
-                        DISK_SUMMARY_NOTE="no SMART info"
-                    fi
-                fi
-            else
-                if [[ "$LANG_MODE" == "cn" ]]; then
-                    DISK_SUMMARY_NOTE="smartctl未安装"
-                else
-                    DISK_SUMMARY_NOTE="smartctl missing"
-                fi
+        if [[ "$smartctl_available" == true ]]; then
+            if [[ "$use_json" == true ]]; then
+                get_smart_json "$disk"; json_data="$SMART_JSON_RESULT"
+                [[ -n "$json_data" ]] && parse_smart_json "$disk" "$json_data" >/dev/null && parsed=true
             fi
+            [[ "$parsed" == false ]] && parse_smart_text "$disk" >/dev/null && parsed=true
+            if [[ "$parsed" == true ]]; then
+                disk_summary_from_fields "$disk"
+            else
+                DISK_SUMMARY_SMART="-"
+                [[ "$LANG_MODE" == "cn" ]] && DISK_SUMMARY_NOTE="无SMART信息" || DISK_SUMMARY_NOTE="no SMART info"
+            fi
+        else
+            [[ "$LANG_MODE" == "cn" ]] && DISK_SUMMARY_NOTE="smartctl未安装" || DISK_SUMMARY_NOTE="smartctl missing"
+        fi
+
+        local dserial=""
+        [[ -n "$json_data" ]] && dserial=$(json_query '.serial_number' "$json_data" 2>/dev/null || true)
+        [[ -n "$dserial" ]] && seen_serials["$dserial"]=1
+
+        if [[ "$disk_summary_table_started" != true ]]; then
+            print_disk_summary_header
+            disk_summary_table_started=true
+        fi
+        print_disk_summary_row "/dev/$disk" "$disk_info"
+        disk_json_add "other" "/dev/$disk" "$disk_info"
+    done
+
+    # ---- RAID controller member disks not already shown above ----
+    if [[ "$smartctl_available" == true ]]; then
+        get_raid_member_devices ""
+        local raid_devs="$RAID_MEMBER_RESULT"
+        local member_entry=""
+        while IFS= read -r member_entry; do
+            [[ -z "$member_entry" ]] && continue
+            local device="" raid_type="" raid_id=""
+            IFS=: read -r device raid_type raid_id <<< "$member_entry"
+
+            get_smart_json_raid "$device" "$raid_type" "$raid_id"
+            local json_data="$SMART_JSON_RAID_RESULT"
+            local mserial=""
+            [[ -n "$json_data" ]] && mserial=$(json_query '.serial_number' "$json_data" 2>/dev/null || true)
+            # Skip if this physical drive is already listed as a direct disk
+            [[ -n "$mserial" && -n "${seen_serials[$mserial]:-}" ]] && continue
+
+            DISK_JSON_EXTRA=(); disk_smart_reset; disk_summary_reset
+            disk_extra_add "raid_type" "$raid_type"
+            disk_extra_add "raid_id" "$raid_id"
+            disk_extra_add "controller_device" "$device"
+
+            local mbasic="-"
+            if [[ -n "$json_data" ]]; then
+                # parse_smart_json_sas prints detail lines; capture them to /dev/null
+                # (brace group keeps DISK_SMART_FIELDS in the current shell).
+                { parse_smart_json_sas "$json_data" "$raid_type,$raid_id"; } >/dev/null
+                disk_summary_from_fields "member"
+                local mmodel=""
+                mmodel=$(json_query '.model_name' "$json_data" 2>/dev/null || true)
+                if [[ -z "$mmodel" ]]; then
+                    local mv="" mp=""
+                    mv=$(json_query '.scsi_vendor' "$json_data" 2>/dev/null || true)
+                    mp=$(json_query '.scsi_product' "$json_data" 2>/dev/null || true)
+                    mmodel="${mv} ${mp}"
+                fi
+                mbasic="${mmodel# }"
+            fi
+            [[ -n "$mserial" ]] && seen_serials["$mserial"]=1
 
             if [[ "$disk_summary_table_started" != true ]]; then
                 print_disk_summary_header
                 disk_summary_table_started=true
             fi
-            print_disk_summary_row "$disk" "$disk_info"
-            continue
-        fi
+            print_disk_summary_row "${raid_type},${raid_id}" "${mbasic:--}"
+            disk_json_add "raid_member" "$device" "$mbasic"
+        done <<< "$raid_devs"
+    fi
 
-        echo "│"
-        print_color "$CYAN" "│ ═══ /dev/$disk ═══"
-        echo "│   Basic Info: $disk_info"
-
-        # SMART information
-        if [[ "$smartctl_available" == true ]]; then
-            # Try JSON parsing first (more reliable)
-            local parsed=false
-            if [[ "$use_json" == true ]]; then
-                get_smart_json "$disk"
-                local json_data="$SMART_JSON_RESULT"
-                if [[ -n "$json_data" ]]; then
-                    parse_smart_json "$disk" "$json_data" && parsed=true
-                fi
-            fi
-
-            # Fallback to text parsing
-            if [[ "$parsed" == false ]]; then
-                parse_smart_text "$disk" || echo "│   SMART: $(get_label "not_detected")"
-            fi
-        else
-            # smartctl not installed
-            if [[ "$LANG_MODE" == "cn" ]]; then
-                echo "│   SMART状态: smartctl未安装"
-            else
-                echo "│   SMART Status: smartctl not installed"
-            fi
-        fi
-
-        disk_json_add "other" "/dev/$disk" "$disk_info"
-    done
-
-    if [[ "$QUIET_MODE" != true && "$disk_summary_table_started" == true ]]; then
+    if [[ "$disk_summary_table_started" == true ]]; then
         print_disk_summary_footer
+    else
+        print_info "$(get_label "status")" "$(get_label "not_detected")"
     fi
-
-    if [[ "$other_disk_count" -eq 0 ]]; then
-        if [[ "$LANG_MODE" == "cn" ]]; then
-            echo "│   (无其他磁盘)"
-        else
-            echo "│   (No other disks)"
-        fi
-    fi
-
     echo "└$(repeat_char '─' 50)"
 }
 
@@ -3824,10 +3525,10 @@ get_raid_info() {
             while IFS= read -r line; do
                 local raid_state="OK" raid_color="$GREEN"
                 local md_name="" md_status="" md_level="" members="" member_count=0
+                # Only degraded/faulty arrays are unhealthy. raid0 is healthy when
+                # active — it just has no redundancy (noted separately below).
                 if [[ "$line" =~ faulty|degraded|inactive|failed ]]; then
                     raid_state="FAIL"; raid_color="$RED"
-                elif [[ "$line" =~ raid0 ]]; then
-                    raid_state="WARN"; raid_color="$YELLOW"
                 fi
                 if [[ "$line" =~ ^(md[0-9]+)[[:space:]]+:[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*(.*)$ ]]; then
                     md_name="${BASH_REMATCH[1]}"
@@ -4234,13 +3935,37 @@ get_network_info() {
         local speed_file="/sys/class/net/$interface/speed"
         local duplex_file="/sys/class/net/$interface/duplex"
         local carrier_file="/sys/class/net/$interface/carrier"
+        # NOTE: $(<file) is bash's fast read; do NOT append 2>/dev/null or the
+        # redirection turns it into a null command that yields an empty string.
         if [[ -r "$speed_file" ]]; then
-            local speed=$(<"$speed_file" 2>/dev/null)
+            local speed=""; speed=$(<"$speed_file") 2>/dev/null
             [[ "$speed" != "-1" && -n "$speed" ]] && speed_val="$speed"
         fi
-        [[ -r "$duplex_file" ]] && duplex_val="$(<"$duplex_file" 2>/dev/null)"
+        if [[ -r "$duplex_file" ]]; then
+            local dtmp=""; dtmp=$(<"$duplex_file") 2>/dev/null
+            [[ -n "$dtmp" && "$dtmp" != "unknown" ]] && duplex_val="$dtmp"
+        fi
         if [[ -r "$carrier_file" ]]; then
-            [[ "$(<"$carrier_file" 2>/dev/null)" == "1" ]] && link_detected="Yes" || link_detected="No"
+            local ctmp=""; ctmp=$(<"$carrier_file") 2>/dev/null
+            [[ "$ctmp" == "1" ]] && link_detected="Yes" || link_detected="No"
+        fi
+        # Fallback to ethtool when sysfs speed/duplex is unavailable
+        if [[ -z "$speed_val" || -z "$duplex_val" ]] && command -v ethtool >/dev/null 2>&1; then
+            local eline=""
+            while IFS= read -r eline; do
+                case "$eline" in
+                    *Speed:*)
+                        if [[ -z "$speed_val" ]]; then
+                            local sp="${eline##*Speed:}"; sp="${sp//[[:space:]]/}"
+                            [[ "$sp" =~ ^([0-9]+)Mb/s$ ]] && speed_val="${BASH_REMATCH[1]}"
+                        fi ;;
+                    *Duplex:*)
+                        if [[ -z "$duplex_val" ]]; then
+                            local dp="${eline##*Duplex:}"; dp="${dp#"${dp%%[![:space:]]*}"}"
+                            case "$dp" in Full|Half) duplex_val="${dp,,}" ;; esac
+                        fi ;;
+                esac
+            done < <(ethtool "$interface" 2>/dev/null)
         fi
 
         # Link column: speed + duplex initial (e.g. "1000M/full")
@@ -4405,28 +4130,52 @@ get_gpu_info() {
         return
     fi
 
-    # Render as a table
-    local w_type=7 w_model=42 w_mem=10 w_driver=14 w_temp=7
-    TABLE_COL_W=($w_type $w_model $w_mem $w_driver $w_temp)
-    if [[ "$LANG_MODE" == "cn" ]]; then
-        table_header "类型" "型号" "显存" "驱动" "温度"
-    else
-        table_header "Type" "Model" "Memory" "Driver" "Temp"
-    fi
-
-    local row="" gtype="" gmodel="" gmem="" gdriver="" gtemp=""
+    # Do any rows carry rich data (memory/driver/temp from nvidia-smi)?
+    local has_rich=false row=""
     for row in "${gpu_rows[@]}"; do
-        IFS="$sep" read -r gtype gmodel gmem gdriver gtemp <<< "$row"
-        local tcolor=""
-        local tnum="${gtemp%%°*}"
-        if [[ "$tnum" =~ ^[0-9]+$ ]]; then
-            if (( tnum >= 85 )); then tcolor="$RED"
-            elif (( tnum >= 75 )); then tcolor="$YELLOW"
-            else tcolor="$GREEN"; fi
+        local _t="" _m="" _mem="" _drv="" _tmp=""
+        IFS="$sep" read -r _t _m _mem _drv _tmp <<< "$row"
+        if [[ ( -n "$_mem" && "$_mem" != "-" && "$_mem" != "- MB" ) || ( -n "$_drv" && "$_drv" != "-" ) || ( -n "$_tmp" && "$_tmp" != "-" ) ]]; then
+            has_rich=true; break
         fi
-        table_row "$gtype" "$CYAN" "$gmodel" "" "$gmem" "" "$gdriver" "" "$gtemp" "$tcolor"
     done
-    table_close
+
+    local gtype="" gmodel="" gmem="" gdriver="" gtemp=""
+    if [[ "$has_rich" == true ]]; then
+        # Full table with detail columns
+        local w_type=7 w_model=42 w_mem=10 w_driver=14 w_temp=7
+        TABLE_COL_W=($w_type $w_model $w_mem $w_driver $w_temp)
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            table_header "类型" "型号" "显存" "驱动" "温度"
+        else
+            table_header "Type" "Model" "Memory" "Driver" "Temp"
+        fi
+        for row in "${gpu_rows[@]}"; do
+            IFS="$sep" read -r gtype gmodel gmem gdriver gtemp <<< "$row"
+            local tcolor="" tnum="${gtemp%%°*}"
+            if [[ "$tnum" =~ ^[0-9]+$ ]]; then
+                if (( tnum >= 85 )); then tcolor="$RED"
+                elif (( tnum >= 75 )); then tcolor="$YELLOW"
+                else tcolor="$GREEN"; fi
+            fi
+            table_row "$gtype" "$CYAN" "$gmodel" "" "$gmem" "" "$gdriver" "" "$gtemp" "$tcolor"
+        done
+        table_close
+    else
+        # No driver-level data available: only Type + Model are meaningful
+        local w_type=8 w_model=64
+        TABLE_COL_W=($w_type $w_model)
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            table_header "类型" "型号"
+        else
+            table_header "Type" "Model"
+        fi
+        for row in "${gpu_rows[@]}"; do
+            IFS="$sep" read -r gtype gmodel gmem gdriver gtemp <<< "$row"
+            table_row "$gtype" "$CYAN" "$gmodel" ""
+        done
+        table_close
+    fi
 
     echo "└$(repeat_char '─' 50)"
 }
