@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.3.3"
+VERSION="0.3.4"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -915,12 +915,12 @@ print_header() {
 }
 
 # Column layout (ASCII widths, fixed):
-#  Area(4) + 2 + Location(18) + 2 + Provider(12) + 2 + Send(12) + 2 + Recv(12) + 2 + Link(6)
-# Send/Recv width 12 holds "9999 Mbps" / "99.99 Gbps" right-aligned.
+#  Area(4) + 2 + Location(18) + 2 + Provider(14) + 2 + Send(12) + 2 + Recv(12) + 2 + Link(6)
+# Provider 14 fits "Kamel Networks"; Send/Recv 12 holds "9999 Mbps" / "99.99 Gbps".
 run_mode_table() {
   local ipver="$1"   # 4 or 6
   local mode_label="IPv${ipver}"
-  local W_REG=4 W_LOC=18 W_PROV=12 W_SPD=12 W_LINK=6
+  local W_REG=4 W_LOC=18 W_PROV=14 W_SPD=12 W_LINK=6
 
   if [[ "$ipver" == "4" ]] && ! $HAVE_IPV4; then
     warn "Skipping ${mode_label} (no IPv4 connectivity)."
