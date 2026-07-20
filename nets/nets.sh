@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.3.1"
+VERSION="0.3.2"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -819,17 +819,15 @@ run_iperf_range() {
   fi
 }
 
-# Speed text for table — fixed patterns so columns stay aligned
-# ok values always fit in 10 ASCII chars: "9999 Mbps" / "99.99 Gbps"
+# Speed text with full units (Mbps / Gbps). Max length fits W_SPD=12.
+# Examples: "9999 Mbps" (9) · "99.99 Gbps" (10) · "busy"/"fail"/"-"
 format_speed_text() {
   local status="$1" mbps="$2"
   case "$status" in
     ok)
       awk -v m="${mbps:-0}" 'BEGIN{
-        if (m >= 1000) printf "%.2fG", m/1000
-        else if (m >= 100) printf "%.0fM", m
-        else if (m >= 10)  printf "%.1fM", m
-        else               printf "%.2fM", m
+        if (m >= 1000) printf "%.2f Gbps", m/1000
+        else           printf "%.0f Mbps", m
       }'
       ;;
     busy) printf '%s' "busy" ;;
@@ -889,11 +887,12 @@ print_header() {
 }
 
 # Column layout (ASCII widths, fixed):
-#  Area(4) + 2 + Location(18) + 2 + Provider(12) + 2 + Send(10) + 2 + Recv(10) + 2 + Link(6)
+#  Area(4) + 2 + Location(18) + 2 + Provider(12) + 2 + Send(12) + 2 + Recv(12) + 2 + Link(6)
+# Send/Recv width 12 holds "9999 Mbps" / "99.99 Gbps" right-aligned.
 run_mode_table() {
   local ipver="$1"   # 4 or 6
   local mode_label="IPv${ipver}"
-  local W_REG=4 W_LOC=18 W_PROV=12 W_SPD=10 W_LINK=6
+  local W_REG=4 W_LOC=18 W_PROV=12 W_SPD=12 W_LINK=6
 
   if [[ "$ipver" == "4" ]] && ! $HAVE_IPV4; then
     warn "Skipping ${mode_label} (no IPv4 connectivity)."
