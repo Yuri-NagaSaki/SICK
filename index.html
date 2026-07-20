@@ -31,7 +31,9 @@
     --radius-sm: 9px;
     --font-display: "Bricolage Grotesque", system-ui, sans-serif;
     --font-mono: "Azeret Mono", ui-monospace, monospace;
-    --max: 1040px;
+    --pad-x: clamp(1rem, 3.5vw, 2.5rem);
+    /* Wider on large / 4K, still capped so lines stay readable */
+    --max: min(92vw, 1480px);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,7 +41,7 @@
 
   body {
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: clamp(13.5px, 0.35vw + 12.5px, 15px);
     line-height: 1.6;
     color: var(--ink);
     background: var(--bg);
@@ -54,8 +56,8 @@
     z-index: -2;
     pointer-events: none;
     background:
-      radial-gradient(820px 480px at 8% -8%, oklch(55% 0.1 70 / 0.1), transparent 58%),
-      radial-gradient(640px 420px at 96% 12%, oklch(40% 0.04 155 / 0.07), transparent 55%),
+      radial-gradient(920px 520px at 10% -6%, oklch(55% 0.1 70 / 0.1), transparent 58%),
+      radial-gradient(720px 460px at 94% 10%, oklch(40% 0.04 155 / 0.07), transparent 55%),
       linear-gradient(180deg, var(--bg-deep), var(--bg) 45%, oklch(15% 0.012 70));
   }
 
@@ -63,7 +65,7 @@
   a:hover { color: var(--brass); }
 
   .wrap {
-    width: min(100% - 2.25rem, var(--max));
+    width: min(100% - 2 * var(--pad-x), var(--max));
     margin-inline: auto;
   }
 
@@ -94,11 +96,28 @@
   .nav-links {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.85rem;
     font-size: 0.76rem;
   }
   .nav-links a { color: var(--ink-soft); }
   .nav-links a:hover { color: var(--amber); }
+  .gh-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--ink-soft);
+    border: 1px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .gh-icon:hover {
+    color: var(--ink);
+    background: var(--bg-elev);
+    border-color: var(--line-soft);
+  }
+  .gh-icon svg { width: 18px; height: 18px; display: block; }
   .lang {
     font-family: var(--font-mono);
     font-size: 0.7rem;
@@ -112,33 +131,29 @@
   }
   .lang:hover { border-color: var(--amber-dim); color: var(--amber); }
   @media (max-width: 640px) {
-    .nav-links a:not(.gh) { display: none; }
+    .nav-links a:not(.gh-icon) { display: none; }
   }
 
   /* Hero */
   .hero {
-    padding: clamp(2rem, 5vw, 3rem) 0 1.75rem;
+    padding: clamp(1.75rem, 4vw, 2.75rem) 0 clamp(1.5rem, 3vw, 2rem);
     display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: clamp(1.25rem, 3vw, 2.25rem);
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+    gap: clamp(1.25rem, 3vw, 2.5rem);
     align-items: center;
   }
-  @media (max-width: 860px) {
+  @media (max-width: 900px) {
     .hero { grid-template-columns: 1fr; }
   }
 
   h1 {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: clamp(1.45rem, 3.2vw, 1.85rem);
-    line-height: 1.25;
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem);
+    line-height: 1.3;
     letter-spacing: -0.03em;
     color: var(--ink);
     margin-bottom: 0.85rem;
-    white-space: nowrap;
-  }
-  @media (max-width: 420px) {
-    h1 { white-space: normal; font-size: 1.3rem; }
   }
   h1 .mark {
     color: var(--amber);
@@ -146,9 +161,9 @@
   }
 
   .lede {
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--ink-soft);
-    max-width: 42ch;
+    max-width: 48ch;
     margin-bottom: 1.1rem;
     line-height: 1.65;
   }
@@ -210,10 +225,12 @@
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-sm);
     padding: 0.65rem 0.8rem;
+    min-width: 0;
   }
   .cmd-row .prompt { color: var(--amber); user-select: none; flex-shrink: 0; }
   .cmd-row code {
     flex: 1;
+    min-width: 0;
     font-size: 0.74rem;
     color: var(--ink);
     white-space: nowrap;
@@ -241,7 +258,7 @@
   .cmd-hint code { color: var(--sky); font-size: 0.68rem; }
 
   /* Sections */
-  section { padding: 1.75rem 0; }
+  section { padding: clamp(1.5rem, 3vw, 2.25rem) 0; }
   section + section { border-top: 1px solid var(--line-soft); }
 
   h2 {
@@ -251,23 +268,22 @@
     letter-spacing: -0.02em;
     color: var(--ink);
     margin-bottom: 1rem;
-    white-space: nowrap;
   }
 
   /* Report map */
   .report-map {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 0.55rem;
+    gap: 0.6rem;
   }
-  @media (max-width: 800px) { .report-map { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 1000px) { .report-map { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 420px) { .report-map { grid-template-columns: 1fr; } }
 
   .rm-item {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    padding: 0.75rem 0.85rem;
+    padding: 0.8rem 0.9rem;
     background: var(--bg-elev);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
@@ -275,16 +291,16 @@
   .rm-item strong {
     font-family: var(--font-display);
     font-weight: 650;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--brass);
   }
   .rm-item span {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     color: var(--muted);
     line-height: 1.4;
   }
 
-  /* Terminal */
+  /* Terminal — full sample, no height clip */
   .term {
     background: var(--bg-deep);
     border: 1px solid var(--line);
@@ -300,7 +316,7 @@
     background: oklch(18% 0.012 70);
     border-bottom: 1px solid var(--line-soft);
   }
-  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .dot.r { background: #e06c6c; }
   .dot.y { background: #e0a84e; }
   .dot.g { background: #6fbf8a; }
@@ -308,17 +324,20 @@
     margin-left: 0.35rem;
     font-size: 0.68rem;
     color: var(--muted);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .term-body {
-    padding: 1rem 1.05rem 1.15rem;
+    padding: 1rem 1.1rem 1.25rem;
     overflow-x: auto;
-    max-height: min(62vh, 560px);
-    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .term-body pre {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 11.5px;
+    font-size: clamp(10.5px, 0.2vw + 10px, 12.5px);
     line-height: 1.48;
     white-space: pre;
     color: var(--ink-soft);
@@ -337,6 +356,7 @@
   .c-dim   { color: oklch(48% 0.02 75); }
   .c-good  { color: oklch(74% 0.14 150); }
   .c-up    { color: oklch(74% 0.14 150); }
+  .c-down  { color: oklch(55% 0.04 75); }
   .c-done  { color: oklch(74% 0.14 150); font-weight: 600; }
   .c-prompt-u { color: var(--amber); }
   .c-prompt-p { color: var(--sky); }
@@ -345,14 +365,14 @@
   .opts {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-sm);
     overflow: hidden;
   }
   .opts th {
     text-align: left;
-    padding: 0.65rem 0.9rem;
+    padding: 0.7rem 1rem;
     background: var(--bg-panel);
     color: var(--amber-dim);
     font-size: 0.65rem;
@@ -361,7 +381,7 @@
     border-bottom: 1px solid var(--line);
   }
   .opts td {
-    padding: 0.65rem 0.9rem;
+    padding: 0.7rem 1rem;
     border-bottom: 1px solid var(--line-soft);
     color: var(--ink-soft);
   }
@@ -371,7 +391,25 @@
     color: var(--sky);
     white-space: nowrap;
     font-weight: 500;
-    width: 10.5rem;
+    width: 11rem;
+  }
+  @media (max-width: 560px) {
+    .opts, .opts thead, .opts tbody, .opts tr, .opts th, .opts td {
+      display: block;
+    }
+    .opts thead { display: none; }
+    .opts tr {
+      border-bottom: 1px solid var(--line-soft);
+      padding: 0.65rem 0.85rem;
+    }
+    .opts tr:hover td { background: transparent; }
+    .opts td {
+      border: none;
+      padding: 0.15rem 0;
+      width: auto !important;
+      white-space: normal;
+    }
+    .opts td:first-child { margin-bottom: 0.15rem; }
   }
 
   /* Distro icons */
@@ -386,9 +424,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
-    width: 88px;
-    height: 88px;
-    padding: 0.65rem 0.4rem;
+    width: clamp(76px, 12vw, 96px);
+    height: clamp(76px, 12vw, 96px);
+    padding: 0.55rem 0.35rem;
     background: var(--bg-elev);
     border: 1px solid var(--line-soft);
     border-radius: 12px;
@@ -414,16 +452,16 @@
   /* Donate */
   .donate-grid {
     display: grid;
-    grid-template-columns: 1.3fr 1fr;
-    gap: 0.75rem;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 0.85rem;
   }
-  @media (max-width: 720px) { .donate-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 780px) { .donate-grid { grid-template-columns: 1fr; } }
 
   .donate-card {
     background: var(--bg-panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 1.15rem 1.2rem;
+    padding: 1.2rem 1.25rem;
     box-shadow: 0 12px 32px -24px oklch(0% 0 0 / 0.55);
   }
   .donate-card h3 {
@@ -445,9 +483,11 @@
     border: 1px dashed var(--line);
     border-radius: 8px;
     padding: 0.65rem 0.8rem;
+    min-width: 0;
   }
   .addr code {
     flex: 1;
+    min-width: 0;
     font-size: 0.7rem;
     color: var(--sky);
     word-break: break-all;
@@ -485,37 +525,43 @@
   /* Footer */
   footer {
     border-top: 1px solid var(--line-soft);
-    padding: 2rem 0 2.75rem;
-    margin-top: 0.5rem;
+    padding: 1.75rem 0 2.5rem;
+    margin-top: 0.25rem;
   }
   .foot-in {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 1rem;
-    align-items: start;
+    align-items: center;
   }
   .foot-brand {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     letter-spacing: -0.03em;
   }
   .foot-brand em { font-style: normal; color: var(--amber); }
-  .foot-tag {
-    margin-top: 0.3rem;
-    font-size: 0.75rem;
-    color: var(--muted);
-    max-width: 36ch;
-  }
   .foot-links {
-    text-align: right;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem;
     font-size: 0.76rem;
-    line-height: 1.85;
     color: var(--muted);
   }
-  .foot-links a { color: var(--ink-soft); }
+  .foot-links a {
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
   .foot-links a:hover { color: var(--amber); }
+  .foot-links .gh-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .foot-links .gh-icon svg { width: 16px; height: 16px; }
 
   .rise {
     opacity: 0;
@@ -530,6 +576,10 @@
 
   @media (prefers-reduced-motion: reduce) {
     .rise { animation: none; opacity: 1; transform: none; }
+  }
+
+  @media (min-width: 1800px) {
+    :root { --max: min(88vw, 1680px); }
   }
 
   ::selection {
@@ -552,7 +602,9 @@
       <a href="#coverage" data-en="Coverage" data-zh="覆盖">Coverage</a>
       <a href="#output" data-en="Output" data-zh="输出">Output</a>
       <a href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
-      <a class="gh" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">GitHub ↗</a>
+      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+      </a>
       <button class="lang" id="langBtn" type="button" onclick="toggleLang()">中文</button>
     </div>
   </div>
@@ -647,11 +699,18 @@
 <span class="c-frame">┌─</span> <span class="c-title">处理器信息</span> <span class="c-frame">────────────────────────────────────</span>
 <span class="c-frame">├──────────────────────────────────────────────────</span>
 <span class="c-frame">│</span> <span class="c-key">型号                :</span> <span class="c-val">Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz</span>
-<span class="c-frame">│</span> <span class="c-key">核心数              :</span> <span class="c-num">48</span>      <span class="c-key">线程数 :</span> <span class="c-num">96</span>
+<span class="c-frame">│</span> <span class="c-key">核心数              :</span> <span class="c-num">48</span>
+<span class="c-frame">│</span> <span class="c-key">线程数              :</span> <span class="c-num">96</span>
 <span class="c-frame">│</span> <span class="c-key">频率                :</span> <span class="c-num">2600.000 MHz</span>
 <span class="c-frame">│</span> <span class="c-key">缓存                :</span> <span class="c-num">36864 KB</span>
 <span class="c-frame">│</span> <span class="c-key">使用率              :</span> <span class="c-num">1.3%</span>
 <span class="c-frame">│</span> <span class="c-key">CPU温度             :</span> <span class="c-good">+53.0°C</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+<span class="c-frame">┌─</span> <span class="c-title">CPU / 平台状态</span> <span class="c-frame">────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">Platform            :</span> <span class="c-val">2 socket(s), 2 NUMA node(s)</span>
+<span class="c-frame">│</span> <span class="c-key">Virtualization      :</span> <span class="c-val">Yes</span>
+<span class="c-frame">│</span> <span class="c-key">Microcode           :</span> <span class="c-val">0xd0003e7</span>
 <span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">内存信息</span> <span class="c-frame">──────────────────────────────────────</span>
 <span class="c-frame">├──────────────────────────────────────────────────</span>
@@ -660,49 +719,110 @@
 <span class="c-frame">│</span> <span class="c-key">可用                :</span> <span class="c-num">334.26 GB</span>
 <span class="c-frame">│</span>
 <span class="c-frame">│</span> <span class="c-title">内存模组:</span>
-<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-title">大小</span>     <span class="c-frame">│</span> <span class="c-title">类型</span>   <span class="c-frame">│</span> <span class="c-title">频率</span>         <span class="c-frame">│</span> <span class="c-title">制造商</span>       <span class="c-frame">│</span> <span class="c-title">型号</span>
-<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> HMA84GR7DJR4N-XN
-<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> HMA84GR7CJR4N-XN
-<span class="c-frame">│</span> <span class="c-dim">… 12 × 32 GB DDR4 3200 MT/s Hynix modules</span>
-<span class="c-frame">└─────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">大小</span>     <span class="c-frame">│</span> <span class="c-title">类型</span>   <span class="c-frame">│</span> <span class="c-title">频率</span>         <span class="c-frame">│</span> <span class="c-title">制造商</span>       <span class="c-frame">│</span> <span class="c-title">序列号</span>           <span class="c-frame">│</span> <span class="c-title">型号</span>                   <span class="c-frame">│</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01222686983~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01202573E86~ <span class="c-frame">│</span> HMA84GR7CJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01222545B08~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01220586072~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD0222312792D~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01202573E86~ <span class="c-frame">│</span> HMA84GR7CJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01220295C55~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD0222312792D~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD0122034543D~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01220513D43~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD0122054549D~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-num">32 GB</span>    <span class="c-frame">│</span> <span class="c-good">DDR4</span>   <span class="c-frame">│</span> <span class="c-val">3200 MT/s</span>    <span class="c-frame">│</span> Hynix        <span class="c-frame">│</span> 80AD01220575621~ <span class="c-frame">│</span> HMA84GR7DJR4N-XN       <span class="c-frame">│</span>
+<span class="c-frame">└─────────────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">硬盘信息</span> <span class="c-frame">──────────────────────────────────────</span>
 <span class="c-frame">├──────────────────────────────────────────────────</span>
 <span class="c-frame">│</span> <span class="c-title">已挂载文件系统:</span>
-<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-title">文件系统</span>                    <span class="c-frame">│</span> <span class="c-title">容量</span>   <span class="c-frame">│</span> <span class="c-title">已用</span>  <span class="c-frame">│</span> <span class="c-title">使用率</span> <span class="c-frame">│</span> <span class="c-title">挂载点</span>
-<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-dev">/dev/mapper/pve-root</span>        <span class="c-frame">│</span> <span class="c-num">102G</span>   <span class="c-frame">│</span> 26G   <span class="c-frame">│</span> <span class="c-good">27%</span>    <span class="c-frame">│</span> /
-<span class="c-frame">│</span> <span class="c-dev">/dev/md127</span>                  <span class="c-frame">│</span> <span class="c-num">7.0T</span>   <span class="c-frame">│</span> 903G  <span class="c-frame">│</span> <span class="c-good">13%</span>    <span class="c-frame">│</span> /data
-<span class="c-frame">└──────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">文件系统</span>                           <span class="c-frame">│</span> <span class="c-title">容量</span>    <span class="c-frame">│</span> <span class="c-title">已用</span>    <span class="c-frame">│</span> <span class="c-title">可用</span>    <span class="c-frame">│</span> <span class="c-title">使用率</span> <span class="c-frame">│</span> <span class="c-title">挂载点</span>               <span class="c-frame">│</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/mapper/pve-root</span>               <span class="c-frame">│</span> <span class="c-num">102G</span>    <span class="c-frame">│</span> 26G     <span class="c-frame">│</span> 72G     <span class="c-frame">│</span> <span class="c-good">27%</span>    <span class="c-frame">│</span> /                    <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/sda2</span>                          <span class="c-frame">│</span> <span class="c-num">1022M</span>   <span class="c-frame">│</span> 9.1M    <span class="c-frame">│</span> 1013M   <span class="c-frame">│</span> <span class="c-good">1%</span>     <span class="c-frame">│</span> /boot/efi            <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/md127</span>                         <span class="c-frame">│</span> <span class="c-num">7.0T</span>    <span class="c-frame">│</span> 903G    <span class="c-frame">│</span> 6.2T    <span class="c-frame">│</span> <span class="c-good">13%</span>    <span class="c-frame">│</span> /data                <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/fuse</span>                          <span class="c-frame">│</span> <span class="c-num">128M</span>    <span class="c-frame">│</span> 24K     <span class="c-frame">│</span> 128M    <span class="c-frame">│</span> <span class="c-good">1%</span>     <span class="c-frame">│</span> /etc/pve             <span class="c-frame">│</span>
+<span class="c-frame">└──────────────────────────────────────────────────────────────────────────────────────────────────┘</span>
 <span class="c-frame">│</span>
-<span class="c-frame">│</span> <span class="c-title">磁盘摘要</span> <span class="c-dim">(坏块=重映射/待处理/离线)</span>
-<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-title">设备</span>         <span class="c-frame">│</span> <span class="c-title">基本信息</span>                <span class="c-frame">│</span> <span class="c-title">SMART</span>  <span class="c-frame">│</span> <span class="c-title">温度</span>   <span class="c-frame">│</span> <span class="c-title">读写</span>
-<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────────┤</span>
-<span class="c-frame">│</span> <span class="c-dev">/dev/sda</span>     <span class="c-frame">│</span> 447G SSSTC ER2-GD480     <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">31°C</span>   <span class="c-frame">│</span> R2.90M W632K
-<span class="c-frame">│</span> <span class="c-dev">/dev/nvme0n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> R51.1T W3.31T
-<span class="c-frame">│</span> <span class="c-dev">/dev/nvme1n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> R50.7T W3.31T
-<span class="c-frame">│</span> <span class="c-dev">/dev/nvme2n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">38°C</span>   <span class="c-frame">│</span> R51.1T W3.36T
-<span class="c-frame">│</span> <span class="c-dev">/dev/nvme3n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8…  <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-good">36°C</span>   <span class="c-frame">│</span> R50.8T W3.36T
-<span class="c-frame">└────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">│</span> <span class="c-title">磁盘摘要</span><span class="c-dim">（坏块=重映射/待处理/离线不可纠正）</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">设备</span>         <span class="c-frame">│</span> <span class="c-title">基本信息</span>                           <span class="c-frame">│</span> <span class="c-title">SMART</span>  <span class="c-frame">│</span> <span class="c-title">通电</span>     <span class="c-frame">│</span> <span class="c-title">温度</span>   <span class="c-frame">│</span> <span class="c-title">读写</span>                 <span class="c-frame">│</span> <span class="c-title">坏块</span>      <span class="c-frame">│</span> <span class="c-title">备注</span>                 <span class="c-frame">│</span>
+<span class="c-frame">├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/sda</span>     <span class="c-frame">│</span> 447.1G SSSTC ER2-GD480      ATA    <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-num">9421h</span>    <span class="c-frame">│</span> <span class="c-good">31°C</span>   <span class="c-frame">│</span> 读2.90M 写632K       <span class="c-frame">│</span> 0/0/0     <span class="c-frame">│</span> -                    <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme2n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8HALS-00007    <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-num">9409h</span>    <span class="c-frame">│</span> <span class="c-good">38°C</span>   <span class="c-frame">│</span> 读51.1T 写3.36T      <span class="c-frame">│</span> -         <span class="c-frame">│</span> 已用0%, 备用100%     <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme0n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8HALS-00007    <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-num">9409h</span>    <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> 读51.1T 写3.31T      <span class="c-frame">│</span> -         <span class="c-frame">│</span> 已用0%, 备用100%     <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme1n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8HALS-00007    <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-num">9409h</span>    <span class="c-frame">│</span> <span class="c-good">37°C</span>   <span class="c-frame">│</span> 读50.7T 写3.31T      <span class="c-frame">│</span> -         <span class="c-frame">│</span> 已用0%, 备用100%     <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme3n1</span> <span class="c-frame">│</span> 3.5T SAMSUNG MZQLB3T8HALS-00007    <span class="c-frame">│</span> <span class="c-ok">PASS</span>   <span class="c-frame">│</span> <span class="c-num">9409h</span>    <span class="c-frame">│</span> <span class="c-good">36°C</span>   <span class="c-frame">│</span> 读50.8T 写3.36T      <span class="c-frame">│</span> -         <span class="c-frame">│</span> 已用0%, 备用100%     <span class="c-frame">│</span>
+<span class="c-frame">└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">NVMe 深度健康</span> <span class="c-frame">─────────────────────────────────</span>
-<span class="c-frame">│</span> <span class="c-dev">/dev/nvme*</span>  <span class="c-frame">│</span> endurance <span class="c-num">0%</span>  spare <span class="c-ok">100%</span>  status <span class="c-ok">OK</span>
-<span class="c-frame">│</span>   <span class="c-info">ℹ 异常掉电(累计):</span> <span class="c-warn">nvme0n1=20 nvme1n1=20 nvme2n1=20 nvme3n1=20</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">设备</span>           <span class="c-frame">│</span> <span class="c-title">型号</span>                       <span class="c-frame">│</span> <span class="c-title">温度</span>    <span class="c-frame">│</span> <span class="c-title">耐久</span>    <span class="c-frame">│</span> <span class="c-title">备用</span>    <span class="c-frame">│</span> <span class="c-title">状态</span>    <span class="c-frame">│</span>
+<span class="c-frame">├─────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme2n1</span>   <span class="c-frame">│</span> SAMSUNG MZQLB3T8HALS-00007 <span class="c-frame">│</span> <span class="c-good">38°C</span>    <span class="c-frame">│</span> <span class="c-num">0%</span>      <span class="c-frame">│</span> <span class="c-ok">100%</span>    <span class="c-frame">│</span> <span class="c-ok">OK</span>      <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme0n1</span>   <span class="c-frame">│</span> SAMSUNG MZQLB3T8HALS-00007 <span class="c-frame">│</span> <span class="c-good">37°C</span>    <span class="c-frame">│</span> <span class="c-num">0%</span>      <span class="c-frame">│</span> <span class="c-ok">100%</span>    <span class="c-frame">│</span> <span class="c-ok">OK</span>      <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme1n1</span>   <span class="c-frame">│</span> SAMSUNG MZQLB3T8HALS-00007 <span class="c-frame">│</span> <span class="c-good">37°C</span>    <span class="c-frame">│</span> <span class="c-num">0%</span>      <span class="c-frame">│</span> <span class="c-ok">100%</span>    <span class="c-frame">│</span> <span class="c-ok">OK</span>      <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">/dev/nvme3n1</span>   <span class="c-frame">│</span> SAMSUNG MZQLB3T8HALS-00007 <span class="c-frame">│</span> <span class="c-good">36°C</span>    <span class="c-frame">│</span> <span class="c-num">0%</span>      <span class="c-frame">│</span> <span class="c-ok">100%</span>    <span class="c-frame">│</span> <span class="c-ok">OK</span>      <span class="c-frame">│</span>
+<span class="c-frame">└─────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">│</span>   <span class="c-info">ℹ 异常掉电(累计):</span> <span class="c-warn">nvme2n1=20 nvme0n1=20 nvme1n1=20 nvme3n1=20</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">RAID控制器信息</span> <span class="c-frame">────────────────────────────────</span>
-<span class="c-frame">│</span> <span class="c-dev">md127</span>     raid10    active    members <span class="c-num">4</span>    <span class="c-ok">OK</span>
-<span class="c-frame">│</span> HBA       Intel SATA Controller [RAID Mode]
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-title">软件 RAID (mdraid):</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">阵列</span>     <span class="c-frame">│</span> <span class="c-title">级别</span>       <span class="c-frame">│</span> <span class="c-title">状态</span>         <span class="c-frame">│</span> <span class="c-title">成员数</span>    <span class="c-frame">│</span> <span class="c-title">健康</span>   <span class="c-frame">│</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">md127</span>    <span class="c-frame">│</span> raid10     <span class="c-frame">│</span> active       <span class="c-frame">│</span> <span class="c-num">4</span>         <span class="c-frame">│</span> <span class="c-ok">OK</span>     <span class="c-frame">│</span>
+<span class="c-frame">└───────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">│</span> <span class="c-key">mdadm arrays        :</span> <span class="c-val">1 (details in JSON)</span>
+<span class="c-frame">│</span> <span class="c-title">RAID/HBA 控制器:</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">插槽</span>       <span class="c-frame">│</span> <span class="c-title">类型</span>      <span class="c-frame">│</span> <span class="c-title">控制器</span>                                           <span class="c-frame">│</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> 00:17.0    <span class="c-frame">│</span> RAID      <span class="c-frame">│</span> Intel SATA Controller [RAID Mode] (rev 0a)       <span class="c-frame">│</span>
+<span class="c-frame">└───────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">网卡信息</span> <span class="c-frame">──────────────────────────────────────</span>
-<span class="c-frame">│</span> <span class="c-dev">ens16f0</span>     <span class="c-up">UP</span>    <span class="c-num">1000M</span>/full    Intel I350
-<span class="c-frame">│</span> <span class="c-dev">ens3f0np0</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
-<span class="c-frame">│</span> <span class="c-dev">ens2f0np0</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
-<span class="c-frame">│</span> <span class="c-dev">ens2f1np1</span>   <span class="c-up">UP</span>   <span class="c-num">10000M</span>/full    Mellanox
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">网卡</span>         <span class="c-frame">│</span> <span class="c-title">状态</span>     <span class="c-frame">│</span> <span class="c-title">速率</span>         <span class="c-frame">│</span> <span class="c-title">MAC地址</span>            <span class="c-frame">│</span> <span class="c-title">IPv4</span>                 <span class="c-frame">│</span> <span class="c-title">型号</span>                     <span class="c-frame">│</span>
+<span class="c-frame">├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-dev">ens16f0</span>      <span class="c-frame">│</span> <span class="c-up">UP</span>       <span class="c-frame">│</span> <span class="c-num">1000M</span>/full   <span class="c-frame">│</span> 40:73:4d:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Intel Corporation I350 ~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens16f1</span>      <span class="c-frame">│</span> <span class="c-down">DOWN</span>     <span class="c-frame">│</span> -            <span class="c-frame">│</span> 40:73:4d:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Intel Corporation I350 ~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens16f2</span>      <span class="c-frame">│</span> <span class="c-down">DOWN</span>     <span class="c-frame">│</span> -            <span class="c-frame">│</span> 40:73:4d:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Intel Corporation I350 ~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens16f3</span>      <span class="c-frame">│</span> <span class="c-down">DOWN</span>     <span class="c-frame">│</span> -            <span class="c-frame">│</span> 40:73:4d:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Intel Corporation I350 ~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens3f0np0</span>    <span class="c-frame">│</span> <span class="c-up">UP</span>       <span class="c-frame">│</span> <span class="c-num">10000M</span>/full  <span class="c-frame">│</span> 94:6d:ae:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Mellanox Technologies M~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens3f1np1</span>    <span class="c-frame">│</span> <span class="c-down">DOWN</span>     <span class="c-frame">│</span> -            <span class="c-frame">│</span> 94:6d:ae:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Mellanox Technologies M~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens2f0np0</span>    <span class="c-frame">│</span> <span class="c-up">UP</span>       <span class="c-frame">│</span> <span class="c-num">10000M</span>/full  <span class="c-frame">│</span> 94:6d:ae:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Mellanox Technologies M~ <span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-dev">ens2f1np1</span>    <span class="c-frame">│</span> <span class="c-up">UP</span>       <span class="c-frame">│</span> <span class="c-num">10000M</span>/full  <span class="c-frame">│</span> 94:6d:ae:<span class="c-dim">XX:XX:XX</span>  <span class="c-frame">│</span> -                    <span class="c-frame">│</span> Mellanox Technologies M~ <span class="c-frame">│</span>
+<span class="c-frame">└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">│</span>
+<span class="c-frame">│</span> <span class="c-title">收发错误 / 丢包计数 (累计):</span>
 <span class="c-frame">│</span>   <span class="c-warn">⚠ ens16f0         rx_dropped=776686</span>
 <span class="c-frame">│</span>   <span class="c-warn">⚠ ens3f0np0       tx_errors=1 rx_dropped=1117229</span>
+<span class="c-frame">│</span>   <span class="c-warn">⚠ ens2f0np0       rx_dropped=1117228</span>
+<span class="c-frame">│</span>   <span class="c-warn">⚠ ens2f1np1       tx_errors=1 rx_dropped=1117228</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
+<span class="c-frame">┌─</span> <span class="c-title">显卡信息</span> <span class="c-frame">──────────────────────────────────────</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> <span class="c-title">厂商</span>     <span class="c-frame">│</span> <span class="c-title">类别</span>       <span class="c-frame">│</span> <span class="c-title">型号</span>                                                   <span class="c-frame">│</span>
+<span class="c-frame">├────────────────────────────────────────────────────────────────────────────────┤</span>
+<span class="c-frame">│</span> ASPEED   <span class="c-frame">│</span> 管理       <span class="c-frame">│</span> ASPEED Technology, Inc. ASPEED Graphics Family (rev 4~ <span class="c-frame">│</span>
+<span class="c-frame">└────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="c-frame">└──────────────────────────────────────────────────</span>
 <span class="c-frame">┌─</span> <span class="c-title">主板信息</span> <span class="c-frame">──────────────────────────────────────</span>
-<span class="c-frame">│</span> <span class="c-key">厂商 :</span> <span class="c-val">H3C</span>   <span class="c-key">型号 :</span> <span class="c-val">RS35M2C16SB</span>
-<span class="c-frame">│</span> <span class="c-key">BIOS :</span> <span class="c-val">American Megatrends · 5.76</span>
+<span class="c-frame">├──────────────────────────────────────────────────</span>
+<span class="c-frame">│</span> <span class="c-key">厂商                :</span> <span class="c-val">H3C</span>
+<span class="c-frame">│</span> <span class="c-key">型号                :</span> <span class="c-val">RS35M2C16SB</span>
+<span class="c-frame">│</span> <span class="c-key">Version             :</span> <span class="c-val">0302A65F</span>
+<span class="c-frame">│</span> <span class="c-key">BIOS Vendor         :</span> <span class="c-val">American Megatrends International, LLC.</span>
+<span class="c-frame">│</span> <span class="c-key">BIOS Version        :</span> <span class="c-val">5.76</span>
 <span class="c-frame">└──────────────────────────────────────────────────</span>
 
 <span class="c-done">报告生成完成！</span>
@@ -804,19 +924,14 @@
 
 <footer>
   <div class="wrap foot-in">
-    <div>
-      <div class="foot-brand">SI<em>CK</em></div>
-      <p class="foot-tag" data-en="Make server checking no longer sick — but sick."
-         data-zh="让服务器检查不再让人 sick（头疼），而是 sick（超酷）。">
-        Make server checking no longer sick — but sick.
-      </p>
-    </div>
+    <div class="foot-brand">SI<em>CK</em></div>
     <div class="foot-links">
-      <a href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener">github.com/Yuri-NagaSaki/SICK</a><br>
+      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+      </a>
       <a href="https://catcat.blog" target="_blank" rel="noopener"
-         data-en="Made by Yuri NagaSaki · 猫猫博客"
-         data-zh="由 Yuri NagaSaki 制作 · 猫猫博客">Made by Yuri NagaSaki · 猫猫博客</a><br>
-      MIT License
+         data-en="猫猫博客" data-zh="猫猫博客">猫猫博客</a>
+      <span>MIT</span>
     </div>
   </div>
 </footer>
