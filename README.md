@@ -54,10 +54,12 @@ curl -sL https://catbash.net/sick | bash -s -- --json
 
 When passing options through `curl | bash`, use `bash -s -- <options>`.
 
-Alternatively, run the script directly from the repository:
+Short install URL: `https://catbash.net/sick` (same script as `hardware_info.sh`).
+
+Alternatively, download and run locally:
 
 ```bash
-curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
+curl -sLO https://catbash.net/hardware_info.sh
 chmod +x hardware_info.sh
 sudo ./hardware_info.sh
 ```

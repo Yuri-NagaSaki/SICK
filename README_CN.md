@@ -54,10 +54,12 @@ curl -sL https://catbash.net/sick | bash -s -- --json
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
 
-也可以直接从仓库下载运行：
+短链安装地址：`https://catbash.net/sick`（与 `hardware_info.sh` 为同一脚本）。
+
+也可以下载到本地再运行：
 
 ```bash
-curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
+curl -sLO https://catbash.net/hardware_info.sh
 chmod +x hardware_info.sh
 sudo ./hardware_info.sh -cn
 ```
