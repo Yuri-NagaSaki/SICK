@@ -1,4 +1,4 @@
-# NETS endpoint list (v5)
+# NETS endpoint list (v6)
 
 Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 
@@ -6,7 +6,7 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 > Ports are tried internally (capped) and **not shown** in the default table.  
 > Output is grouped by **Area**: `NA` · `EU` · `APAC`.
 
-## Default (`global`) — 22 endpoints
+## Default (`global`) — 24 endpoints
 
 ### North America — NA (5)
 
@@ -18,7 +18,7 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 | nocix-kc | Nocix | Kansas City, US | `speedtest.nocix.net` | 200G | IPv4\|IPv6 |
 | leaseweb-mtl | Leaseweb | Montreal, CA | `speedtest.mtl2.ca.leaseweb.net` | 10G | IPv4\|IPv6 |
 
-### Europe — EU (11)
+### Europe — EU (13)
 
 | ID | Provider | City | Host | Speed | Stack |
 |----|----------|------|------|-------|-------|
@@ -29,36 +29,40 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 | scaleway-paris | Scaleway | Paris, FR | `iperf.online.net` | 100G | IPv4 |
 | alwyzon-vie | Alwyzon | Vienna, AT | `iperf3-vie-at.alwyzon.net` | 200G | IPv4\|IPv6 |
 | kamel-kista | Kamel Networks | Kista, SE | `speedtest.kamel.network` | 10G | IPv4\|IPv6 |
-| fiberby-cph | Fiberby | Copenhagen, DK | `speed2.fiberby.dk` (9201–9240) | **25G** | IPv4\|IPv6 |
+| fiberby-cph | Fiberby | Copenhagen, DK | `speed2.fiberby.dk` | **25G** | IPv4\|IPv6 |
 | buyvm-lux | BuyVM | Bissen, LU | `speedtest.lu.buyvm.net` | 10G | IPv4\|IPv6 |
-| gigahost-svg | Gigahost | Sandefjord, NO | `lg.gigahost.no` (9201–9240) | **100G** | IPv4\|IPv6 |
-| datapacket-fra | DataPacket | Frankfurt, DE | `185.102.219.93` | 10G | IPv4 |
+| gigahost-svg | Gigahost | Sandefjord, NO | `lg.gigahost.no` | **100G** | **IPv4 only** |
+| wobcom-fra | Wobcom | Frankfurt, DE | `a205.speedtest.wobcom.de` | **25G** | IPv4\|IPv6 |
+| leaseweb-fra | Leaseweb | Frankfurt, DE | `speedtest.fra1.de.leaseweb.net` | 10G | IPv4\|IPv6 |
+| cosmonova-iev | Cosmonova | Kyiv, UA | `speed.cosmonova.net` | **40G** | IPv4 |
 
 ### Asia-Pacific — APAC (6)
 
 | ID | Provider | City | Host | Speed | Stack |
 |----|----------|------|------|-------|-------|
-| datapacket-tyo | DataPacket | Tokyo, JP | `89.187.160.1` | 10G | IPv4 |
-| datapacket-sin | DataPacket | Singapore, SG | `89.187.162.1` | 10G | IPv4 |
+| leaseweb-tyo | Leaseweb | Tokyo, JP | `speedtest.tyo11.jp.leaseweb.net` | 10G | IPv4\|IPv6 |
+| leaseweb-sin | Leaseweb | Singapore, SG | `speedtest.sin1.sg.leaseweb.net` | 10G | IPv4\|IPv6 |
 | leaseweb-hkg | Leaseweb | Hong Kong, HK | `speedtest.hkg12.hk.leaseweb.net` | 10G | IPv4\|IPv6 |
 | leaseweb-syd | Leaseweb | Sydney, AU | `speedtest.syd12.au.leaseweb.net` | 10G | IPv4\|IPv6 |
 | ovh-bom | OVH | Mumbai, IN | `bom.proof.ovh.net` | 10G | IPv4\|IPv6 |
 | uztelecom-tas | UZ Telecom | Tashkent, UZ | `speedtest.uztelecom.uz` | 10G | IPv4\|IPv6 |
 
+## Notes
+
+### Gigahost IPv6 always failed
+`lg.gigahost.no` has **A only** (no **AAAA**). `iperf3 -6` returns *No address associated with hostname*. Stack is therefore **IPv4 only** so the script skips v6 for this host.
+
+### DataPacket TYO / SIN / FRA removed
+Public iperf on DataPacket IPs frequently failed send/recv. Replaced with:
+- **Tokyo / Singapore** → Leaseweb
+- **Frankfurt** → Wobcom (+ Leaseweb FRA)
+
 ## Reduced (`-r`)
 
-`purevoltage-nyc` · `clouvider-la` · `leaseweb-mtl` · `onlyservers-uk` · `eranium-ams` · `fiberby-cph` · `datapacket-tyo` · `leaseweb-hkg`
-
-## Filter by area
-
-```bash
-./nets.sh --region na     # North America
-./nets.sh --region eu     # Europe
-./nets.sh --region apac   # Asia-Pacific
-```
+`purevoltage-nyc` · `clouvider-la` · `leaseweb-mtl` · `onlyservers-uk` · `eranium-ams` · `wobcom-fra` · `leaseweb-tyo` · `leaseweb-hkg`
 
 ## Changelog
 
-- **v5:** Gigahost NO, DataPacket FRA; Scaleway rename; region grouping in UI
-- **v4:** DataPacket TYO/SIN, Kamel SE, Fiberby DK, BuyVM LU, UZ Telecom
-- **v3:** Removed Advin Osaka/Johor
+- **v6:** Drop DataPacket TYO/SIN/FRA; +Leaseweb TYO/SIN/FRA, Wobcom FRA, Cosmonova Kyiv; Gigahost IPv4-only
+- **v5:** Gigahost NO, DataPacket FRA; Scaleway rename; region grouping
+- **v4:** DataPacket TYO/SIN, Kamel, Fiberby, BuyVM, UZ Telecom

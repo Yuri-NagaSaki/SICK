@@ -66,11 +66,11 @@ chmod +x nets.sh
 | `--send-only` / `--recv-only` | One direction only |
 | `-l` | List endpoints |
 
-## Endpoint policy (v5)
+## Endpoint policy (v6)
 
 - **NA** PureVoltage NYC · Clouvider/InterServer LA · Nocix KC · Leaseweb MTL  
-- **EU** Scaleway Paris · Gigahost NO · DataPacket FRA · Eranium/RS AMS · Kamel SE · Fiberby DK · BuyVM LU · …  
-- **APAC** DataPacket TYO/SIN · Leaseweb HKG/SYD · OVH Mumbai · UZ Telecom  
+- **EU** Wobcom/Leaseweb FRA · Cosmonova Kyiv · Gigahost NO · Scaleway · Eranium/RS AMS · Kamel · Fiberby · BuyVM · …  
+- **APAC** Leaseweb TYO/SIN/HKG/SYD · OVH Mumbai · UZ Telecom  
 - Output grouped by area (`NA` / `EU` / `APAC`). Ports capped/hidden. Summary shows Send/Recv traffic.
 
 See [endpoints.md](endpoints.md). Full reverse-proxy URL list: [PROXY.md](PROXY.md).

@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.3.2"
+VERSION="0.3.3"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,13 +34,13 @@ write_embedded_endpoints() {
   # Writes embedded catalog to $1
   cat >"$1" <<'NETS_ENDPOINTS_JSON'
 {
-  "version": 5,
+  "version": 6,
   "updated": "2026-07-20",
   "notes": [
     "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
     "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v5: +Gigahost NO, DataPacket FRA; Scaleway rename; region column in table."
+    "v6: drop failing DataPacket TYO/SIN/FRA; +Leaseweb TYO/SIN/FRA, Wobcom FRA, Cosmonova Kyiv; Gigahost IPv4-only (no AAAA)."
   ],
   "endpoints": [
     {
@@ -156,18 +156,18 @@ write_embedded_endpoints() {
       "source": "yabs"
     },
     {
-      "id": "datapacket-fra",
-      "provider": "DataPacket",
-      "city": "Frankfurt, DE",
+      "id": "cosmonova-iev",
+      "provider": "Cosmonova",
+      "city": "Kyiv, UA",
       "region": "eu",
-      "host": "185.102.219.93",
+      "host": "speed.cosmonova.net",
       "port_range": [
         5201,
-        5201
+        5209
       ],
-      "speed": "10G",
+      "speed": "40G",
       "stack": "IPv4",
-      "source": "datapacket.com"
+      "source": "cosmonova.net"
     },
     {
       "id": "eranium-ams",
@@ -208,7 +208,7 @@ write_embedded_endpoints() {
         9240
       ],
       "speed": "100G",
-      "stack": "IPv4|IPv6",
+      "stack": "IPv4",
       "source": "gigahost.no"
     },
     {
@@ -224,6 +224,20 @@ write_embedded_endpoints() {
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "kamel.network"
+    },
+    {
+      "id": "leaseweb-fra",
+      "provider": "Leaseweb",
+      "city": "Frankfurt, DE",
+      "region": "eu",
+      "host": "speedtest.fra1.de.leaseweb.net",
+      "port_range": [
+        5201,
+        5210
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "leaseweb"
     },
     {
       "id": "onlyservers-uk",
@@ -268,32 +282,18 @@ write_embedded_endpoints() {
       "source": "nws"
     },
     {
-      "id": "datapacket-sin",
-      "provider": "DataPacket",
-      "city": "Singapore, SG",
-      "region": "apac",
-      "host": "89.187.162.1",
+      "id": "wobcom-fra",
+      "provider": "Wobcom",
+      "city": "Frankfurt, DE",
+      "region": "eu",
+      "host": "a205.speedtest.wobcom.de",
       "port_range": [
         5201,
         5201
       ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
-    },
-    {
-      "id": "datapacket-tyo",
-      "provider": "DataPacket",
-      "city": "Tokyo, JP",
-      "region": "apac",
-      "host": "89.187.160.1",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
+      "speed": "25G",
+      "stack": "IPv4|IPv6",
+      "source": "wobcom.de"
     },
     {
       "id": "leaseweb-hkg",
@@ -310,6 +310,20 @@ write_embedded_endpoints() {
       "source": "iperf3serverlist"
     },
     {
+      "id": "leaseweb-sin",
+      "provider": "Leaseweb",
+      "city": "Singapore, SG",
+      "region": "apac",
+      "host": "speedtest.sin1.sg.leaseweb.net",
+      "port_range": [
+        5201,
+        5210
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "leaseweb"
+    },
+    {
       "id": "leaseweb-syd",
       "provider": "Leaseweb",
       "city": "Sydney, AU",
@@ -322,6 +336,20 @@ write_embedded_endpoints() {
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "nws"
+    },
+    {
+      "id": "leaseweb-tyo",
+      "provider": "Leaseweb",
+      "city": "Tokyo, JP",
+      "region": "apac",
+      "host": "speedtest.tyo11.jp.leaseweb.net",
+      "port_range": [
+        5201,
+        5210
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "leaseweb"
     },
     {
       "id": "ovh-bom",
@@ -358,8 +386,8 @@ write_embedded_endpoints() {
     "leaseweb-mtl",
     "onlyservers-uk",
     "eranium-ams",
-    "fiberby-cph",
-    "datapacket-tyo",
+    "wobcom-fra",
+    "leaseweb-tyo",
     "leaseweb-hkg"
   ]
 }
