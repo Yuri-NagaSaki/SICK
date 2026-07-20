@@ -1,27 +1,13 @@
 {
-  "version": 4,
+  "version": 5,
   "updated": "2026-07-20",
   "notes": [
     "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
     "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v4: +DataPacket TYO/SIN, Kamel SE, UZ Telecom, Fiberby DK, BuyVM LU; Advin removed in v3."
+    "v5: +Gigahost NO, DataPacket FRA; Scaleway rename; region column in table."
   ],
   "endpoints": [
-    {
-      "id": "purevoltage-nyc",
-      "provider": "PureVoltage",
-      "city": "New York, US",
-      "region": "na",
-      "host": "speedtest.nyc.purevoltage.com",
-      "port_range": [
-        5201,
-        5210
-      ],
-      "speed": "40G",
-      "stack": "IPv4",
-      "source": "nws"
-    },
     {
       "id": "clouvider-la",
       "provider": "Clouvider",
@@ -51,20 +37,6 @@
       "source": "interserver.net/speedtest"
     },
     {
-      "id": "nocix-kc",
-      "provider": "Nocix",
-      "city": "Kansas City, US",
-      "region": "na",
-      "host": "speedtest.nocix.net",
-      "port_range": [
-        5201,
-        5205
-      ],
-      "speed": "200G",
-      "stack": "IPv4|IPv6",
-      "source": "nws"
-    },
-    {
       "id": "leaseweb-mtl",
       "provider": "Leaseweb",
       "city": "Montreal, CA",
@@ -79,72 +51,30 @@
       "source": "iperf3serverlist"
     },
     {
-      "id": "onlyservers-uk",
-      "provider": "OnlyServers",
-      "city": "United Kingdom",
-      "region": "eu",
-      "host": "speedtest.onlyservers.com",
+      "id": "nocix-kc",
+      "provider": "Nocix",
+      "city": "Kansas City, US",
+      "region": "na",
+      "host": "speedtest.nocix.net",
       "port_range": [
         5201,
-        5201
+        5205
       ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "speedtest.onlyservers.com"
-    },
-    {
-      "id": "clouvider-lon",
-      "provider": "Clouvider",
-      "city": "London, UK",
-      "region": "eu",
-      "host": "lon.speedtest.clouvider.net",
-      "port_range": [
-        5200,
-        5209
-      ],
-      "speed": "10G",
+      "speed": "200G",
       "stack": "IPv4|IPv6",
-      "source": "yabs"
+      "source": "nws"
     },
     {
-      "id": "eranium-ams",
-      "provider": "Eranium",
-      "city": "Amsterdam, NL",
-      "region": "eu",
-      "host": "iperf-ams-nl.eranium.net",
+      "id": "purevoltage-nyc",
+      "provider": "PureVoltage",
+      "city": "New York, US",
+      "region": "na",
+      "host": "speedtest.nyc.purevoltage.com",
       "port_range": [
         5201,
         5210
       ],
-      "speed": "100G",
-      "stack": "IPv4|IPv6",
-      "source": "yabs"
-    },
-    {
-      "id": "redswitches-ams25g",
-      "provider": "RedSwitches",
-      "city": "Amsterdam (Iron Mountain), NL",
-      "region": "eu",
-      "host": "43.250.53.56",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "25G",
-      "stack": "IPv4",
-      "source": "lg.redswitches.com"
-    },
-    {
-      "id": "online-paris",
-      "provider": "Online.net/Scaleway",
-      "city": "Paris, FR",
-      "region": "eu",
-      "host": "iperf.online.net",
-      "port_range": [
-        5200,
-        5209
-      ],
-      "speed": "100G",
+      "speed": "40G",
       "stack": "IPv4",
       "source": "nws"
     },
@@ -161,6 +91,174 @@
       "speed": "200G",
       "stack": "IPv4|IPv6",
       "source": "nws"
+    },
+    {
+      "id": "buyvm-lux",
+      "provider": "BuyVM",
+      "city": "Bissen, LU",
+      "region": "eu",
+      "host": "speedtest.lu.buyvm.net",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "buyvm.net"
+    },
+    {
+      "id": "clouvider-lon",
+      "provider": "Clouvider",
+      "city": "London, UK",
+      "region": "eu",
+      "host": "lon.speedtest.clouvider.net",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "datapacket-fra",
+      "provider": "DataPacket",
+      "city": "Frankfurt, DE",
+      "region": "eu",
+      "host": "185.102.219.93",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "eranium-ams",
+      "provider": "Eranium",
+      "city": "Amsterdam, NL",
+      "region": "eu",
+      "host": "iperf-ams-nl.eranium.net",
+      "port_range": [
+        5201,
+        5210
+      ],
+      "speed": "100G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "fiberby-cph",
+      "provider": "Fiberby",
+      "city": "Copenhagen, DK",
+      "region": "eu",
+      "host": "speed2.fiberby.dk",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "25G",
+      "stack": "IPv4|IPv6",
+      "source": "fiberby.dk"
+    },
+    {
+      "id": "gigahost-svg",
+      "provider": "Gigahost",
+      "city": "Sandefjord, NO",
+      "region": "eu",
+      "host": "lg.gigahost.no",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "100G",
+      "stack": "IPv4|IPv6",
+      "source": "gigahost.no"
+    },
+    {
+      "id": "kamel-kista",
+      "provider": "Kamel Networks",
+      "city": "Kista, SE",
+      "region": "eu",
+      "host": "speedtest.kamel.network",
+      "port_range": [
+        5201,
+        5205
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "kamel.network"
+    },
+    {
+      "id": "onlyservers-uk",
+      "provider": "OnlyServers",
+      "city": "United Kingdom",
+      "region": "eu",
+      "host": "speedtest.onlyservers.com",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "speedtest.onlyservers.com"
+    },
+    {
+      "id": "redswitches-ams25g",
+      "provider": "RedSwitches",
+      "city": "Amsterdam, NL",
+      "region": "eu",
+      "host": "43.250.53.56",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "25G",
+      "stack": "IPv4",
+      "source": "lg.redswitches.com"
+    },
+    {
+      "id": "scaleway-paris",
+      "provider": "Scaleway",
+      "city": "Paris, FR",
+      "region": "eu",
+      "host": "iperf.online.net",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "100G",
+      "stack": "IPv4",
+      "source": "nws"
+    },
+    {
+      "id": "datapacket-sin",
+      "provider": "DataPacket",
+      "city": "Singapore, SG",
+      "region": "apac",
+      "host": "89.187.162.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "datapacket-tyo",
+      "provider": "DataPacket",
+      "city": "Tokyo, JP",
+      "region": "apac",
+      "host": "89.187.160.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
     },
     {
       "id": "leaseweb-hkg",
@@ -205,48 +303,6 @@
       "source": "nws"
     },
     {
-      "id": "datapacket-tyo",
-      "provider": "DataPacket",
-      "city": "Tokyo, JP",
-      "region": "apac",
-      "host": "89.187.160.1",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
-    },
-    {
-      "id": "datapacket-sin",
-      "provider": "DataPacket",
-      "city": "Singapore, SG",
-      "region": "apac",
-      "host": "89.187.162.1",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
-    },
-    {
-      "id": "kamel-kista",
-      "provider": "Kamel Networks",
-      "city": "Kista, SE",
-      "region": "eu",
-      "host": "speedtest.kamel.network",
-      "port_range": [
-        5201,
-        5205
-      ],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "kamel.network"
-    },
-    {
       "id": "uztelecom-tas",
       "provider": "UZ Telecom",
       "city": "Tashkent, UZ",
@@ -259,34 +315,6 @@
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "uztelecom.uz"
-    },
-    {
-      "id": "fiberby-cph",
-      "provider": "Fiberby",
-      "city": "Copenhagen, DK",
-      "region": "eu",
-      "host": "speed2.fiberby.dk",
-      "port_range": [
-        9201,
-        9240
-      ],
-      "speed": "25G",
-      "stack": "IPv4|IPv6",
-      "source": "fiberby.dk"
-    },
-    {
-      "id": "buyvm-lux",
-      "provider": "BuyVM",
-      "city": "Bissen, LU",
-      "region": "eu",
-      "host": "speedtest.lu.buyvm.net",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "buyvm.net"
     }
   ],
   "reduced_ids": [

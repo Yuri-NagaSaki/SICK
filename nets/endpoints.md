@@ -1,13 +1,14 @@
-# NETS endpoint list (v4)
+# NETS endpoint list (v5)
 
 Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 
 > Shared nodes are often **busy**. Numbers are comparative only.  
-> Ports are tried internally (capped) and **not shown** in the default table.
+> Ports are tried internally (capped) and **not shown** in the default table.  
+> Output is grouped by **Area**: `NA` · `EU` · `APAC`.
 
-## Default (`global`) — 20 endpoints
+## Default (`global`) — 22 endpoints
 
-### North America (5)
+### North America — NA (5)
 
 | ID | Provider | City | Host | Speed | Stack |
 |----|----------|------|------|-------|-------|
@@ -17,21 +18,23 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 | nocix-kc | Nocix | Kansas City, US | `speedtest.nocix.net` | 200G | IPv4\|IPv6 |
 | leaseweb-mtl | Leaseweb | Montreal, CA | `speedtest.mtl2.ca.leaseweb.net` | 10G | IPv4\|IPv6 |
 
-### Europe (9)
+### Europe — EU (11)
 
 | ID | Provider | City | Host | Speed | Stack |
 |----|----------|------|------|-------|-------|
 | onlyservers-uk | OnlyServers | United Kingdom | `speedtest.onlyservers.com` | 10G | IPv4 |
 | clouvider-lon | Clouvider | London, UK | `lon.speedtest.clouvider.net` | 10G | IPv4\|IPv6 |
 | eranium-ams | Eranium | Amsterdam, NL | `iperf-ams-nl.eranium.net` | 100G | IPv4\|IPv6 |
-| redswitches-ams25g | RedSwitches | Amsterdam Iron Mountain, NL | `43.250.53.56` | **25G** | IPv4 |
-| online-paris | Online.net/Scaleway | Paris, FR | `iperf.online.net` | 100G | IPv4 |
+| redswitches-ams25g | RedSwitches | Amsterdam, NL | `43.250.53.56` | **25G** | IPv4 |
+| scaleway-paris | Scaleway | Paris, FR | `iperf.online.net` | 100G | IPv4 |
 | alwyzon-vie | Alwyzon | Vienna, AT | `iperf3-vie-at.alwyzon.net` | 200G | IPv4\|IPv6 |
 | kamel-kista | Kamel Networks | Kista, SE | `speedtest.kamel.network` | 10G | IPv4\|IPv6 |
 | fiberby-cph | Fiberby | Copenhagen, DK | `speed2.fiberby.dk` (9201–9240) | **25G** | IPv4\|IPv6 |
 | buyvm-lux | BuyVM | Bissen, LU | `speedtest.lu.buyvm.net` | 10G | IPv4\|IPv6 |
+| gigahost-svg | Gigahost | Sandefjord, NO | `lg.gigahost.no` (9201–9240) | **100G** | IPv4\|IPv6 |
+| datapacket-fra | DataPacket | Frankfurt, DE | `185.102.219.93` | 10G | IPv4 |
 
-### Asia-Pacific (6)
+### Asia-Pacific — APAC (6)
 
 | ID | Provider | City | Host | Speed | Stack |
 |----|----------|------|------|-------|-------|
@@ -46,8 +49,16 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 
 `purevoltage-nyc` · `clouvider-la` · `leaseweb-mtl` · `onlyservers-uk` · `eranium-ams` · `fiberby-cph` · `datapacket-tyo` · `leaseweb-hkg`
 
+## Filter by area
+
+```bash
+./nets.sh --region na     # North America
+./nets.sh --region eu     # Europe
+./nets.sh --region apac   # Asia-Pacific
+```
+
 ## Changelog
 
-- **v4:** DataPacket Tokyo/Singapore, Kamel SE, Fiberby DK, BuyVM LU, UZ Telecom
+- **v5:** Gigahost NO, DataPacket FRA; Scaleway rename; region grouping in UI
+- **v4:** DataPacket TYO/SIN, Kamel SE, Fiberby DK, BuyVM LU, UZ Telecom
 - **v3:** Removed Advin Osaka/Johor
-- **v2:** FiberState removed; metro trim

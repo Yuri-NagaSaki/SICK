@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.3.0"
+VERSION="0.3.1"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,29 +34,15 @@ write_embedded_endpoints() {
   # Writes embedded catalog to $1
   cat >"$1" <<'NETS_ENDPOINTS_JSON'
 {
-  "version": 4,
+  "version": 5,
   "updated": "2026-07-20",
   "notes": [
     "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
     "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v4: +DataPacket TYO/SIN, Kamel SE, UZ Telecom, Fiberby DK, BuyVM LU; Advin removed in v3."
+    "v5: +Gigahost NO, DataPacket FRA; Scaleway rename; region column in table."
   ],
   "endpoints": [
-    {
-      "id": "purevoltage-nyc",
-      "provider": "PureVoltage",
-      "city": "New York, US",
-      "region": "na",
-      "host": "speedtest.nyc.purevoltage.com",
-      "port_range": [
-        5201,
-        5210
-      ],
-      "speed": "40G",
-      "stack": "IPv4",
-      "source": "nws"
-    },
     {
       "id": "clouvider-la",
       "provider": "Clouvider",
@@ -86,20 +72,6 @@ write_embedded_endpoints() {
       "source": "interserver.net/speedtest"
     },
     {
-      "id": "nocix-kc",
-      "provider": "Nocix",
-      "city": "Kansas City, US",
-      "region": "na",
-      "host": "speedtest.nocix.net",
-      "port_range": [
-        5201,
-        5205
-      ],
-      "speed": "200G",
-      "stack": "IPv4|IPv6",
-      "source": "nws"
-    },
-    {
       "id": "leaseweb-mtl",
       "provider": "Leaseweb",
       "city": "Montreal, CA",
@@ -114,72 +86,30 @@ write_embedded_endpoints() {
       "source": "iperf3serverlist"
     },
     {
-      "id": "onlyservers-uk",
-      "provider": "OnlyServers",
-      "city": "United Kingdom",
-      "region": "eu",
-      "host": "speedtest.onlyservers.com",
+      "id": "nocix-kc",
+      "provider": "Nocix",
+      "city": "Kansas City, US",
+      "region": "na",
+      "host": "speedtest.nocix.net",
       "port_range": [
         5201,
-        5201
+        5205
       ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "speedtest.onlyservers.com"
-    },
-    {
-      "id": "clouvider-lon",
-      "provider": "Clouvider",
-      "city": "London, UK",
-      "region": "eu",
-      "host": "lon.speedtest.clouvider.net",
-      "port_range": [
-        5200,
-        5209
-      ],
-      "speed": "10G",
+      "speed": "200G",
       "stack": "IPv4|IPv6",
-      "source": "yabs"
+      "source": "nws"
     },
     {
-      "id": "eranium-ams",
-      "provider": "Eranium",
-      "city": "Amsterdam, NL",
-      "region": "eu",
-      "host": "iperf-ams-nl.eranium.net",
+      "id": "purevoltage-nyc",
+      "provider": "PureVoltage",
+      "city": "New York, US",
+      "region": "na",
+      "host": "speedtest.nyc.purevoltage.com",
       "port_range": [
         5201,
         5210
       ],
-      "speed": "100G",
-      "stack": "IPv4|IPv6",
-      "source": "yabs"
-    },
-    {
-      "id": "redswitches-ams25g",
-      "provider": "RedSwitches",
-      "city": "Amsterdam (Iron Mountain), NL",
-      "region": "eu",
-      "host": "43.250.53.56",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "25G",
-      "stack": "IPv4",
-      "source": "lg.redswitches.com"
-    },
-    {
-      "id": "online-paris",
-      "provider": "Online.net/Scaleway",
-      "city": "Paris, FR",
-      "region": "eu",
-      "host": "iperf.online.net",
-      "port_range": [
-        5200,
-        5209
-      ],
-      "speed": "100G",
+      "speed": "40G",
       "stack": "IPv4",
       "source": "nws"
     },
@@ -196,6 +126,174 @@ write_embedded_endpoints() {
       "speed": "200G",
       "stack": "IPv4|IPv6",
       "source": "nws"
+    },
+    {
+      "id": "buyvm-lux",
+      "provider": "BuyVM",
+      "city": "Bissen, LU",
+      "region": "eu",
+      "host": "speedtest.lu.buyvm.net",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "buyvm.net"
+    },
+    {
+      "id": "clouvider-lon",
+      "provider": "Clouvider",
+      "city": "London, UK",
+      "region": "eu",
+      "host": "lon.speedtest.clouvider.net",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "datapacket-fra",
+      "provider": "DataPacket",
+      "city": "Frankfurt, DE",
+      "region": "eu",
+      "host": "185.102.219.93",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "eranium-ams",
+      "provider": "Eranium",
+      "city": "Amsterdam, NL",
+      "region": "eu",
+      "host": "iperf-ams-nl.eranium.net",
+      "port_range": [
+        5201,
+        5210
+      ],
+      "speed": "100G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "fiberby-cph",
+      "provider": "Fiberby",
+      "city": "Copenhagen, DK",
+      "region": "eu",
+      "host": "speed2.fiberby.dk",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "25G",
+      "stack": "IPv4|IPv6",
+      "source": "fiberby.dk"
+    },
+    {
+      "id": "gigahost-svg",
+      "provider": "Gigahost",
+      "city": "Sandefjord, NO",
+      "region": "eu",
+      "host": "lg.gigahost.no",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "100G",
+      "stack": "IPv4|IPv6",
+      "source": "gigahost.no"
+    },
+    {
+      "id": "kamel-kista",
+      "provider": "Kamel Networks",
+      "city": "Kista, SE",
+      "region": "eu",
+      "host": "speedtest.kamel.network",
+      "port_range": [
+        5201,
+        5205
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "kamel.network"
+    },
+    {
+      "id": "onlyservers-uk",
+      "provider": "OnlyServers",
+      "city": "United Kingdom",
+      "region": "eu",
+      "host": "speedtest.onlyservers.com",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "speedtest.onlyservers.com"
+    },
+    {
+      "id": "redswitches-ams25g",
+      "provider": "RedSwitches",
+      "city": "Amsterdam, NL",
+      "region": "eu",
+      "host": "43.250.53.56",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "25G",
+      "stack": "IPv4",
+      "source": "lg.redswitches.com"
+    },
+    {
+      "id": "scaleway-paris",
+      "provider": "Scaleway",
+      "city": "Paris, FR",
+      "region": "eu",
+      "host": "iperf.online.net",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "100G",
+      "stack": "IPv4",
+      "source": "nws"
+    },
+    {
+      "id": "datapacket-sin",
+      "provider": "DataPacket",
+      "city": "Singapore, SG",
+      "region": "apac",
+      "host": "89.187.162.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "datapacket-tyo",
+      "provider": "DataPacket",
+      "city": "Tokyo, JP",
+      "region": "apac",
+      "host": "89.187.160.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
     },
     {
       "id": "leaseweb-hkg",
@@ -240,48 +338,6 @@ write_embedded_endpoints() {
       "source": "nws"
     },
     {
-      "id": "datapacket-tyo",
-      "provider": "DataPacket",
-      "city": "Tokyo, JP",
-      "region": "apac",
-      "host": "89.187.160.1",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
-    },
-    {
-      "id": "datapacket-sin",
-      "provider": "DataPacket",
-      "city": "Singapore, SG",
-      "region": "apac",
-      "host": "89.187.162.1",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "datapacket.com"
-    },
-    {
-      "id": "kamel-kista",
-      "provider": "Kamel Networks",
-      "city": "Kista, SE",
-      "region": "eu",
-      "host": "speedtest.kamel.network",
-      "port_range": [
-        5201,
-        5205
-      ],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "kamel.network"
-    },
-    {
       "id": "uztelecom-tas",
       "provider": "UZ Telecom",
       "city": "Tashkent, UZ",
@@ -294,34 +350,6 @@ write_embedded_endpoints() {
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "uztelecom.uz"
-    },
-    {
-      "id": "fiberby-cph",
-      "provider": "Fiberby",
-      "city": "Copenhagen, DK",
-      "region": "eu",
-      "host": "speed2.fiberby.dk",
-      "port_range": [
-        9201,
-        9240
-      ],
-      "speed": "25G",
-      "stack": "IPv4|IPv6",
-      "source": "fiberby.dk"
-    },
-    {
-      "id": "buyvm-lux",
-      "provider": "BuyVM",
-      "city": "Bissen, LU",
-      "region": "eu",
-      "host": "speedtest.lu.buyvm.net",
-      "port_range": [
-        5201,
-        5201
-      ],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "buyvm.net"
     }
   ],
   "reduced_ids": [
@@ -572,18 +600,43 @@ PY
   return 0
 }
 
+# Region code for display: na -> NA, eu -> EU, apac -> APAC
+region_label() {
+  case "$1" in
+    na) printf 'NA' ;;
+    eu) printf 'EU' ;;
+    apac) printf 'APAC' ;;
+    *) printf '%s' "$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')" ;;
+  esac
+}
+
+region_title() {
+  case "$1" in
+    na) printf 'North America' ;;
+    eu) printf 'Europe' ;;
+    apac) printf 'Asia-Pacific' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
 list_endpoints() {
-  printf '%b\n' "${C_HDR}NETS endpoints${NC} ${C_META}(region=${REGION})${NC}"
+  printf '%b\n' "${C_HDR}NETS endpoints${NC} ${C_META}(filter=${REGION})${NC}"
   printf '%b\n' "${C_META}--------------------------------------------------------------------------------${NC}"
-  printf '%b%-20s %-16s %-22s %-36s %s%b\n' \
-    "${DIM}" "ID" "PROVIDER" "CITY" "HOST" "STACK" "${NC}"
-  local i
+  local i last=""
   for ((i = 0; i < ${#EP_ID[@]}; i++)); do
-    printf '%-20s %-16s %-22s %-36s %s\n' \
+    local reg="${EP_REGION[$i]}"
+    if [[ "$reg" != "$last" ]]; then
+      last="$reg"
+      printf '\n%b[%s] %s%b\n' "${C_HDR}" "$(region_label "$reg")" "$(region_title "$reg")" "${NC}"
+      printf '%b%-5s %-20s %-14s %-20s %-32s %s%b\n' \
+        "${DIM}" "AREA" "ID" "PROVIDER" "CITY" "HOST" "STACK" "${NC}"
+    fi
+    printf '%-5s %-20s %-14s %-20s %-32s %s\n' \
+      "$(region_label "$reg")" \
       "$(fit "${EP_ID[$i]}" 20)" \
-      "$(fit "${EP_PROVIDER[$i]}" 16)" \
-      "$(fit "${EP_CITY[$i]}" 22)" \
-      "$(fit "${EP_HOST[$i]}" 36)" \
+      "$(fit "${EP_PROVIDER[$i]}" 14)" \
+      "$(fit "${EP_CITY[$i]}" 20)" \
+      "$(fit "${EP_HOST[$i]}" 32)" \
       "${EP_STACK[$i]}"
   done
   printf '\n%b%d endpoint(s)%b\n' "${C_META}" "${#EP_ID[@]}" "${NC}"
@@ -836,11 +889,11 @@ print_header() {
 }
 
 # Column layout (ASCII widths, fixed):
-#  Location(20) + 2 + Provider(14) + 2 + Send(10) + 2 + Recv(10) + 2 + Link(6) = 68
+#  Area(4) + 2 + Location(18) + 2 + Provider(12) + 2 + Send(10) + 2 + Recv(10) + 2 + Link(6)
 run_mode_table() {
   local ipver="$1"   # 4 or 6
   local mode_label="IPv${ipver}"
-  local W_LOC=20 W_PROV=14 W_SPD=10 W_LINK=6
+  local W_REG=4 W_LOC=18 W_PROV=12 W_SPD=10 W_LINK=6
 
   if [[ "$ipver" == "4" ]] && ! $HAVE_IPV4; then
     warn "Skipping ${mode_label} (no IPv4 connectivity)."
@@ -855,29 +908,36 @@ run_mode_table() {
   fi
 
   printf '%b\n' "${C_BAR}-- iperf3 ${mode_label} -----------------------------------------------------------${NC}"
-  # Header row (all ASCII)
-  printf '  %b' "${DIM}"
-  lcell "$W_LOC" "Location"
-  printf '  '
-  lcell "$W_PROV" "Provider"
-  printf '  '
-  rcell "$W_SPD" "Send"
-  printf '  '
-  rcell "$W_SPD" "Recv"
-  printf '  '
-  lcell "$W_LINK" "Link"
-  printf '%b\n' "${NC}"
-  printf '  %b' "${C_META}"
-  printf '%s  %s  %s  %s  %s' \
-    "$(printf '%*s' "$W_LOC" '' | tr ' ' '-')" \
-    "$(printf '%*s' "$W_PROV" '' | tr ' ' '-')" \
-    "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
-    "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
-    "$(printf '%*s' "$W_LINK" '' | tr ' ' '-')"
-  printf '%b\n' "${NC}"
 
-  local i host p0 p1 stack city prov speed_meta
+  local i host p0 p1 stack city prov speed_meta reg
   local do_test send_st send_mb send_by recv_st recv_mb recv_by send_s recv_s
+  local last_reg=""
+
+  print_cols() {
+    printf '  %b' "${DIM}"
+    lcell "$W_REG" "Area"
+    printf '  '
+    lcell "$W_LOC" "Location"
+    printf '  '
+    lcell "$W_PROV" "Provider"
+    printf '  '
+    rcell "$W_SPD" "Send"
+    printf '  '
+    rcell "$W_SPD" "Recv"
+    printf '  '
+    lcell "$W_LINK" "Link"
+    printf '%b\n' "${NC}"
+    printf '  %b' "${C_META}"
+    printf '%s  %s  %s  %s  %s  %s' \
+      "$(printf '%*s' "$W_REG" '' | tr ' ' '-')" \
+      "$(printf '%*s' "$W_LOC" '' | tr ' ' '-')" \
+      "$(printf '%*s' "$W_PROV" '' | tr ' ' '-')" \
+      "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
+      "$(printf '%*s' "$W_SPD" '' | tr ' ' '-')" \
+      "$(printf '%*s' "$W_LINK" '' | tr ' ' '-')"
+    printf '%b\n' "${NC}"
+  }
+
   for ((i = 0; i < ${#EP_ID[@]}; i++)); do
     host="${EP_HOST[$i]}"
     p0="${EP_P0[$i]}"; p1="${EP_P1[$i]}"
@@ -885,6 +945,7 @@ run_mode_table() {
     city="${EP_CITY[$i]}"
     prov="${EP_PROVIDER[$i]}"
     speed_meta="${EP_SPEED[$i]}"
+    reg="${EP_REGION[$i]}"
 
     do_test=true
     if [[ "$ipver" == "6" && "$stack" == "IPv4" ]]; then
@@ -896,6 +957,12 @@ run_mode_table() {
 
     if ! $do_test; then
       continue
+    fi
+
+    if [[ "$reg" != "$last_reg" ]]; then
+      last_reg="$reg"
+      printf '\n  %b[%s] %s%b\n' "${C_HDR}" "$(region_label "$reg")" "$(region_title "$reg")" "${NC}"
+      print_cols
     fi
 
     send_st="skip"; send_mb=""; send_by=0
@@ -913,6 +980,8 @@ run_mode_table() {
     send_s="$(format_speed_text "$send_st" "$send_mb")"
     recv_s="$(format_speed_text "$recv_st" "$recv_mb")"
 
+    printf '  '
+    lcell "$W_REG" "$(region_label "$reg")" "$C_HDR"
     printf '  '
     lcell "$W_LOC" "$(fit "$city" "$W_LOC")" "$C_LOC"
     printf '  '

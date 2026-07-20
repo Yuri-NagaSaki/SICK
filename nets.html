@@ -90,7 +90,7 @@
     <div class="pills">
       <span class="pill"><b>iperf3</b> send + recv</span>
       <span class="pill"><b>IPv4</b> · <b>IPv6</b></span>
-      <span class="pill"><b>20</b> endpoints</span>
+      <span class="pill"><b>22</b> endpoints</span>
       <span class="pill">MIT</span>
     </div>
   </div>
@@ -161,43 +161,29 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>-r, --reduced</td>
-          <td data-en="Short list (~8 endpoints) for a quick pass" data-zh="精简列表（约 8 个节点），快速摸底">Short list (~8 endpoints) for a quick pass</td>
-        </tr>
-        <tr>
-          <td>--region na|eu|apac|global|reduced</td>
-          <td data-en="Filter by region (default: global)" data-zh="按区域筛选（默认 global）">Filter by region (default: global)</td>
-        </tr>
-        <tr>
-          <td>-4 / -6</td>
-          <td data-en="IPv4 only / IPv6 only" data-zh="仅 IPv4 / 仅 IPv6">IPv4 only / IPv6 only</td>
-        </tr>
-        <tr>
-          <td>-t, --time &lt;sec&gt;</td>
-          <td data-en="iperf3 duration per direction (default: 10)" data-zh="每个方向测试秒数（默认 10）">iperf3 duration per direction (default: 10)</td>
-        </tr>
-        <tr>
-          <td>-P, --parallel &lt;n&gt;</td>
-          <td data-en="Parallel streams (default: 4). Keep low on shared nodes." data-zh="并行流数（默认 4）。公网节点请勿过大。">Parallel streams (default: 4). Keep low on shared nodes.</td>
-        </tr>
-        <tr>
-          <td>--send-only</td>
-          <td data-en="Upload only (client → server)" data-zh="只测上传（客户端 → 服务端）">Upload only (client → server)</td>
-        </tr>
-        <tr>
-          <td>--recv-only</td>
-          <td data-en="Download only (server → client, iperf -R)" data-zh="只测下载（服务端 → 客户端，iperf -R）">Download only (server → client, iperf -R)</td>
-        </tr>
-        <tr>
-          <td>-l, --list</td>
-          <td data-en="List endpoints and exit" data-zh="列出节点后退出">List endpoints and exit</td>
-        </tr>
-        <tr>
-          <td>-h / -v</td>
-          <td data-en="Help / version" data-zh="帮助 / 版本">Help / version</td>
-        </tr>
-      </tbody>
+        <tr><td>NA</td><td>Clouvider</td><td>Los Angeles, US</td><td>la.speedtest.clouvider.net</td></tr>
+        <tr><td>NA</td><td>InterServer</td><td>Los Angeles, US</td><td>lax.speedtest.is.cc</td></tr>
+        <tr><td>NA</td><td>Leaseweb</td><td>Montreal, CA</td><td>speedtest.mtl2.ca.leaseweb.net</td></tr>
+        <tr><td>NA</td><td>Nocix</td><td>Kansas City, US</td><td>speedtest.nocix.net</td></tr>
+        <tr><td>NA</td><td>PureVoltage</td><td>New York, US</td><td>speedtest.nyc.purevoltage.com</td></tr>
+        <tr><td>EU</td><td>Alwyzon</td><td>Vienna, AT</td><td>iperf3-vie-at.alwyzon.net</td></tr>
+        <tr><td>EU</td><td>BuyVM</td><td>Bissen, LU</td><td>speedtest.lu.buyvm.net</td></tr>
+        <tr><td>EU</td><td>Clouvider</td><td>London, UK</td><td>lon.speedtest.clouvider.net</td></tr>
+        <tr><td>EU</td><td>DataPacket</td><td>Frankfurt, DE</td><td>185.102.219.93</td></tr>
+        <tr><td>EU</td><td>Eranium</td><td>Amsterdam, NL</td><td>iperf-ams-nl.eranium.net</td></tr>
+        <tr><td>EU</td><td>Fiberby</td><td>Copenhagen, DK</td><td>speed2.fiberby.dk</td></tr>
+        <tr><td>EU</td><td>Gigahost</td><td>Sandefjord, NO</td><td>lg.gigahost.no</td></tr>
+        <tr><td>EU</td><td>Kamel Networks</td><td>Kista, SE</td><td>speedtest.kamel.network</td></tr>
+        <tr><td>EU</td><td>OnlyServers</td><td>United Kingdom</td><td>speedtest.onlyservers.com</td></tr>
+        <tr><td>EU</td><td>RedSwitches</td><td>Amsterdam, NL</td><td>43.250.53.56</td></tr>
+        <tr><td>EU</td><td>Scaleway</td><td>Paris, FR</td><td>iperf.online.net</td></tr>
+        <tr><td>APAC</td><td>DataPacket</td><td>Singapore, SG</td><td>89.187.162.1</td></tr>
+        <tr><td>APAC</td><td>DataPacket</td><td>Tokyo, JP</td><td>89.187.160.1</td></tr>
+        <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong, HK</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
+        <tr><td>APAC</td><td>Leaseweb</td><td>Sydney, AU</td><td>speedtest.syd12.au.leaseweb.net</td></tr>
+        <tr><td>APAC</td><td>OVH</td><td>Mumbai, IN</td><td>bom.proof.ovh.net</td></tr>
+        <tr><td>APAC</td><td>UZ Telecom</td><td>Tashkent, UZ</td><td>speedtest.uztelecom.uz</td></tr>
+    </tbody>
     </table>
 
     <h2 data-en="Examples" data-zh="示例">Examples</h2>
@@ -289,7 +275,7 @@
 
 <section class="rule" id="endpoints">
   <div class="wrap">
-    <h2 data-en="Default endpoints (v4)" data-zh="默认节点 (v4)">Default endpoints (v4)</h2>
+    <h2 data-en="Default endpoints (v5)" data-zh="默认节点 (v5)">Default endpoints (v5)</h2>
     <table class="data-table">
       <thead>
         <tr>
