@@ -558,6 +558,40 @@ print_info() {
     printf "│ %s%*s: %s\n" "$label" $padding "" "$value"
 }
 
+# Like print_info but colorizes the value.
+print_info_colored() {
+    [[ "$QUIET_MODE" == true ]] && return
+    local label="$1"
+    local value="$2"
+    local color="${3:-}"
+    local target_width=20
+
+    get_display_width "$label"
+    local label_width="$DISPLAY_WIDTH_RESULT"
+    local padding=$((target_width - label_width))
+    [[ $padding -lt 0 ]] && padding=0
+
+    if [[ -n "$color" ]]; then
+        printf "│ %s%*s: %b%s%b\n" "$label" $padding "" "$color" "$value" "$NC"
+    else
+        printf "│ %s%*s: %s\n" "$label" $padding "" "$value"
+    fi
+}
+
+# Aligned warning/note line under a section: "│   ⚠ <tag padded>  <detail>".
+print_note() {
+    [[ "$QUIET_MODE" == true ]] && return
+    local tag="$1"
+    local detail="$2"
+    local color="${3:-$YELLOW}"
+    local mark="${4:-⚠}"
+    local tagw=14
+    get_display_width "$tag"
+    local pad=$((tagw - DISPLAY_WIDTH_RESULT))
+    [[ $pad -lt 0 ]] && pad=0
+    printf "│   %b%s %s%*s  %s%b\n" "$color" "$mark" "$tag" "$pad" "" "$detail" "$NC"
+}
+
 print_wrapped_line() {
     [[ "$QUIET_MODE" == true ]] && return
     local prefix="$1"
@@ -1473,52 +1507,40 @@ collect_ram_info() {
 render_ram_info() {
     print_subsection "$(get_label "ram_info")"
 
-    print_info "$(get_label "total")" "$RAM_TOTAL"
-    print_info "$(get_label "used")" "$RAM_USED"
-    print_info "$(get_label "available")" "$RAM_AVAILABLE"
+    print_info_colored "$(get_label "total")" "$RAM_TOTAL" "$CYAN"
+    print_info_colored "$(get_label "used")" "$RAM_USED" "$YELLOW"
+    print_info_colored "$(get_label "available")" "$RAM_AVAILABLE" "$GREEN"
 
     echo "│"
-    print_color "$GREEN" "│ Memory Modules:"
+    [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 内存模组:" || print_color "$GREEN" "│ Memory Modules:"
 
     if [[ "$RAM_HAS_DETAILED_MODULES" == true ]]; then
-        local w1=8 w2=6 w3=12 w4=12 w5=15 w6=20
+        local w1=8 w2=6 w3=12 w4=12 w5=16 w6=22
+        TABLE_COL_W=($w1 $w2 $w3 $w4 $w5 $w6)
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            table_header "大小" "类型" "频率" "制造商" "序列号" "型号"
+        else
+            table_header "Size" "Type" "Frequency" "Manufacturer" "Serial" "Model"
+        fi
+
         local row="" size="" type="" speed="" manufacturer="" display_sn="" part_number=""
-
-        echo "├$(repeat_char '─' 100)┤"
-        printf "│ "
-        print_table_cell "$(get_label "size")" $w1
-        printf " │ "
-        print_table_cell "$(get_label "type")" $w2
-        printf " │ "
-        print_table_cell "$(get_label "frequency")" $w3
-        printf " │ "
-        print_table_cell "$(get_label "manufacturer")" $w4
-        printf " │ "
-        print_table_cell "$(get_label "serial_number")" $w5
-        printf " │ "
-        print_table_cell "$(get_label "model")" $w6
-        printf " │\n"
-        echo "├$(repeat_char '─' 100)┤"
-
         for row in "${RAM_MODULE_ROWS[@]}"; do
             IFS="$RAM_FIELD_SEP" read -r size type speed manufacturer display_sn part_number <<< "$row"
-
-            printf "│ "
-            print_table_cell "${size:0:8}" $w1
-            printf " │ "
-            print_table_cell "${type:0:6}" $w2
-            printf " │ "
-            print_table_cell "${speed:0:12}" $w3
-            printf " │ "
-            print_table_cell "${manufacturer:0:12}" $w4
-            printf " │ "
-            print_table_cell "${display_sn:0:15}" $w5
-            printf " │ "
-            print_table_cell "${part_number:0:20}" $w6
-            printf " │\n"
+            local type_color="$WHITE"
+            case "$type" in
+                DDR5*) type_color="$GREEN" ;;
+                DDR4*) type_color="$CYAN" ;;
+                DDR3*) type_color="$YELLOW" ;;
+            esac
+            table_row \
+                "$size" "$CYAN" \
+                "$type" "$type_color" \
+                "$speed" "" \
+                "$manufacturer" "" \
+                "$display_sn" "" \
+                "$part_number" ""
         done
-
-        echo "└$(repeat_char '─' 100)┘"
+        table_close
     else
         for row in "${RAM_FALLBACK_LINES[@]}"; do
             echo "│   $row"
@@ -1848,7 +1870,7 @@ get_nvme_deep_info() {
         [[ "$unsafe_shutdowns" =~ ^[0-9]+$ && "$unsafe_shutdowns" -gt 0 ]] && unsafe_summary+=("${disk}=$unsafe_shutdowns")
         if [[ "$nvme_status" == "WARN" ]]; then
             ((nvme_warn_count++))
-            nvme_warn_lines+=("${dev} ${model:-Unknown}: ${nvme_warn[*]}")
+            nvme_warn_lines+=("${dev}${sep}${nvme_warn[*]}")
         fi
 
         if [[ "$COLLECT_JSON" == true ]]; then
@@ -1898,13 +1920,18 @@ get_nvme_deep_info() {
     table_close
 
     if [[ "$nvme_warn_count" -gt 0 ]]; then
-        local nvme_warn_line=""
+        echo "│"
+        [[ "$LANG_MODE" == "cn" ]] && print_color "$YELLOW" "│ 健康告警:" || print_color "$YELLOW" "│ Health warnings:"
+        local nvme_warn_line="" wdev="" wdetail=""
         for nvme_warn_line in "${nvme_warn_lines[@]}"; do
-            printf '%b\n' "│   ${YELLOW}⚠ ${nvme_warn_line}${NC}"
+            IFS="$sep" read -r wdev wdetail <<< "$nvme_warn_line"
+            print_note "$wdev" "$wdetail"
         done
     fi
     if [[ ${#unsafe_summary[@]} -gt 0 ]]; then
-        echo "│   Unsafe Shutdowns: ${unsafe_summary[*]} (lifetime)"
+        local us_label="Unsafe shutdowns (lifetime)"
+        [[ "$LANG_MODE" == "cn" ]] && us_label="异常掉电(累计)"
+        printf "│   %bℹ %s: %s%b\n" "$CYAN" "$us_label" "${unsafe_summary[*]}" "$NC"
     fi
 
     echo "└$(repeat_char '─' 50)"
@@ -3372,10 +3399,37 @@ get_disk_info() {
     JSON_DISKS=()
     JSON_RAID_CONTROLLERS=()
 
-    # Disk usage
-    df -h | grep -E '^/dev/' | while IFS= read -r line; do
-        echo "│ $line"
-    done
+    # Filesystem usage table (mounted /dev/* filesystems)
+    local -a fs_rows=()
+    local fsep=$'\t'
+    local fs sz used avail usep mnt rest
+    while read -r fs sz used avail usep mnt rest; do
+        [[ "$fs" == /dev/* ]] || continue
+        fs_rows+=("${fs}${fsep}${sz}${fsep}${used}${fsep}${avail}${fsep}${usep}${fsep}${mnt}")
+    done < <(df -hP 2>/dev/null)
+
+    if [[ ${#fs_rows[@]} -gt 0 ]]; then
+        [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 已挂载文件系统:" || print_color "$GREEN" "│ Mounted Filesystems:"
+        local w_fs=34 w_sz=7 w_used=7 w_avail=7 w_use=6 w_mnt=20
+        TABLE_COL_W=($w_fs $w_sz $w_used $w_avail $w_use $w_mnt)
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            table_header "文件系统" "容量" "已用" "可用" "使用率" "挂载点"
+        else
+            table_header "Filesystem" "Size" "Used" "Avail" "Use%" "Mounted"
+        fi
+        local r=""
+        for r in "${fs_rows[@]}"; do
+            IFS="$fsep" read -r fs sz used avail usep mnt <<< "$r"
+            local upn="${usep%\%}" ucolor="$GREEN"
+            if [[ "$upn" =~ ^[0-9]+$ ]]; then
+                if (( upn >= 90 )); then ucolor="$RED"
+                elif (( upn >= 75 )); then ucolor="$YELLOW"; fi
+            fi
+            table_row "$fs" "$CYAN" "$sz" "" "$used" "" "$avail" "" "$usep" "$ucolor" "$mnt" ""
+        done
+        table_close
+        echo "│"
+    fi
 
     # Check smartctl version for JSON support (7.0+)
     local smartctl_available=false
@@ -3537,7 +3591,13 @@ get_raid_info() {
                     members="${BASH_REMATCH[4]}"
                     member_count=$(grep -o '\[[0-9]\+\]' <<< "$members" | wc -l)
                     sw_rows+=("${md_name}${sep}${md_level}${sep}${md_status}${sep}${member_count}${sep}${raid_state}${sep}${raid_color}")
-                    [[ "$md_level" == "raid0" ]] && sw_warns+=("${md_name}: raid0 has no redundancy; any member failure breaks the array")
+                    if [[ "$md_level" == "raid0" ]]; then
+                        if [[ "$LANG_MODE" == "cn" ]]; then
+                            sw_warns+=("${md_name}${sep}raid0 无冗余，任一成员故障将导致阵列失效")
+                        else
+                            sw_warns+=("${md_name}${sep}raid0 has no redundancy; any member failure breaks the array")
+                        fi
+                    fi
                 fi
                 JSON_RAID_SW+=("$line")
             done <<< "$md_info"
@@ -3557,9 +3617,10 @@ get_raid_info() {
                     table_row "$a" "$CYAN" "$l" "" "$s" "" "$m" "" "$hs" "$hc"
                 done
                 table_close
-                local wln=""
+                local wln="" ww_name="" ww_detail=""
                 for wln in "${sw_warns[@]}"; do
-                    printf '%b\n' "│   ${YELLOW}⚠ ${wln}${NC}"
+                    IFS="$sep" read -r ww_name ww_detail <<< "$wln"
+                    print_note "$ww_name" "$ww_detail"
                 done
                 raid_found=true
             fi
@@ -4000,7 +4061,7 @@ get_network_info() {
         [[ -n "$rx_dropped" && "$rx_dropped" != "0" ]] && error_summary+=("rx_dropped=$rx_dropped")
         [[ -n "$tx_dropped" && "$tx_dropped" != "0" ]] && error_summary+=("tx_dropped=$tx_dropped")
         [[ -n "$collisions" && "$collisions" != "0" ]] && error_summary+=("collisions=$collisions")
-        [[ ${#error_summary[@]} -gt 0 ]] && net_warns+=("${interface}: ${error_summary[*]}")
+        [[ ${#error_summary[@]} -gt 0 ]] && net_warns+=("${interface}${sep}${error_summary[*]}")
 
         local rx_bytes=$(<"/sys/class/net/$interface/statistics/rx_bytes" 2>/dev/null || echo "")
         local tx_bytes=$(<"/sys/class/net/$interface/statistics/tx_bytes" 2>/dev/null || echo "")
@@ -4054,9 +4115,16 @@ get_network_info() {
     table_close
 
     if [[ ${#net_warns[@]} -gt 0 ]]; then
-        local wln=""
+        echo "│"
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            print_color "$YELLOW" "│ 收发错误 / 丢包计数 (累计):"
+        else
+            print_color "$YELLOW" "│ RX/TX error & drop counters (cumulative):"
+        fi
+        local wln="" w_if="" w_detail=""
         for wln in "${net_warns[@]}"; do
-            printf '%b\n' "│   ${YELLOW}⚠ ${wln}${NC}"
+            IFS="$sep" read -r w_if w_detail <<< "$wln"
+            print_note "$w_if" "$w_detail"
         done
     fi
 
@@ -4082,7 +4150,7 @@ get_gpu_info() {
             local util_val="${util//[[:space:]]/}"
             [[ -z "$name_val" ]] && continue
 
-            gpu_rows+=("NVIDIA${sep}${name_val}${sep}${memory_val} MB${sep}${driver_val}${sep}${temp_val}°C")
+            gpu_rows+=("NVIDIA${sep}discrete${sep}${name_val}${sep}${memory_val} MB${sep}${driver_val}${sep}${temp_val}°C")
 
             local gpu_kv=(
                 "$(json_kv "source" "nvidia-smi")"
@@ -4108,15 +4176,28 @@ get_gpu_info() {
                 local slot="${line%% *}"
                 local desc="${line#* }"
                 desc="${desc#*: }"                 # strip class label, keep vendor/device
-                local vtype="PCI"
+                # NVIDIA already covered with rich data via nvidia-smi
                 [[ "$desc" == *NVIDIA* ]] && command -v nvidia-smi >/dev/null 2>&1 && continue
-                [[ "$desc" == *AMD* || "$desc" == *"Advanced Micro"* || "$desc" == *ATI* ]] && vtype="AMD"
-                [[ "$desc" == *Intel* ]] && vtype="Intel"
-                [[ "$desc" == *NVIDIA* ]] && vtype="NVIDIA"
-                gpu_rows+=("${vtype}${sep}${desc}${sep}-${sep}-${sep}-")
+
+                # Classify vendor + class (discrete/integrated/bmc)
+                local vendor="Other" cls="-"
+                case "$desc" in
+                    *NVIDIA*)                          vendor="NVIDIA"; cls="discrete" ;;
+                    *AMD*|*"Advanced Micro"*|*ATI*|*Radeon*) vendor="AMD"; cls="discrete" ;;
+                    *Intel*)
+                        vendor="Intel"
+                        case "$desc" in *Arc*|*"DG2"*|*Flex*|*Battlemage*) cls="discrete" ;; *) cls="integrated" ;; esac ;;
+                    *ASPEED*)                          vendor="ASPEED"; cls="bmc" ;;
+                    *Matrox*)                          vendor="Matrox"; cls="bmc" ;;
+                    *)                                 vendor="${desc%% *}"; cls="-" ;;
+                esac
+
+                gpu_rows+=("${vendor}${sep}${cls}${sep}${desc}${sep}-${sep}-${sep}-")
                 local gpu_kv=(
                     "$(json_kv "source" "lspci")"
                     "$(json_kv "slot" "$slot")"
+                    "$(json_kv "vendor" "$vendor")"
+                    "$(json_kv "class" "$cls")"
                     "$(json_kv "name" "$desc")"
                 )
                 JSON_GPU+=("$(json_obj "${gpu_kv[@]}")")
@@ -4130,49 +4211,59 @@ get_gpu_info() {
         return
     fi
 
+    # Map a class token to a localized label.
+    gpu_class_label() {
+        case "$1" in
+            discrete)   [[ "$LANG_MODE" == "cn" ]] && echo "独显" || echo "Discrete" ;;
+            integrated) [[ "$LANG_MODE" == "cn" ]] && echo "集显" || echo "Integrated" ;;
+            bmc)        [[ "$LANG_MODE" == "cn" ]] && echo "管理" || echo "BMC" ;;
+            *)          echo "-" ;;
+        esac
+    }
+
     # Do any rows carry rich data (memory/driver/temp from nvidia-smi)?
     local has_rich=false row=""
     for row in "${gpu_rows[@]}"; do
-        local _t="" _m="" _mem="" _drv="" _tmp=""
-        IFS="$sep" read -r _t _m _mem _drv _tmp <<< "$row"
+        local _v="" _c="" _m="" _mem="" _drv="" _tmp=""
+        IFS="$sep" read -r _v _c _m _mem _drv _tmp <<< "$row"
         if [[ ( -n "$_mem" && "$_mem" != "-" && "$_mem" != "- MB" ) || ( -n "$_drv" && "$_drv" != "-" ) || ( -n "$_tmp" && "$_tmp" != "-" ) ]]; then
             has_rich=true; break
         fi
     done
 
-    local gtype="" gmodel="" gmem="" gdriver="" gtemp=""
+    local gvendor="" gclass="" gmodel="" gmem="" gdriver="" gtemp="" clabel="" ccolor=""
     if [[ "$has_rich" == true ]]; then
-        # Full table with detail columns
-        local w_type=7 w_model=42 w_mem=10 w_driver=14 w_temp=7
-        TABLE_COL_W=($w_type $w_model $w_mem $w_driver $w_temp)
+        local w_v=7 w_c=8 w_model=34 w_mem=10 w_driver=13 w_temp=6
+        TABLE_COL_W=($w_v $w_c $w_model $w_mem $w_driver $w_temp)
         if [[ "$LANG_MODE" == "cn" ]]; then
-            table_header "类型" "型号" "显存" "驱动" "温度"
+            table_header "厂商" "类别" "型号" "显存" "驱动" "温度"
         else
-            table_header "Type" "Model" "Memory" "Driver" "Temp"
+            table_header "Vendor" "Class" "Model" "Memory" "Driver" "Temp"
         fi
         for row in "${gpu_rows[@]}"; do
-            IFS="$sep" read -r gtype gmodel gmem gdriver gtemp <<< "$row"
+            IFS="$sep" read -r gvendor gclass gmodel gmem gdriver gtemp <<< "$row"
+            clabel=$(gpu_class_label "$gclass")
+            case "$gclass" in discrete) ccolor="$GREEN" ;; integrated) ccolor="$CYAN" ;; bmc) ccolor="$YELLOW" ;; *) ccolor="" ;; esac
             local tcolor="" tnum="${gtemp%%°*}"
             if [[ "$tnum" =~ ^[0-9]+$ ]]; then
-                if (( tnum >= 85 )); then tcolor="$RED"
-                elif (( tnum >= 75 )); then tcolor="$YELLOW"
-                else tcolor="$GREEN"; fi
+                if (( tnum >= 85 )); then tcolor="$RED"; elif (( tnum >= 75 )); then tcolor="$YELLOW"; else tcolor="$GREEN"; fi
             fi
-            table_row "$gtype" "$CYAN" "$gmodel" "" "$gmem" "" "$gdriver" "" "$gtemp" "$tcolor"
+            table_row "$gvendor" "$CYAN" "$clabel" "$ccolor" "$gmodel" "" "$gmem" "" "$gdriver" "" "$gtemp" "$tcolor"
         done
         table_close
     else
-        # No driver-level data available: only Type + Model are meaningful
-        local w_type=8 w_model=64
-        TABLE_COL_W=($w_type $w_model)
+        local w_v=8 w_c=10 w_model=54
+        TABLE_COL_W=($w_v $w_c $w_model)
         if [[ "$LANG_MODE" == "cn" ]]; then
-            table_header "类型" "型号"
+            table_header "厂商" "类别" "型号"
         else
-            table_header "Type" "Model"
+            table_header "Vendor" "Class" "Model"
         fi
         for row in "${gpu_rows[@]}"; do
-            IFS="$sep" read -r gtype gmodel gmem gdriver gtemp <<< "$row"
-            table_row "$gtype" "$CYAN" "$gmodel" ""
+            IFS="$sep" read -r gvendor gclass gmodel gmem gdriver gtemp <<< "$row"
+            clabel=$(gpu_class_label "$gclass")
+            case "$gclass" in discrete) ccolor="$GREEN" ;; integrated) ccolor="$CYAN" ;; bmc) ccolor="$YELLOW" ;; *) ccolor="" ;; esac
+            table_row "$gvendor" "$CYAN" "$clabel" "$ccolor" "$gmodel" ""
         done
         table_close
     fi
