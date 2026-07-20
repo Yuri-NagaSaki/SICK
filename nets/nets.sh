@@ -14,8 +14,20 @@
 set -uo pipefail
 
 VERSION="0.1.0"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENDPOINTS_JSON="${SCRIPT_DIR}/endpoints.json"
+# When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  SCRIPT_DIR=""
+fi
+ENDPOINTS_JSON="${NETS_ENDPOINTS_JSON:-}"
+ENDPOINTS_TMP=""
+# Preferred public URLs when running via curl|bash (no local file tree)
+ENDPOINTS_URLS=(
+  "${NETS_ENDPOINTS_URL:-}"
+  "https://catbash.net/nets/endpoints.json"
+  "https://ba.sh/nets/endpoints.json"
+)
 
 # Defaults
 TEST_TIME=10
@@ -103,16 +115,60 @@ detect_connectivity() {
   fi
 }
 
+resolve_endpoints_json() {
+  # 1) explicit path
+  if [[ -n "$ENDPOINTS_JSON" && -f "$ENDPOINTS_JSON" ]]; then
+    return 0
+  fi
+  # 2) beside script
+  if [[ -n "$SCRIPT_DIR" && -f "${SCRIPT_DIR}/endpoints.json" ]]; then
+    ENDPOINTS_JSON="${SCRIPT_DIR}/endpoints.json"
+    return 0
+  fi
+  # 3) cwd
+  if [[ -f "./endpoints.json" ]]; then
+    ENDPOINTS_JSON="$(pwd)/endpoints.json"
+    return 0
+  fi
+  # 4) download from public short hosts
+  local url
+  ENDPOINTS_TMP="$(mktemp "${TMPDIR:-/tmp}/nets-endpoints.XXXXXX.json")"
+  for url in "${ENDPOINTS_URLS[@]}"; do
+    [[ -z "$url" ]] && continue
+    if command -v curl >/dev/null 2>&1; then
+      if curl -fsSL --connect-timeout 8 --max-time 30 "$url" -o "$ENDPOINTS_TMP" 2>/dev/null \
+        && [[ -s "$ENDPOINTS_TMP" ]]; then
+        ENDPOINTS_JSON="$ENDPOINTS_TMP"
+        info "Loaded endpoints from ${url}"
+        return 0
+      fi
+    elif command -v wget >/dev/null 2>&1; then
+      if wget -q -T 30 -O "$ENDPOINTS_TMP" "$url" 2>/dev/null \
+        && [[ -s "$ENDPOINTS_TMP" ]]; then
+        ENDPOINTS_JSON="$ENDPOINTS_TMP"
+        info "Loaded endpoints from ${url}"
+        return 0
+      fi
+    fi
+  done
+  rm -f "$ENDPOINTS_TMP"
+  ENDPOINTS_TMP=""
+  err "Could not load endpoints.json (local or https://catbash.net/nets/endpoints.json)."
+  return 1
+}
+
+cleanup() {
+  [[ -n "${ENDPOINTS_TMP:-}" && -f "$ENDPOINTS_TMP" ]] && rm -f "$ENDPOINTS_TMP"
+}
+trap cleanup EXIT
+
 # Load endpoints into parallel bash arrays via python3 (preferred) or jq.
 # Arrays: EP_ID EP_PROVIDER EP_CITY EP_REGION EP_HOST EP_P0 EP_P1 EP_SPEED EP_STACK
 load_endpoints() {
   EP_ID=(); EP_PROVIDER=(); EP_CITY=(); EP_REGION=()
   EP_HOST=(); EP_P0=(); EP_P1=(); EP_SPEED=(); EP_STACK=()
 
-  if [[ ! -f "$ENDPOINTS_JSON" ]]; then
-    err "Missing endpoints file: $ENDPOINTS_JSON"
-    return 1
-  fi
+  resolve_endpoints_json || return 1
 
   if command -v python3 >/dev/null 2>&1; then
     local dumped

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETS — Network Endpoint Throughput Sampler</title>
+<meta name="description" content="NETS: public iperf3 throughput tests (IPv4/IPv6) against curated servers worldwide. One curl command.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://catbash.net/nets/">
+<link rel="icon" href="https://catbash.net/favicon.svg" type="image/svg+xml">
+<meta property="og:url" content="https://catbash.net/nets/">
+<meta property="og:title" content="NETS — Network Endpoint Throughput Sampler">
+<meta property="og:description" content="Public iperf3 throughput sampler. IPv4/IPv6 send &amp; recv against curated endpoints.">
+<meta property="og:image" content="https://catbash.net/assets/tg-cover.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:oklch(16% .012 75);--bg-elev:oklch(20% .014 70);--bg-panel:oklch(22% .016 68);--bg-deep:oklch(13% .01 80);
+  --line:oklch(32% .02 70);--line-soft:oklch(28% .015 70/.7);--ink:oklch(94% .012 85);--ink-soft:oklch(78% .02 80);
+  --muted:oklch(58% .02 75);--amber:oklch(78% .14 70);--mint:oklch(72% .12 155);--sky:oklch(76% .07 220);
+  --font-display:"Bricolage Grotesque",system-ui,sans-serif;--font-mono:"Azeret Mono",ui-monospace,monospace;
+  --max:min(92vw,960px);--pad-x:clamp(1rem,3.5vw,2.5rem);--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-mono);font-size:14.5px;line-height:1.65;color:var(--ink);background:var(--bg);min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(820px 480px at 12% -8%,oklch(55% .1 70/.1),transparent 58%),
+  radial-gradient(640px 400px at 95% 10%,oklch(40% .04 155/.07),transparent 55%),
+  linear-gradient(180deg,var(--bg-deep),var(--bg) 50%)}
+a{color:var(--amber);text-decoration:none}a:hover{color:oklch(82% .1 70)}
+.wrap{width:min(100% - 2*var(--pad-x),var(--max));margin-inline:auto}
+.nav{border-bottom:1px solid var(--line-soft);backdrop-filter:blur(12px);background:oklch(16% .012 75/.85);position:sticky;top:0;z-index:20}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:52px;gap:1rem}
+.brand{font-family:var(--font-display);font-weight:800;font-size:1.25rem;letter-spacing:-.03em;color:var(--ink)}
+.nav-links{display:flex;gap:.85rem;align-items:center;font-size:.76rem}
+.nav-links a{color:var(--ink-soft)}.nav-links a:hover{color:var(--amber)}
+.hero{padding:clamp(2rem,5vw,3rem) 0 1.5rem}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(1.5rem,1.2rem + 1.2vw,2rem);letter-spacing:-.03em;margin-bottom:.6rem}
+h1 span{color:var(--amber)}
+.lede{color:var(--ink-soft);max-width:52ch;margin-bottom:1.25rem;font-size:.92rem}
+.pills{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.5rem}
+.pill{font-size:.7rem;padding:.3rem .7rem;border-radius:999px;border:1px solid var(--line);background:var(--bg-elev);color:var(--ink-soft)}
+.pill b{color:var(--mint);font-weight:600}
+.cmd{background:var(--bg-panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:2rem}
+.cmd::before{content:"";display:block;height:2px;background:linear-gradient(90deg,var(--amber),var(--mint),transparent 70%)}
+.cmd-h{display:flex;justify-content:space-between;padding:.65rem 1rem;border-bottom:1px solid var(--line-soft);background:oklch(18% .012 70);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cmd-b{padding:.85rem;display:flex;flex-direction:column;gap:.5rem}
+.row{display:flex;align-items:center;gap:.55rem;background:var(--bg-deep);border:1px solid var(--line-soft);border-radius:9px;padding:.65rem .8rem;min-width:0}
+.row .p{color:var(--amber);flex-shrink:0}
+.row code{flex:1;min-width:0;font-size:.78rem;color:var(--ink);white-space:nowrap;overflow-x:auto}
+.copy{flex-shrink:0;font-family:var(--font-mono);font-size:.65rem;padding:.3rem .55rem;border-radius:5px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.copy:hover{color:var(--amber);border-color:var(--amber)}.copy.ok{color:var(--mint)}
+.hint{font-size:.7rem;color:var(--muted)}.hint code{color:var(--sky);font-size:.7rem}
+section{padding:1.25rem 0;border-top:1px solid var(--line-soft)}
+h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;margin-bottom:.85rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th,td{text-align:left;padding:.55rem .5rem;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{color:var(--muted);font-size:.65rem;letter-spacing:.06em;text-transform:uppercase}
+td:first-child{color:var(--sky);white-space:nowrap}
+footer{border-top:1px solid var(--line-soft);padding:1.5rem 0 2.5rem;margin-top:1rem;font-size:.76rem;color:var(--muted);display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}
+footer a{color:var(--ink-soft)}
+@media(max-width:640px){table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap nav-in">
+  <div class="brand">NETS</div>
+  <div class="nav-links">
+    <a href="https://catbash.net/">SICK</a>
+    <a href="#install">Install</a>
+    <a href="#endpoints">Endpoints</a>
+    <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">GitHub</a>
+  </div>
+</div></nav>
+
+<header class="wrap hero">
+  <h1>Network Endpoint <span>Throughput</span> Sampler</h1>
+  <p class="lede">Public iperf3 tests (IPv4 / IPv6) against a curated set of providers — Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, Advin, and more. One curl.</p>
+  <div class="pills">
+    <span class="pill"><b>iperf3</b> send + recv</span>
+    <span class="pill"><b>IPv4</b> · <b>IPv6</b></span>
+    <span class="pill"><b>16</b> endpoints</span>
+    <span class="pill">MIT</span>
+  </div>
+
+  <div class="cmd" id="install">
+    <div class="cmd-h"><span>Quick start</span><span>catbash.net · ba.sh</span></div>
+    <div class="cmd-b">
+      <div class="row"><span class="p">$</span><code>curl -sL https://catbash.net/nets | bash</code>
+        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash">copy</button></div>
+      <div class="row"><span class="p">$</span><code>curl -sL https://ba.sh/nets | bash</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash">copy</button></div>
+      <div class="row"><span class="p">$</span><code>curl -sL https://catbash.net/nets | bash -s -- -r</code>
+        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash -s -- -r">copy</button></div>
+      <p class="hint"><code>-r</code> reduced · <code>--region na|eu|apac</code> · <code>-4</code>/<code>-6</code> · <code>-t 10</code> · <code>-P 4</code> · needs <code>iperf3</code> + <code>python3</code></p>
+    </div>
+  </div>
+</header>
+
+<section class="wrap" id="endpoints">
+  <h2>Default endpoints (v2)</h2>
+  <table>
+    <thead><tr><th>Region</th><th>Provider</th><th>City</th><th>Host</th></tr></thead>
+    <tbody>
+      <tr><td>NA</td><td>PureVoltage</td><td>New York</td><td>speedtest.nyc.purevoltage.com</td></tr>
+      <tr><td>NA</td><td>Clouvider</td><td>Los Angeles</td><td>la.speedtest.clouvider.net</td></tr>
+      <tr><td>NA</td><td>InterServer</td><td>Los Angeles</td><td>lax.speedtest.is.cc</td></tr>
+      <tr><td>NA</td><td>Nocix</td><td>Kansas City</td><td>speedtest.nocix.net</td></tr>
+      <tr><td>NA</td><td>Leaseweb</td><td>Montreal, CA</td><td>speedtest.mtl2.ca.leaseweb.net</td></tr>
+      <tr><td>EU</td><td>OnlyServers</td><td>United Kingdom</td><td>speedtest.onlyservers.com</td></tr>
+      <tr><td>EU</td><td>Clouvider</td><td>London</td><td>lon.speedtest.clouvider.net</td></tr>
+      <tr><td>EU</td><td>Eranium</td><td>Amsterdam</td><td>iperf-ams-nl.eranium.net</td></tr>
+      <tr><td>EU</td><td>RedSwitches</td><td>AMS 25G</td><td>43.250.53.56</td></tr>
+      <tr><td>EU</td><td>Online.net</td><td>Paris</td><td>iperf.online.net</td></tr>
+      <tr><td>EU</td><td>Alwyzon</td><td>Vienna</td><td>iperf3-vie-at.alwyzon.net</td></tr>
+      <tr><td>APAC</td><td>Advin</td><td>Osaka</td><td>lg-kix.advinservers.com</td></tr>
+      <tr><td>APAC</td><td>Advin</td><td>Johor, MY</td><td>lg-jhb.advinservers.com</td></tr>
+      <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
+      <tr><td>APAC</td><td>Leaseweb</td><td>Sydney</td><td>speedtest.syd12.au.leaseweb.net</td></tr>
+      <tr><td>APAC</td><td>OVH</td><td>Mumbai</td><td>bom.proof.ovh.net</td></tr>
+    </tbody>
+  </table>
+  <p class="hint" style="margin-top:1rem">Full catalog: <a href="endpoints.json">endpoints.json</a> · <a href="endpoints.md">endpoints.md</a> · <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">source</a></p>
+</section>
+
+<footer class="wrap">
+  <div>NETS · part of <a href="https://catbash.net/">SICK</a> / catbash.net</div>
+  <div><a href="https://github.com/Yuri-NagaSaki/SICK">GitHub</a> · MIT</div>
+</footer>
+<script>
+document.querySelectorAll('.copy').forEach(btn=>{
+  btn.addEventListener('click',async()=>{
+    const t=btn.getAttribute('data-copy');
+    try{await navigator.clipboard.writeText(t);btn.textContent='copied';btn.classList.add('ok');
+      setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok')},1200)}catch(e){}
+  });
+});
+</script>
+</body>
+</html>

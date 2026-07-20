@@ -9,8 +9,14 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    // Run the Worker for short install paths so /sick is never a bare 404.
-    "run_worker_first": ["/sick", "/sick/"]
+    // Worker handles short install paths before static 404.
+    "run_worker_first": [
+      "/sick",
+      "/sick/",
+      "/nets",
+      "/nets/",
+      "/nets.sh"
+    ]
   },
   "compatibility_flags": [
     "nodejs_compat"

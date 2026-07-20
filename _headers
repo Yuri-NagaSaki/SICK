@@ -6,3 +6,13 @@
 /hardware_info.sh
   Content-Type: text/plain; charset=utf-8
   X-Content-Type-Options: nosniff
+
+/nets
+  Content-Type: text/plain; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=300
+
+/nets/nets.sh
+  Content-Type: text/plain; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=300
