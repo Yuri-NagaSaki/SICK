@@ -4,6 +4,8 @@
 
 **Language / 语言:** [English](README.md) | [中文](README_CN.md)
 
+**Website:** [https://catbash.net/](https://catbash.net/)
+
 ## About
 
 **SICK** (Server Info & Check Kit) answers one question fast: *what hardware is in this server and is it healthy right now?* Run it once, read the report, move on. Every section is rendered as an aligned, color-coded table so the output stays readable whether the machine has one disk or forty.
@@ -38,16 +40,16 @@
 
 ```bash
 # English (default)
-curl -sL https://ba.sh/sick | bash
+curl -sL https://catbash.net/sick | bash
 
 # Chinese
-curl -sL https://ba.sh/sick | bash -s -- -cn
+curl -sL https://catbash.net/sick | bash -s -- -cn
 
 # Auto-install any missing tools without prompting
-curl -sL https://ba.sh/sick | bash -s -- -y
+curl -sL https://catbash.net/sick | bash -s -- -y
 
 # JSON to stdout
-curl -sL https://ba.sh/sick | bash -s -- --json
+curl -sL https://catbash.net/sick | bash -s -- --json
 ```
 
 When passing options through `curl | bash`, use `bash -s -- <options>`.

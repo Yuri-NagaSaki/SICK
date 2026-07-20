@@ -4,6 +4,8 @@
 
 **语言 / Language:** [中文](README_CN.md) | [English](README.md)
 
+**官网:** [https://catbash.net/](https://catbash.net/)
+
 ## 简介
 
 **SICK**（Server Info & Check Kit）只回答一个问题，而且回答得很快：*这台服务器里是什么硬件、现在是否健康？* 跑一次、看报告、收工。每个板块都以对齐、按状态着色的表格呈现，无论机器上是 1 块盘还是 40 块盘，输出都清晰可读。
@@ -38,16 +40,16 @@
 
 ```bash
 # 中文
-curl -sL https://ba.sh/sick | bash -s -- -cn
+curl -sL https://catbash.net/sick | bash -s -- -cn
 
 # 英文（默认）
-curl -sL https://ba.sh/sick | bash
+curl -sL https://catbash.net/sick | bash
 
 # 自动安装缺失工具，不询问
-curl -sL https://ba.sh/sick | bash -s -- -cn -y
+curl -sL https://catbash.net/sick | bash -s -- -cn -y
 
 # 输出 JSON 到标准输出
-curl -sL https://ba.sh/sick | bash -s -- --json
+curl -sL https://catbash.net/sick | bash -s -- --json
 ```
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
