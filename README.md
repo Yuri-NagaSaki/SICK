@@ -87,7 +87,17 @@ More: [https://catbash.net/sick.html](https://catbash.net/sick.html)
 
 ## NETS — Network Endpoint Throughput Sampler
 
-Public **iperf3** send/recv against curated endpoints (NA / EU / APAC). IPv4 & IPv6. Summary includes **Mbps/Gbps** and **traffic used this run**.
+Public **iperf3** send/recv against curated endpoints. IPv4 & IPv6. Summary includes **Mbps/Gbps** and **traffic used this run**.
+
+### Supported regions
+
+| Flag | Region | Coverage |
+|------|--------|----------|
+| `--region na` | North America | New York, Los Angeles, Kansas City, Montreal (5) |
+| `--region eu` | Europe | UK, NL, DE, FR, AT, SE, DK, NO, LU, UA (13) |
+| `--region apac` | Asia-Pacific | Tokyo, Singapore, Hong Kong, Sydney, Mumbai, Tashkent (6) |
+| `global` (default) | All | 24 nodes · NA + EU + APAC |
+| `-r` / `reduced` | Quick set | 8 nodes across the three regions |
 
 ```bash
 # Full run

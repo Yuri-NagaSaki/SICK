@@ -65,6 +65,7 @@
       <a href="/sick.html">SICK</a>
       <a class="active" href="/nets.html">NETS</a>
       <a class="nav-hide-sm" href="#install" data-en="Install" data-zh="安装">Install</a>
+      <a class="nav-hide-sm" href="#regions" data-en="Regions" data-zh="地区">Regions</a>
       <a class="nav-hide-sm" href="#usage" data-en="Usage" data-zh="用法">Usage</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
@@ -124,6 +125,82 @@
   </div>
 </header>
 
+<section class="rule" id="regions">
+  <div class="wrap">
+    <h2 data-en="Supported regions" data-zh="支持的地区">Supported regions</h2>
+    <p class="lede" style="max-width:none;margin-bottom:1rem"
+       data-en="Filter with <code>--region na|eu|apac</code> (default <code>global</code> = all). Use <code>-r</code> for a short multi-region set. List with <code>-l</code>."
+       data-zh="用 <code>--region na|eu|apac</code> 筛选（默认 <code>global</code> = 全部）。<code>-r</code> 为跨区精简列表。<code>-l</code> 可打印节点表。">
+      Filter with <code>--region na|eu|apac</code> (default <code>global</code> = all). Use <code>-r</code> for a short multi-region set. List with <code>-l</code>.
+    </p>
+
+    <table class="opts" style="margin-bottom:1.25rem">
+      <thead>
+        <tr>
+          <th data-en="Flag" data-zh="参数">Flag</th>
+          <th data-en="Region" data-zh="地区">Region</th>
+          <th data-en="Coverage" data-zh="覆盖">Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--region na</code></td>
+          <td data-en="North America" data-zh="北美">North America</td>
+          <td data-en="5 nodes · New York, Los Angeles, Kansas City, Montreal" data-zh="5 个节点 · 纽约、洛杉矶、堪萨斯城、蒙特利尔">5 nodes · New York, Los Angeles, Kansas City, Montreal</td>
+        </tr>
+        <tr>
+          <td><code>--region eu</code></td>
+          <td data-en="Europe" data-zh="欧洲">Europe</td>
+          <td data-en="13 nodes · UK, NL, DE, FR, AT, SE, DK, NO, LU, UA" data-zh="13 个节点 · 英、荷、德、法、奥、瑞典、丹麦、挪威、卢森堡、乌克兰">13 nodes · UK, NL, DE, FR, AT, SE, DK, NO, LU, UA</td>
+        </tr>
+        <tr>
+          <td><code>--region apac</code></td>
+          <td data-en="Asia-Pacific" data-zh="亚太">Asia-Pacific</td>
+          <td data-en="6 nodes · Tokyo, Singapore, Hong Kong, Sydney, Mumbai, Tashkent" data-zh="6 个节点 · 东京、新加坡、香港、悉尼、孟买、塔什干">6 nodes · Tokyo, Singapore, Hong Kong, Sydney, Mumbai, Tashkent</td>
+        </tr>
+        <tr>
+          <td><code>global</code></td>
+          <td data-en="All regions (default)" data-zh="全部地区（默认）">All regions (default)</td>
+          <td data-en="24 nodes · NA + EU + APAC" data-zh="24 个节点 · 北美 + 欧洲 + 亚太">24 nodes · NA + EU + APAC</td>
+        </tr>
+        <tr>
+          <td><code>-r</code> / <code>--region reduced</code></td>
+          <td data-en="Reduced set" data-zh="精简集">Reduced set</td>
+          <td data-en="8 nodes spanning NA / EU / APAC (quick pass)" data-zh="8 个跨区节点（快速摸底）">8 nodes spanning NA / EU / APAC (quick pass)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="report-map" style="margin-bottom:1rem">
+      <div class="rm-item">
+        <strong>NA</strong>
+        <span data-en="New York (PureVoltage) · Los Angeles (Clouvider, InterServer) · Kansas City (Nocix) · Montreal (Leaseweb)"
+              data-zh="纽约 PureVoltage · 洛杉矶 Clouvider / InterServer · 堪萨斯城 Nocix · 蒙特利尔 Leaseweb">
+          New York (PureVoltage) · Los Angeles (Clouvider, InterServer) · Kansas City (Nocix) · Montreal (Leaseweb)
+        </span>
+      </div>
+      <div class="rm-item">
+        <strong>EU</strong>
+        <span data-en="UK · Amsterdam · Frankfurt · Paris · Vienna · Kista · Copenhagen · Sandefjord · Luxembourg · Kyiv"
+              data-zh="英国 · 阿姆斯特丹 · 法兰克福 · 巴黎 · 维也纳 · 基斯塔 · 哥本哈根 · 桑讷菲尤尔 · 卢森堡 · 基辅">
+          UK · Amsterdam · Frankfurt · Paris · Vienna · Kista · Copenhagen · Sandefjord · Luxembourg · Kyiv
+        </span>
+      </div>
+      <div class="rm-item">
+        <strong>APAC</strong>
+        <span data-en="Tokyo · Singapore · Hong Kong · Sydney · Mumbai · Tashkent"
+              data-zh="东京 · 新加坡 · 香港 · 悉尼 · 孟买 · 塔什干">
+          Tokyo · Singapore · Hong Kong · Sydney · Mumbai · Tashkent
+        </span>
+      </div>
+      <div class="rm-item">
+        <strong data-en="Catalog" data-zh="完整目录">Catalog</strong>
+        <span><a href="/nets/endpoints.md">endpoints.md</a> · <a href="/nets/endpoints.json">endpoints.json</a></span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="rule" id="usage">
   <div class="wrap">
     <h2 data-en="Options" data-zh="参数">Options</h2>
@@ -141,7 +218,7 @@
         </tr>
         <tr>
           <td>--region na|eu|apac|global|reduced</td>
-          <td data-en="Filter by region (default: global)" data-zh="按区域筛选（默认 global）">Filter by region (default: global)</td>
+          <td data-en="Filter by region — see <a href=&quot;#regions&quot;>Supported regions</a> (default: global)" data-zh="按地区筛选 — 见 <a href=&quot;#regions&quot;>支持的地区</a>（默认 global）">Filter by region — see <a href="#regions">Supported regions</a> (default: global)</td>
         </tr>
         <tr>
           <td>-4 / -6</td>
@@ -221,18 +298,10 @@
       </div>
     </div>
 
-    <h2 data-en="Endpoint catalog" data-zh="节点目录">Endpoint catalog</h2>
-    <p class="lede" style="max-width:none;margin-bottom:0.75rem"
-       data-en="Default list is embedded in the script and grouped by <b>NA</b> / <b>EU</b> / <b>APAC</b>. Full machine-readable and human-readable catalogs:"
-       data-zh="默认节点表内嵌在脚本中，按 <b>NA</b> / <b>EU</b> / <b>APAC</b> 分组。完整目录：">
-      Default list is embedded in the script and grouped by <b>NA</b> / <b>EU</b> / <b>APAC</b>. Full machine-readable and human-readable catalogs:
-    </p>
-    <p class="lede" style="max-width:none;margin:0">
-      <a href="/nets/endpoints.md">endpoints.md</a>
-      ·
-      <a href="/nets/endpoints.json">endpoints.json</a>
-      ·
-      <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">source</a>
+    <p class="hint mt-1"
+       data-en="Full host list: <a href=&quot;/nets/endpoints.md&quot;>endpoints.md</a> · <a href=&quot;/nets/endpoints.json&quot;>endpoints.json</a> · <a href=&quot;https://github.com/Yuri-NagaSaki/SICK/tree/main/nets&quot;>source</a>"
+       data-zh="完整主机列表：<a href=&quot;/nets/endpoints.md&quot;>endpoints.md</a> · <a href=&quot;/nets/endpoints.json&quot;>endpoints.json</a> · <a href=&quot;https://github.com/Yuri-NagaSaki/SICK/tree/main/nets&quot;>source</a>">
+      Full host list: <a href="/nets/endpoints.md">endpoints.md</a> · <a href="/nets/endpoints.json">endpoints.json</a> · <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">source</a>
     </p>
   </div>
 </section>
