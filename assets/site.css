@@ -88,21 +88,7 @@ a:hover { color: var(--brass); }
 }
 .brand:hover { color: var(--ink); }
 .brand .cat {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line-soft);
-  font-size: 0.95rem;
-  line-height: 1;
-}
-.brand em {
-  font-style: normal;
-  color: var(--amber);
-  text-shadow: var(--glow-amber);
+  display: none;
 }
 .nav-links {
   display: flex;
@@ -663,4 +649,3 @@ footer {
   min-width: 100%;
   max-width: none;
 }
-.brand .cat { display: none; }
