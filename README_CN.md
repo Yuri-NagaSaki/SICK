@@ -38,28 +38,34 @@
 
 ### 一键运行
 
+短链安装地址（同一脚本）：
+
+- `https://ba.sh/sick`
+- `https://catbash.net/sick`
+
 ```bash
 # 中文
-curl -sL https://catbash.net/sick | bash -s -- -cn
+curl -sL https://ba.sh/sick | bash -s -- -cn
+# curl -sL https://catbash.net/sick | bash -s -- -cn
 
 # 英文（默认）
-curl -sL https://catbash.net/sick | bash
+curl -sL https://ba.sh/sick | bash
+# curl -sL https://catbash.net/sick | bash
 
 # 自动安装缺失工具，不询问
-curl -sL https://catbash.net/sick | bash -s -- -cn -y
+curl -sL https://ba.sh/sick | bash -s -- -cn -y
 
 # 输出 JSON 到标准输出
-curl -sL https://catbash.net/sick | bash -s -- --json
+curl -sL https://ba.sh/sick | bash -s -- --json
 ```
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
-
-短链安装地址：`https://catbash.net/sick`（与 `hardware_info.sh` 为同一脚本）。
 
 也可以下载到本地再运行：
 
 ```bash
 curl -sLO https://catbash.net/hardware_info.sh
+# 或: curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
 chmod +x hardware_info.sh
 sudo ./hardware_info.sh -cn
 ```

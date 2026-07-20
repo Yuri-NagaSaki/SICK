@@ -38,28 +38,34 @@
 
 ### One-line run
 
+Short install URLs (same script):
+
+- `https://ba.sh/sick`
+- `https://catbash.net/sick`
+
 ```bash
 # English (default)
-curl -sL https://catbash.net/sick | bash
+curl -sL https://ba.sh/sick | bash
+# curl -sL https://catbash.net/sick | bash
 
 # Chinese
-curl -sL https://catbash.net/sick | bash -s -- -cn
+curl -sL https://ba.sh/sick | bash -s -- -cn
+# curl -sL https://catbash.net/sick | bash -s -- -cn
 
 # Auto-install any missing tools without prompting
-curl -sL https://catbash.net/sick | bash -s -- -y
+curl -sL https://ba.sh/sick | bash -s -- -y
 
 # JSON to stdout
-curl -sL https://catbash.net/sick | bash -s -- --json
+curl -sL https://ba.sh/sick | bash -s -- --json
 ```
 
 When passing options through `curl | bash`, use `bash -s -- <options>`.
-
-Short install URL: `https://catbash.net/sick` (same script as `hardware_info.sh`).
 
 Alternatively, download and run locally:
 
 ```bash
 curl -sLO https://catbash.net/hardware_info.sh
+# or: curl -sLO https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info.sh
 chmod +x hardware_info.sh
 sudo ./hardware_info.sh
 ```

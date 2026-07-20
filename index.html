@@ -75,7 +75,12 @@
       "author": { "@id": "https://catbash.net/#author" },
       "softwareVersion": "3.0.0",
       "downloadUrl": "https://catbash.net/sick",
-      "installUrl": "https://catbash.net/sick"
+      "installUrl": "https://catbash.net/sick",
+      "sameAs": [
+        "https://ba.sh/sick",
+        "https://catbash.net/sick",
+        "https://github.com/Yuri-NagaSaki/SICK"
+      ]
     },
     {
       "@type": "Person",
@@ -724,9 +729,14 @@
   <div class="cmd-panel rise d4" id="install">
     <div class="cmd-head">
       <span class="label" data-en="Quick start" data-zh="快速开始">Quick start</span>
-      <span class="label">catbash.net/sick</span>
+      <span class="label">ba.sh · catbash.net</span>
     </div>
     <div class="cmd-body">
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/sick | bash</code>
+        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash', this)" data-en="copy" data-zh="复制">copy</button>
+      </div>
       <div class="cmd-row">
         <span class="prompt">$</span>
         <code>curl -sL https://catbash.net/sick | bash</code>
@@ -734,13 +744,13 @@
       </div>
       <div class="cmd-row">
         <span class="prompt">$</span>
-        <code>curl -sL https://catbash.net/sick | bash -s -- -cn</code>
-        <button class="copy" type="button" onclick="copyText('curl -sL https://catbash.net/sick | bash -s -- -cn', this)" data-en="copy" data-zh="复制">copy</button>
+        <code>curl -sL https://ba.sh/sick | bash -s -- -cn</code>
+        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash -s -- -cn', this)" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="<code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · <code>bash -s -- …</code>"
-         data-zh="<code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> 机器可读 · <code>bash -s -- …</code>">
-        <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> machine output · <code>bash -s -- …</code>
+         data-en="Same script on both short URLs · <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> · <code>bash -s -- …</code>"
+         data-zh="两条短链同一脚本 · <code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> · <code>bash -s -- …</code>">
+        Same script on both short URLs · <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> · <code>bash -s -- …</code>
       </p>
     </div>
   </div>
