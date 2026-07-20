@@ -75,6 +75,30 @@ curl -sL https://ba.sh/sick | bash -s -- --json
 通过 `curl | bash` 传参时需要使用 `bash -s -- <参数>`。
 
 
+### 🧪 测试版 (v3.0.0-beta.1)
+
+重构后的测试版脚本 `hardware_info_beta.sh` 可供试用。它把 **显卡、RAID/HBA、网卡、NVMe
+全部改为对齐的彩色表格**（与内存/硬盘表格一致），在**安装任何依赖前先询问 Y/N**，
+修复了中文宽度/locale 处理，并去掉了冗杂的 PCIe / ECC / 存储栈 / CPU 漏洞段落，
+保持“一次性收集”的干净定位。
+
+```
+# 中文
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- -cn
+
+# 英文
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash
+
+# 自动安装缺失工具（不询问）——适合 curl | bash
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- -cn -y
+
+# JSON 输出
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- --json
+```
+
+测试版参数：`-y/--yes`（自动安装）、`--no-install`（仅用现有工具生成报告，不安装）。
+
+
 ### 示例输出
 
 ```

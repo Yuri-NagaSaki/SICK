@@ -75,6 +75,31 @@ curl -sL https://ba.sh/sick | bash -s -- --json
 When passing options through `curl | bash`, use `bash -s -- <options>`.
 
 
+### 🧪 Beta (v3.0.0-beta.1)
+
+A refactored beta (`hardware_info_beta.sh`) is available for testing. It renders
+**GPU, RAID/HBA, Network and NVMe as aligned colorized tables** (like the memory/disk
+tables), asks **Y/N before installing any dependency**, fixes CJK width/locale handling,
+and drops the noisy PCIe / ECC / storage-stack / CPU-vulnerability sections to stay a
+clean one-shot inventory.
+
+```
+# English
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash
+
+# Chinese
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- -cn
+
+# Auto-install missing tools (no prompt) — handy for curl | bash
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- -y
+
+# JSON output
+curl -sL https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/hardware_info_beta.sh | bash -s -- --json
+```
+
+Beta flags: `-y/--yes` (auto-install), `--no-install` (report with what's present, never install).
+
+
 ###  Sample Output
 
 ```shell
