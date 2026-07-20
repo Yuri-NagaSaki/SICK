@@ -3,31 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SICK — Server Info &amp; Check Kit | Linux Hardware Inventory</title>
-<meta name="description" content="SICK is a one-shot Linux server hardware inventory tool. Colorized tables for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or JSON. No daemon, zero footprint.">
-<meta name="keywords" content="SICK, Linux, server hardware, inventory, SMART, NVMe, dmidecode, server check, hardware report, bash script">
+<title>猫脚本 · Catbash — Linux server scripts (SICK · NETS)</title>
+<meta name="description" content="猫脚本 (Catbash): open-source Linux server tools. SICK for one-shot hardware inventory; NETS for public iperf3 throughput tests. curl | bash, zero footprint.">
+<meta name="keywords" content="猫脚本, catbash, SICK, NETS, Linux, server, hardware inventory, iperf3, bash">
 <meta name="author" content="Yuri NagaSaki">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta name="googlebot" content="index, follow">
 <link rel="canonical" href="https://catbash.net/">
 <link rel="icon" href="https://catbash.net/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="https://catbash.net/favicon.svg">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="SICK">
+<meta property="og:site_name" content="猫脚本 · Catbash">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:url" content="https://catbash.net/">
-<meta property="og:title" content="SICK — Server Info & Check Kit">
-<meta property="og:description" content="One-shot Linux server hardware inventory. Colorized report or JSON. No daemon, zero footprint.">
+<meta property="og:title" content="猫脚本 · Catbash — Linux server scripts">
+<meta property="og:description" content="Open-source Linux tools: SICK hardware inventory + NETS iperf3 throughput. One curl each.">
 <meta property="og:image" content="https://catbash.net/assets/tg-cover.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
-<meta property="og:image:alt" content="SICK — One-shot Linux hardware inventory">
+<meta property="og:image:alt" content="猫脚本 Catbash — Linux server scripts">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SICK — Server Info & Check Kit">
-<meta name="twitter:description" content="One-shot Linux server hardware inventory. Colorized report or JSON.">
+<meta name="twitter:title" content="猫脚本 · Catbash">
+<meta name="twitter:description" content="SICK hardware inventory + NETS iperf3 throughput. curl | bash.">
 <meta name="twitter:image" content="https://catbash.net/assets/tg-cover.jpg">
 
 <script type="application/ld+json">
@@ -38,8 +37,9 @@
       "@type": "WebSite",
       "@id": "https://catbash.net/#website",
       "url": "https://catbash.net/",
-      "name": "SICK",
-      "description": "Server Info & Check Kit — one-shot Linux server hardware inventory",
+      "name": "猫脚本",
+      "alternateName": ["Catbash", "catbash.net"],
+      "description": "Open-source Linux server scripts: hardware inventory and network throughput tests",
       "inLanguage": ["en", "zh-CN"],
       "publisher": { "@id": "https://catbash.net/#author" }
     },
@@ -47,40 +47,14 @@
       "@type": "WebPage",
       "@id": "https://catbash.net/#webpage",
       "url": "https://catbash.net/",
-      "name": "SICK — Server Info & Check Kit",
+      "name": "猫脚本 · Catbash",
       "isPartOf": { "@id": "https://catbash.net/#website" },
-      "description": "One-shot Linux server hardware inventory tool with colorized tables or JSON output.",
+      "description": "Hub for SICK and NETS — Linux server scripts you run with curl | bash.",
       "primaryImageOfPage": {
         "@type": "ImageObject",
         "url": "https://catbash.net/assets/tg-cover.jpg"
       },
       "inLanguage": ["en", "zh-CN"]
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": "https://catbash.net/#software",
-      "name": "SICK",
-      "alternateName": "Server Info & Check Kit",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Linux",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "license": "https://opensource.org/licenses/MIT",
-      "codeRepository": "https://github.com/Yuri-NagaSaki/SICK",
-      "url": "https://catbash.net/",
-      "description": "A one-shot Linux server hardware inventory tool. Collects CPU, memory, disks/SMART, NVMe, RAID, network and GPU into a colorized report or JSON.",
-      "author": { "@id": "https://catbash.net/#author" },
-      "softwareVersion": "3.0.0",
-      "downloadUrl": "https://catbash.net/sick",
-      "installUrl": "https://catbash.net/sick",
-      "sameAs": [
-        "https://ba.sh/sick",
-        "https://catbash.net/sick",
-        "https://github.com/Yuri-NagaSaki/SICK"
-      ]
     },
     {
       "@type": "Person",
@@ -94,614 +68,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: oklch(16% 0.012 75);
-    --bg-elev: oklch(20% 0.014 70);
-    --bg-panel: oklch(22% 0.016 68);
-    --bg-deep: oklch(13% 0.01 80);
-    --line: oklch(32% 0.02 70);
-    --line-soft: oklch(28% 0.015 70 / 0.7);
-    --ink: oklch(94% 0.012 85);
-    --ink-soft: oklch(78% 0.02 80);
-    --muted: oklch(58% 0.02 75);
-    --amber: oklch(78% 0.14 70);
-    --amber-dim: oklch(62% 0.12 65);
-    --brass: oklch(72% 0.09 75);
-    --mint: oklch(72% 0.12 155);
-    --mint-dim: oklch(55% 0.1 155);
-    --sky: oklch(76% 0.07 220);
-    --glow-amber: 0 0 32px oklch(70% 0.14 70 / 0.14);
-    --shadow-lg: 0 24px 48px -28px oklch(0% 0 0 / 0.6), 0 0 0 1px var(--line-soft);
-    --radius: 12px;
-    --radius-sm: 9px;
-    --font-display: "Bricolage Grotesque", system-ui, sans-serif;
-    --font-mono: "Azeret Mono", ui-monospace, monospace;
-    --pad-x: clamp(1rem, 3.5vw, 2.5rem);
-    /* Wider on large / 4K, still capped so lines stay readable */
-    --max: min(92vw, 1480px);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-
-  body {
-    font-family: var(--font-mono);
-    font-size: clamp(13.5px, 0.35vw + 12.5px, 15px);
-    line-height: 1.6;
-    color: var(--ink);
-    background: var(--bg);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background:
-      radial-gradient(920px 520px at 10% -6%, oklch(55% 0.1 70 / 0.1), transparent 58%),
-      radial-gradient(720px 460px at 94% 10%, oklch(40% 0.04 155 / 0.07), transparent 55%),
-      linear-gradient(180deg, var(--bg-deep), var(--bg) 45%, oklch(15% 0.012 70));
-  }
-
-  a { color: var(--amber); text-decoration: none; transition: color .15s; }
-  a:hover { color: var(--brass); }
-
-  .wrap {
-    width: min(100% - 2 * var(--pad-x), var(--max));
-    margin-inline: auto;
-  }
-
-  /* Nav */
-  .nav {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    backdrop-filter: blur(14px) saturate(1.15);
-    background: oklch(16% 0.012 75 / 0.82);
-    border-bottom: 1px solid var(--line-soft);
-  }
-  .nav-in {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 52px;
-    gap: 1rem;
-  }
-  .brand {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.25rem;
-    letter-spacing: -0.03em;
-    color: var(--ink);
-  }
-
-  .nav-links {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    font-size: 0.76rem;
-  }
-  .nav-links a { color: var(--ink-soft); }
-  .nav-links a:hover { color: var(--amber); }
-  .gh-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    color: var(--ink-soft);
-    border: 1px solid transparent;
-    transition: color .15s, border-color .15s, background .15s;
-  }
-  .gh-icon:hover {
-    color: var(--ink);
-    background: var(--bg-elev);
-    border-color: var(--line-soft);
-  }
-  .gh-icon svg { width: 18px; height: 18px; display: block; }
-  .lang {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    padding: 0.28rem 0.6rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--ink-soft);
-    cursor: pointer;
-    transition: .15s;
-  }
-  .lang:hover { border-color: var(--amber-dim); color: var(--amber); }
-  @media (max-width: 640px) {
-    .nav-links a:not(.gh-icon) { display: none; }
-  }
-
-  /* Hero */
-  .hero {
-    padding: clamp(1.75rem, 4vw, 2.75rem) 0 clamp(1.5rem, 3vw, 2rem);
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
-    gap: clamp(1.25rem, 3vw, 2.5rem);
-    align-items: center;
-  }
-  @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; }
-  }
-
-  h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem);
-    line-height: 1.3;
-    letter-spacing: -0.03em;
-    color: var(--ink);
-    margin-bottom: 0.85rem;
-  }
-  h1 .mark {
-    color: var(--amber);
-    text-shadow: var(--glow-amber);
-  }
-
-  .lede {
-    font-size: 0.9rem;
-    color: var(--ink-soft);
-    max-width: 48ch;
-    margin-bottom: 1.1rem;
-    line-height: 1.65;
-  }
-  .lede strong { color: var(--ink); font-weight: 600; }
-
-  .pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-  .pill {
-    font-size: 0.7rem;
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: var(--bg-elev);
-    color: var(--ink-soft);
-  }
-  .pill b { color: var(--mint); font-weight: 600; }
-
-  .cmd-panel {
-    background: var(--bg-panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-  }
-  .cmd-panel::before {
-    content: "";
-    display: block;
-    height: 2px;
-    background: linear-gradient(90deg, var(--amber), var(--mint-dim), transparent 72%);
-  }
-  .cmd-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.7rem 1rem;
-    border-bottom: 1px solid var(--line-soft);
-    background: oklch(18% 0.012 70);
-  }
-  .cmd-head .label {
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .cmd-body {
-    padding: 0.9rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-  .cmd-row {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    background: var(--bg-deep);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-sm);
-    padding: 0.65rem 0.8rem;
-    min-width: 0;
-  }
-  .cmd-row .prompt { color: var(--amber); user-select: none; flex-shrink: 0; }
-  .cmd-row code {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.74rem;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow-x: auto;
-  }
-  .copy {
-    flex-shrink: 0;
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    padding: 0.3rem 0.55rem;
-    border-radius: 5px;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: .15s;
-  }
-  .copy:hover { color: var(--amber); border-color: var(--amber-dim); }
-  .copy.ok { color: var(--mint); border-color: var(--mint-dim); }
-  .cmd-hint {
-    font-size: 0.68rem;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-  .cmd-hint code { color: var(--sky); font-size: 0.68rem; }
-
-  /* Sections */
-  section { padding: clamp(1.5rem, 3vw, 2.25rem) 0; }
-  section + section { border-top: 1px solid var(--line-soft); }
-
-  h2 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.05rem;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-    margin-bottom: 1rem;
-  }
-
-  /* Report map */
-  .report-map {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.6rem;
-  }
-  @media (max-width: 1000px) { .report-map { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 420px) { .report-map { grid-template-columns: 1fr; } }
-
-  .rm-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.8rem 0.9rem;
-    background: var(--bg-elev);
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-  }
-  .rm-item strong {
-    font-family: var(--font-display);
-    font-weight: 650;
-    font-size: 0.88rem;
-    color: var(--brass);
-  }
-  .rm-item span {
-    font-size: 0.72rem;
-    color: var(--muted);
-    line-height: 1.4;
-  }
-
-  /* Terminal — full sample, no height clip */
-  .term {
-    background: var(--bg-deep);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg), inset 0 1px 0 oklch(100% 0 0 / 0.03);
-    overflow: hidden;
-  }
-  .term-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.6rem 0.9rem;
-    background: oklch(18% 0.012 70);
-    border-bottom: 1px solid var(--line-soft);
-  }
-  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .dot.r { background: #e06c6c; }
-  .dot.y { background: #e0a84e; }
-  .dot.g { background: #6fbf8a; }
-  .term-title {
-    margin-left: 0.35rem;
-    font-size: 0.68rem;
-    color: var(--muted);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .term-body {
-    padding: 1rem 1.1rem 1.25rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .term-body pre {
-    margin: 0;
-    /* Prefer dual-width CJK mono when present; never clip glyphs */
-    font-family: "Sarasa Term SC", "Sarasa Mono SC", "Noto Sans Mono CJK SC",
-      "Source Han Mono SC", "WenQuanYi Zen Hei Mono", "Cascadia Mono",
-      "JetBrains Mono", var(--font-mono), ui-monospace, monospace;
-    font-size: clamp(11px, 0.15vw + 10.5px, 13px);
-    line-height: 1.45;
-    white-space: pre;
-    color: var(--ink-soft);
-    tab-size: 4;
-    letter-spacing: 0;
-    word-spacing: 0;
-    font-variant-ligatures: none;
-    -webkit-font-smoothing: antialiased;
-  }
-  .term-body pre span {
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-    letter-spacing: inherit;
-  }
-
-  .c-frame { color: oklch(78% 0.14 95); }
-  .c-title { color: oklch(96% 0.01 90); font-weight: 600; }
-  .c-bar   { color: oklch(72% 0.08 210); }
-  .c-key   { color: oklch(70% 0.02 80); }
-  .c-val   { color: oklch(88% 0.04 200); }
-  .c-dev   { color: oklch(78% 0.1 210); }
-  .c-ok    { color: oklch(74% 0.14 150); font-weight: 600; }
-  .c-warn  { color: oklch(80% 0.14 75); }
-  .c-info  { color: oklch(72% 0.08 230); }
-  .c-num   { color: oklch(82% 0.1 70); }
-  .c-dim   { color: oklch(48% 0.02 75); }
-  .c-good  { color: oklch(74% 0.14 150); }
-  .c-up    { color: oklch(74% 0.14 150); }
-  .c-down  { color: oklch(55% 0.04 75); }
-  .c-done  { color: oklch(74% 0.14 150); font-weight: 600; }
-  .c-prompt-u { color: var(--amber); }
-  .c-prompt-p { color: var(--sky); }
-
-  /* Options */
-  .opts {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.82rem;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-  .opts th {
-    text-align: left;
-    padding: 0.7rem 1rem;
-    background: var(--bg-panel);
-    color: var(--amber-dim);
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--line);
-  }
-  .opts td {
-    padding: 0.7rem 1rem;
-    border-bottom: 1px solid var(--line-soft);
-    color: var(--ink-soft);
-  }
-  .opts tr:last-child td { border-bottom: none; }
-  .opts tr:hover td { background: oklch(22% 0.014 70 / 0.45); }
-  .opts td:first-child {
-    color: var(--sky);
-    white-space: nowrap;
-    font-weight: 500;
-    width: 11rem;
-  }
-  @media (max-width: 560px) {
-    .opts, .opts thead, .opts tbody, .opts tr, .opts th, .opts td {
-      display: block;
-    }
-    .opts thead { display: none; }
-    .opts tr {
-      border-bottom: 1px solid var(--line-soft);
-      padding: 0.65rem 0.85rem;
-    }
-    .opts tr:hover td { background: transparent; }
-    .opts td {
-      border: none;
-      padding: 0.15rem 0;
-      width: auto !important;
-      white-space: normal;
-    }
-    .opts td:first-child { margin-bottom: 0.15rem; }
-  }
-
-  /* Distro icons */
-  .distros {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem;
-  }
-  .distro {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    width: clamp(76px, 12vw, 96px);
-    height: clamp(76px, 12vw, 96px);
-    padding: 0.55rem 0.35rem;
-    background: var(--bg-elev);
-    border: 1px solid var(--line-soft);
-    border-radius: 12px;
-    transition: border-color .15s, transform .15s, background .15s;
-  }
-  .distro:hover {
-    border-color: oklch(45% 0.04 70);
-    background: var(--bg-panel);
-    transform: translateY(-2px);
-  }
-  .distro img {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-  }
-  .distro span {
-    font-size: 0.65rem;
-    color: var(--muted);
-    text-align: center;
-    line-height: 1.2;
-  }
-
-  /* Donate */
-  .donate-grid {
-    display: grid;
-    grid-template-columns: 1.35fr 1fr;
-    gap: 0.85rem;
-  }
-  @media (max-width: 780px) { .donate-grid { grid-template-columns: 1fr; } }
-
-  .donate-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1.2rem 1.25rem;
-    box-shadow: 0 12px 32px -24px oklch(0% 0 0 / 0.55);
-  }
-  .donate-card h3 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 0.3rem;
-  }
-  .donate-card .lead {
-    font-size: 0.74rem;
-    color: var(--muted);
-    margin-bottom: 0.85rem;
-  }
-  .addr {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    background: var(--bg-deep);
-    border: 1px dashed var(--line);
-    border-radius: 8px;
-    padding: 0.65rem 0.8rem;
-    min-width: 0;
-  }
-  .addr code {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.7rem;
-    color: var(--sky);
-    word-break: break-all;
-  }
-  .net-tag {
-    display: inline-block;
-    margin-top: 0.55rem;
-    font-size: 0.62rem;
-    letter-spacing: 0.05em;
-    color: var(--amber-dim);
-    border: 1px solid oklch(50% 0.08 70 / 0.4);
-    padding: 0.18rem 0.5rem;
-    border-radius: 4px;
-  }
-  .afd-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    width: 100%;
-    margin-top: 0.15rem;
-    padding: 0.8rem 1rem;
-    border-radius: 9px;
-    background: linear-gradient(160deg, oklch(58% 0.2 300), oklch(48% 0.18 295));
-    color: #fff;
-    font-family: var(--font-display);
-    font-weight: 650;
-    font-size: 0.9rem;
-    transition: filter .15s, transform .15s;
-    box-shadow: 0 10px 24px -12px oklch(50% 0.2 300 / 0.65);
-  }
-  .afd-btn:hover { color: #fff; filter: brightness(1.08); transform: translateY(-1px); }
-  .heart { color: #ff9bb8; }
-
-  /* Footer */
-  footer {
-    border-top: 1px solid var(--line-soft);
-    padding: 1.75rem 0 2.5rem;
-    margin-top: 0.25rem;
-  }
-  .foot-in {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: center;
-  }
-  .foot-brand {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: -0.03em;
-  }
-
-  .foot-links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.85rem;
-    font-size: 0.76rem;
-    color: var(--muted);
-  }
-  .foot-links a {
-    color: var(--ink-soft);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-  .foot-links a:hover { color: var(--amber); }
-  .foot-links .gh-icon {
-    width: 28px;
-    height: 28px;
-  }
-  .foot-links .gh-icon svg { width: 16px; height: 16px; }
-
-  .rise {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: rise .55s cubic-bezier(.2,.7,.2,1) forwards;
-  }
-  @keyframes rise { to { opacity: 1; transform: none; } }
-  .d1 { animation-delay: .04s; }
-  .d2 { animation-delay: .1s; }
-  .d3 { animation-delay: .16s; }
-  .d4 { animation-delay: .22s; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .rise { animation: none; opacity: 1; transform: none; }
-  }
-
-  @media (min-width: 1800px) {
-    :root { --max: min(88vw, 1680px); }
-  }
-
-  ::selection {
-    background: oklch(70% 0.12 70 / 0.4);
-    color: var(--ink);
-  }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: var(--bg-deep); }
-  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
-</style>
+<link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
 <nav class="nav">
   <div class="wrap nav-in">
-    <div class="brand">SICK</div>
+    <a class="brand" href="/">
+      <span class="cat" aria-hidden="true">🐱</span>
+      <span data-en="<em>Cat</em>bash" data-zh="<em>猫</em>脚本"><em>Cat</em>bash</span>
+    </a>
     <div class="nav-links">
-      <a href="#install" data-en="Install" data-zh="安装">Install</a>
-      <a href="#coverage" data-en="Coverage" data-zh="覆盖">Coverage</a>
-      <a href="#output" data-en="Output" data-zh="输出">Output</a>
-      <a href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
+      <a class="active" href="/" data-en="Home" data-zh="首页">Home</a>
+      <a href="/sick.html" data-en="SICK" data-zh="SICK">SICK</a>
+      <a href="/nets/" data-en="NETS" data-zh="NETS">NETS</a>
+      <a class="nav-hide-sm" href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
       </a>
@@ -711,141 +92,98 @@
 </nav>
 
 <header class="wrap hero">
-  <div>
-    <h1 class="rise d1">Hardware without the <span class="mark">sick</span>.</h1>
-    <p class="lede rise d2"
-       data-en="One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or JSON. No daemon. No footprint."
-       data-zh="一条命令，完整盘点。<strong>彩色对齐表格</strong>覆盖 CPU、内存、SMART、NVMe、RAID、网卡与显卡，也可输出 JSON。零残留。">
-      One command. Full inventory. <strong>Colorized tables</strong> for CPU, RAM, SMART, NVMe, RAID, NICs and GPU — or JSON. No daemon. No footprint.
-    </p>
-    <div class="pills rise d3">
-      <span class="pill" data-en="<b>one-shot</b> · zero footprint" data-zh="<b>一次性</b> · 零残留"><b>one-shot</b> · zero footprint</span>
-      <span class="pill" data-en="<b>EN / 中文</b>" data-zh="<b>中英双语</b>"><b>EN / 中文</b></span>
-      <span class="pill"><b>JSON</b></span>
-      <span class="pill">MIT</span>
-    </div>
-  </div>
-
-  <div class="cmd-panel rise d4" id="install">
-    <div class="cmd-head">
-      <span class="label" data-en="Quick start" data-zh="快速开始">Quick start</span>
-      <span class="label">ba.sh · catbash.net</span>
-    </div>
-    <div class="cmd-body">
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/sick | bash</code>
-        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash', this)" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://catbash.net/sick | bash</code>
-        <button class="copy" type="button" onclick="copyText('curl -sL https://catbash.net/sick | bash', this)" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/sick | bash -s -- -cn</code>
-        <button class="copy" type="button" onclick="copyText('curl -sL https://ba.sh/sick | bash -s -- -cn', this)" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <p class="cmd-hint"
-         data-en="Same script on both short URLs · <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> · <code>bash -s -- …</code>"
-         data-zh="两条短链同一脚本 · <code>-cn</code> 中文 · <code>-y</code> 自动装依赖 · <code>--json</code> · <code>bash -s -- …</code>">
-        Same script on both short URLs · <code>-cn</code> Chinese · <code>-y</code> auto-install · <code>--json</code> · <code>bash -s -- …</code>
-      </p>
-    </div>
+  <p class="kicker" data-en="catbash.net" data-zh="catbash.net · 猫脚本">catbash.net</p>
+  <h1 data-en="Server scripts that <span class=&quot;mark&quot;>just run</span>."
+      data-zh="一条命令就能跑的<span class=&quot;mark&quot;>服务器脚本</span>。">
+    Server scripts that <span class="mark">just run</span>.
+  </h1>
+  <p class="lede"
+     data-en="<strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done."
+     data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点与公网吞吐测试。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
+    <strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done.
+  </p>
+  <div class="pills">
+    <span class="pill"><b>SICK</b> · hardware</span>
+    <span class="pill"><b>NETS</b> · iperf3</span>
+    <span class="pill" data-en="<b>MIT</b> · open source" data-zh="<b>MIT</b> · 开源"><b>MIT</b> · open source</span>
   </div>
 </header>
 
-<section id="coverage">
+<section class="rule">
   <div class="wrap">
-    <h2 data-en="Report coverage" data-zh="报告覆盖">Report coverage</h2>
-    <div class="report-map">
-      <div class="rm-item"><strong>System</strong><span data-en="Hostname, OS, kernel, uptime" data-zh="主机名、系统、内核、运行时间">Hostname, OS, kernel, uptime</span></div>
-      <div class="rm-item"><strong>CPU / Platform</strong><span data-en="Cores, freq, temp, NUMA, virt" data-zh="核心、频率、温度、NUMA、虚拟化">Cores, freq, temp, NUMA, virt</span></div>
-      <div class="rm-item"><strong data-en="Memory" data-zh="内存">Memory</strong><span data-en="Totals + per-DIMM table" data-zh="总量 + 逐模组表格">Totals + per-DIMM table</span></div>
-      <div class="rm-item"><strong data-en="Disks / SMART" data-zh="磁盘 / SMART">Disks / SMART</strong><span data-en="Health, hours, I/O, defects" data-zh="健康、通电、读写、坏块">Health, hours, I/O, defects</span></div>
-      <div class="rm-item"><strong>NVMe</strong><span data-en="Temp, endurance, spare" data-zh="温度、耐久、备用">Temp, endurance, spare</span></div>
-      <div class="rm-item"><strong>RAID</strong><span data-en="mdraid + HBA controllers" data-zh="mdraid + HBA 控制器">mdraid + HBA controllers</span></div>
-      <div class="rm-item"><strong data-en="Network" data-zh="网卡">Network</strong><span data-en="Link, speed, errors" data-zh="链路、速率、错误计数">Link, speed, errors</span></div>
-      <div class="rm-item"><strong>GPU / Board</strong><span data-en="Class, model, BIOS" data-zh="类别、型号、BIOS">Class, model, BIOS</span></div>
+    <h2 data-en="Projects" data-zh="子项目">Projects</h2>
+    <div class="product-grid">
+      <a class="product-card" href="/sick.html">
+        <span class="tag">SICK</span>
+        <h3>Server Info &amp; <span>Check</span> Kit</h3>
+        <p data-en="One-shot hardware inventory: CPU, RAM, SMART, NVMe, RAID, NICs, GPU — colorized tables or JSON. Zero footprint."
+           data-zh="一次性硬件盘点：CPU、内存、SMART、NVMe、RAID、网卡、GPU。彩色表格或 JSON，零残留。">
+          One-shot hardware inventory: CPU, RAM, SMART, NVMe, RAID, NICs, GPU — colorized tables or JSON. Zero footprint.
+        </p>
+        <code class="mini-cmd">curl -sL https://catbash.net/sick | bash</code>
+        <span class="go" data-en="Read SICK docs →" data-zh="查看 SICK 介绍 →">Read SICK docs →</span>
+      </a>
+      <a class="product-card" href="/nets/">
+        <span class="tag">NETS</span>
+        <h3>Network Endpoint <span>Throughput</span></h3>
+        <p data-en="Public iperf3 send/recv against curated endpoints worldwide. IPv4 / IPv6, regions, reduced mode."
+           data-zh="对全球精选公网节点跑 iperf3 上下行。支持 IPv4/IPv6、区域筛选与精简模式。">
+          Public iperf3 send/recv against curated endpoints worldwide. IPv4 / IPv6, regions, reduced mode.
+        </p>
+        <code class="mini-cmd">curl -sL https://catbash.net/nets | bash</code>
+        <span class="go" data-en="Read NETS docs →" data-zh="查看 NETS 介绍 →">Read NETS docs →</span>
+      </a>
     </div>
   </div>
 </section>
 
-<section id="output">
+<section>
   <div class="wrap">
-    <h2 data-en="Sample output" data-zh="输出示例">Sample output</h2>
-    <div class="term">
-      <div class="term-bar">
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="term-title">root@pve:~ — sick -cn</span>
+    <h2 data-en="Quick install" data-zh="快速安装">Quick install</h2>
+    <div class="product-grid">
+      <div class="cmd-panel" id="install-sick">
+        <div class="cmd-head">
+          <span class="label">SICK</span>
+          <span class="label">ba.sh · catbash</span>
+        </div>
+        <div class="cmd-body">
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://ba.sh/sick | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/sick | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://catbash.net/sick | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/sick | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <p class="cmd-hint" data-en="Same script · <code>-cn</code> Chinese · see <a href=&quot;/sick.html&quot;>SICK page</a>"
+             data-zh="同一脚本 · <code>-cn</code> 中文 · 详见 <a href=&quot;/sick.html&quot;>SICK 页</a>">
+            Same script · <code>-cn</code> Chinese · see <a href="/sick.html">SICK page</a>
+          </p>
+        </div>
       </div>
-      <div class="term-body">
-<pre id="sample-out" aria-label="SICK sample output"></pre>
-</div>
-<script type="application/json" id="sample-raw">"root@pve:~$ curl -sL https://catbash.net/sick | bash -s -- -cn\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                                    \u7cfb\u7edf\u786c\u4ef6\u4fe1\u606f\u62a5\u544a                                    \n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u250c\u2500 \u62a5\u544a\u6982\u89c8 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u7248\u672c                : 3.0.0\n\u2502 \u6a21\u5f0f                : \u6587\u672c\n\u2502 \u9690\u79c1                : IP/MAC \u5df2\u8131\u654f\n\u2502 \u5e8f\u5217\u53f7              : \u660e\u6587\u663e\u793a\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u7cfb\u7edf\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u4e3b\u673a\u540d              : pve\n\u2502 \u64cd\u4f5c\u7cfb\u7edf            : Debian GNU/Linux 13 (trixie)\n\u2502 \u5185\u6838\u7248\u672c            : 6.8.12-9-pve\n\u2502 \u8fd0\u884c\u65f6\u95f4            : up 38 weeks, 3 days, 21 hours, 36 minutes\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u5904\u7406\u5668\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u578b\u53f7                : Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz\n\u2502 \u6838\u5fc3\u6570              : 48\n\u2502 \u7ebf\u7a0b\u6570              : 96\n\u2502 \u9891\u7387                : 2600.000 MHz\n\u2502 \u7f13\u5b58                : 36864 KB\n\u2502 \u4f7f\u7528\u7387              : 1.3%\n\u2502 CPU\u6e29\u5ea6             : +53.0\u00b0C\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 CPU / \u5e73\u53f0\u72b6\u6001 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 Platform            : 2 socket(s), 2 NUMA node(s)\n\u2502 Virtualization      : Yes\n\u2502 Microcode           : 0xd0003e7\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u5185\u5b58\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u603b\u8ba1                : 377.27 GB\n\u2502 \u5df2\u7528                : 43Gi\n\u2502 \u53ef\u7528                : 334.26 GB\n\u2502\n\u2502 \u5185\u5b58\u6a21\u7ec4:\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u5927\u5c0f     \u2502 \u7c7b\u578b   \u2502 \u9891\u7387         \u2502 \u5236\u9020\u5546       \u2502 \u5e8f\u5217\u53f7           \u2502 \u578b\u53f7                   \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01222686983~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01202573E86~ \u2502 HMA84GR7CJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01222545B08~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01220586072~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD0222312792D~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01202573E86~ \u2502 HMA84GR7CJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01220295C55~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD0222312792D~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD0122034543D~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01220513D43~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD0122054549D~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2502 32 GB    \u2502 DDR4   \u2502 3200 MT/s    \u2502 Hynix        \u2502 80AD01220575621~ \u2502 HMA84GR7DJR4N-XN       \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u786c\u76d8\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u5df2\u6302\u8f7d\u6587\u4ef6\u7cfb\u7edf:\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u6587\u4ef6\u7cfb\u7edf                           \u2502 \u5bb9\u91cf    \u2502 \u5df2\u7528    \u2502 \u53ef\u7528    \u2502 \u4f7f\u7528\u7387 \u2502 \u6302\u8f7d\u70b9               \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 /dev/mapper/pve-root               \u2502 102G    \u2502 26G     \u2502 72G     \u2502 27%    \u2502 /                    \u2502\n\u2502 /dev/sda2                          \u2502 1022M   \u2502 9.1M    \u2502 1013M   \u2502 1%     \u2502 /boot/efi            \u2502\n\u2502 /dev/md127                         \u2502 7.0T    \u2502 903G    \u2502 6.2T    \u2502 13%    \u2502 /data                \u2502\n\u2502 /dev/fuse                          \u2502 128M    \u2502 24K     \u2502 128M    \u2502 1%     \u2502 /etc/pve             \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2502\n\u2502 \u78c1\u76d8\u6458\u8981\uff08\u574f\u5757=\u91cd\u6620\u5c04/\u5f85\u5904\u7406/\u79bb\u7ebf\u4e0d\u53ef\u7ea0\u6b63\uff09\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u8bbe\u5907         \u2502 \u57fa\u672c\u4fe1\u606f                           \u2502 SMART  \u2502 \u901a\u7535     \u2502 \u6e29\u5ea6   \u2502 \u8bfb\u5199                 \u2502 \u574f\u5757      \u2502 \u5907\u6ce8                 \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 /dev/sda     \u2502 447.1G SSSTC ER2-GD480      ATA    \u2502 PASS   \u2502 9421h    \u2502 31\u00b0C   \u2502 \u8bfb2.90M \u5199632K       \u2502 0/0/0     \u2502 -                    \u2502\n\u2502 /dev/nvme2n1 \u2502 3.5T SAMSUNG MZQLB3T8HALS-00007    \u2502 PASS   \u2502 9409h    \u2502 38\u00b0C   \u2502 \u8bfb51.1T \u51993.36T      \u2502 -         \u2502 \u5df2\u75280%, \u5907\u7528100%     \u2502\n\u2502 /dev/nvme0n1 \u2502 3.5T SAMSUNG MZQLB3T8HALS-00007    \u2502 PASS   \u2502 9409h    \u2502 37\u00b0C   \u2502 \u8bfb51.1T \u51993.31T      \u2502 -         \u2502 \u5df2\u75280%, \u5907\u7528100%     \u2502\n\u2502 /dev/nvme1n1 \u2502 3.5T SAMSUNG MZQLB3T8HALS-00007    \u2502 PASS   \u2502 9409h    \u2502 37\u00b0C   \u2502 \u8bfb50.7T \u51993.31T      \u2502 -         \u2502 \u5df2\u75280%, \u5907\u7528100%     \u2502\n\u2502 /dev/nvme3n1 \u2502 3.5T SAMSUNG MZQLB3T8HALS-00007    \u2502 PASS   \u2502 9409h    \u2502 36\u00b0C   \u2502 \u8bfb50.8T \u51993.36T      \u2502 -         \u2502 \u5df2\u75280%, \u5907\u7528100%     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 NVMe \u6df1\u5ea6\u5065\u5eb7 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u8bbe\u5907           \u2502 \u578b\u53f7                       \u2502 \u6e29\u5ea6    \u2502 \u8010\u4e45    \u2502 \u5907\u7528    \u2502 \u72b6\u6001    \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 /dev/nvme2n1   \u2502 SAMSUNG MZQLB3T8HALS-00007 \u2502 38\u00b0C    \u2502 0%      \u2502 100%    \u2502 OK      \u2502\n\u2502 /dev/nvme0n1   \u2502 SAMSUNG MZQLB3T8HALS-00007 \u2502 37\u00b0C    \u2502 0%      \u2502 100%    \u2502 OK      \u2502\n\u2502 /dev/nvme1n1   \u2502 SAMSUNG MZQLB3T8HALS-00007 \u2502 37\u00b0C    \u2502 0%      \u2502 100%    \u2502 OK      \u2502\n\u2502 /dev/nvme3n1   \u2502 SAMSUNG MZQLB3T8HALS-00007 \u2502 36\u00b0C    \u2502 0%      \u2502 100%    \u2502 OK      \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2502   \u2139 \u5f02\u5e38\u6389\u7535(\u7d2f\u8ba1): nvme2n1=20 nvme0n1=20 nvme1n1=20 nvme3n1=20\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 RAID\u63a7\u5236\u5668\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u8f6f\u4ef6 RAID (mdraid):\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u9635\u5217     \u2502 \u7ea7\u522b       \u2502 \u72b6\u6001         \u2502 \u6210\u5458\u6570    \u2502 \u5065\u5eb7   \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 md127    \u2502 raid10     \u2502 active       \u2502 4         \u2502 OK     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2502 mdadm arrays        : 1 (details in JSON)\n\u2502 RAID/HBA \u63a7\u5236\u5668:\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u63d2\u69fd       \u2502 \u7c7b\u578b      \u2502 \u63a7\u5236\u5668                                           \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 00:17.0    \u2502 RAID      \u2502 Intel SATA Controller [RAID Mode] (rev 0a)       \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u7f51\u5361\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u7f51\u5361         \u2502 \u72b6\u6001     \u2502 \u901f\u7387         \u2502 MAC\u5730\u5740            \u2502 IPv4                 \u2502 \u578b\u53f7                     \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 ens16f0      \u2502 UP       \u2502 1000M/full   \u2502 40:73:4d:XX:XX:XX  \u2502 -                    \u2502 Intel Corporation I350 ~ \u2502\n\u2502 ens16f1      \u2502 DOWN     \u2502 -            \u2502 40:73:4d:XX:XX:XX  \u2502 -                    \u2502 Intel Corporation I350 ~ \u2502\n\u2502 ens16f2      \u2502 DOWN     \u2502 -            \u2502 40:73:4d:XX:XX:XX  \u2502 -                    \u2502 Intel Corporation I350 ~ \u2502\n\u2502 ens16f3      \u2502 DOWN     \u2502 -            \u2502 40:73:4d:XX:XX:XX  \u2502 -                    \u2502 Intel Corporation I350 ~ \u2502\n\u2502 ens3f0np0    \u2502 UP       \u2502 10000M/full  \u2502 94:6d:ae:XX:XX:XX  \u2502 -                    \u2502 Mellanox Technologies M~ \u2502\n\u2502 ens3f1np1    \u2502 DOWN     \u2502 -            \u2502 94:6d:ae:XX:XX:XX  \u2502 -                    \u2502 Mellanox Technologies M~ \u2502\n\u2502 ens2f0np0    \u2502 UP       \u2502 10000M/full  \u2502 94:6d:ae:XX:XX:XX  \u2502 -                    \u2502 Mellanox Technologies M~ \u2502\n\u2502 ens2f1np1    \u2502 UP       \u2502 10000M/full  \u2502 94:6d:ae:XX:XX:XX  \u2502 -                    \u2502 Mellanox Technologies M~ \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2502\n\u2502 \u6536\u53d1\u9519\u8bef / \u4e22\u5305\u8ba1\u6570 (\u7d2f\u8ba1):\n\u2502   \u26a0 ens16f0         rx_dropped=776686\n\u2502   \u26a0 ens3f0np0       tx_errors=1 rx_dropped=1117229\n\u2502   \u26a0 ens2f0np0       rx_dropped=1117228\n\u2502   \u26a0 ens2f1np1       tx_errors=1 rx_dropped=1117228\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u663e\u5361\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u5382\u5546     \u2502 \u7c7b\u522b       \u2502 \u578b\u53f7                                                   \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 ASPEED   \u2502 \u7ba1\u7406       \u2502 ASPEED Technology, Inc. ASPEED Graphics Family (rev 4~ \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u250c\u2500 \u4e3b\u677f\u4fe1\u606f \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2502 \u5382\u5546                : H3C\n\u2502 \u578b\u53f7                : RS35M2C16SB\n\u2502 Version             : 0302A65F\n\u2502 BIOS Vendor         : American Megatrends International, LLC.\n\u2502 BIOS Version        : 5.76\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n\u62a5\u544a\u751f\u6210\u5b8c\u6210\uff01\nGenerated on: Mon Jul 20 02:22:57 PM CST 2026"</script>
-    </div>
-  </div>
-</section>
-
-<section id="options">
-  <div class="wrap">
-    <h2 data-en="Options" data-zh="参数">Options</h2>
-    <table class="opts">
-      <thead>
-        <tr>
-          <th data-en="Flag" data-zh="参数">Flag</th>
-          <th data-en="Description" data-zh="说明">Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>-cn, --chinese</td><td data-en="Output in Chinese" data-zh="中文输出">Output in Chinese</td></tr>
-        <tr><td>-us, --english</td><td data-en="Output in English (default)" data-zh="英文输出（默认）">Output in English (default)</td></tr>
-        <tr><td>-j, --json</td><td data-en="JSON object to stdout only" data-zh="仅向 stdout 打印 JSON">JSON object to stdout only</td></tr>
-        <tr><td>-y, --yes</td><td data-en="Install missing tools without prompting" data-zh="不询问，直接安装缺失工具">Install missing tools without prompting</td></tr>
-        <tr><td>--no-install</td><td data-en="Never install; use tools already present" data-zh="从不安装；只用现有工具">Never install; use tools already present</td></tr>
-        <tr><td>-h, --help</td><td data-en="Show help" data-zh="显示帮助">Show help</td></tr>
-        <tr><td>-v, --version</td><td data-en="Show version" data-zh="显示版本">Show version</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section id="compat">
-  <div class="wrap">
-    <h2 data-en="Compatibility" data-zh="兼容性">Compatibility</h2>
-    <div class="distros">
-      <div class="distro" title="Debian">
-        <img src="https://cdn.simpleicons.org/debian/A81D33" alt="Debian" width="32" height="32" loading="lazy">
-        <span>Debian</span>
-      </div>
-      <div class="distro" title="Ubuntu">
-        <img src="https://cdn.simpleicons.org/ubuntu/E95420" alt="Ubuntu" width="32" height="32" loading="lazy">
-        <span>Ubuntu</span>
-      </div>
-      <div class="distro" title="Fedora">
-        <img src="https://cdn.simpleicons.org/fedora/51A2DA" alt="Fedora" width="32" height="32" loading="lazy">
-        <span>Fedora</span>
-      </div>
-      <div class="distro" title="RHEL / Alma / Rocky">
-        <img src="https://cdn.simpleicons.org/redhat/EE0000" alt="RHEL" width="32" height="32" loading="lazy">
-        <span>RHEL</span>
-      </div>
-      <div class="distro" title="CentOS">
-        <img src="https://cdn.simpleicons.org/centos/262577" alt="CentOS" width="32" height="32" loading="lazy">
-        <span>CentOS</span>
-      </div>
-      <div class="distro" title="Arch Linux">
-        <img src="https://cdn.simpleicons.org/archlinux/1793D1" alt="Arch" width="32" height="32" loading="lazy">
-        <span>Arch</span>
-      </div>
-      <div class="distro" title="openSUSE">
-        <img src="https://cdn.simpleicons.org/opensuse/73BA25" alt="openSUSE" width="32" height="32" loading="lazy">
-        <span>openSUSE</span>
-      </div>
-      <div class="distro" title="Linux Mint">
-        <img src="https://cdn.simpleicons.org/linuxmint/86BE43" alt="Linux Mint" width="32" height="32" loading="lazy">
-        <span>Mint</span>
+      <div class="cmd-panel" id="install-nets">
+        <div class="cmd-head">
+          <span class="label">NETS</span>
+          <span class="label">ba.sh · catbash</span>
+        </div>
+        <div class="cmd-body">
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://ba.sh/nets | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://catbash.net/nets | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <p class="cmd-hint" data-en="Needs <code>iperf3</code> + <code>python3</code> · see <a href=&quot;/nets/&quot;>NETS page</a>"
+             data-zh="需要 <code>iperf3</code> + <code>python3</code> · 详见 <a href=&quot;/nets/&quot;>NETS 页</a>">
+            Needs <code>iperf3</code> + <code>python3</code> · see <a href="/nets/">NETS page</a>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -879,8 +217,10 @@
 
 <footer>
   <div class="wrap foot-in">
-    <div class="foot-brand">SICK</div>
+    <div class="foot-brand" data-en="猫脚本 · Catbash" data-zh="猫脚本 · Catbash">猫脚本 · Catbash</div>
     <div class="foot-links">
+      <a href="/sick.html">SICK</a>
+      <a href="/nets/">NETS</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
       </a>
@@ -891,191 +231,6 @@
   </div>
 </footer>
 
-<script>
-  function copyText(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
-      const prev = btn.textContent;
-      btn.textContent = (document.documentElement.lang === 'zh') ? '已复制' : 'copied';
-      btn.classList.add('ok');
-      setTimeout(() => {
-        btn.textContent = prev;
-        btn.classList.remove('ok');
-      }, 1400);
-    });
-  }
-
-  function applyLang(lang) {
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[data-en]').forEach(el => {
-      const v = el.getAttribute('data-' + lang);
-      if (v !== null) el.innerHTML = v;
-    });
-    document.getElementById('langBtn').textContent = (lang === 'zh') ? 'EN' : '中文';
-    try { localStorage.setItem('sick-lang', lang); } catch (e) {}
-  }
-
-  function toggleLang() {
-    applyLang(document.documentElement.lang === 'zh' ? 'en' : 'zh');
-  }
-
-  (function () {
-    let lang = 'en';
-    try {
-      const saved = localStorage.getItem('sick-lang');
-      if (saved) lang = saved;
-      else if ((navigator.language || '').toLowerCase().startsWith('zh')) lang = 'zh';
-    } catch (e) {}
-    if (lang !== 'en') applyLang(lang);
-  })();
-</script>
-
-<script>
-(function () {
-  const rawEl = document.getElementById('sample-raw');
-  const out = document.getElementById('sample-out');
-  if (!rawEl || !out) return;
-
-  // Exact CLI dump — never mutate character content
-  const text = JSON.parse(rawEl.textContent);
-
-  function esc(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  /**
-   * Color a line by wrapping tokens only.
-   * Critical: never split into fixed-width cells (that clipped Latin glyphs).
-   */
-  function colorLine(line) {
-    if (line === '') return '';
-
-    // Full ═ bars
-    if (/^[═]+$/.test(line)) {
-      return '<span class="c-bar">' + esc(line) + '</span>';
-    }
-
-    // Pure box-drawing rows (table borders / section closers)
-    if (/^[\u2500-\u257F]+$/.test(line)) {
-      return '<span class="c-frame">' + esc(line) + '</span>';
-    }
-
-    // Report title row
-    if (line.indexOf('系统硬件信息报告') !== -1) {
-      return '<span class="c-title">' + esc(line) + '</span>';
-    }
-
-    if (line.indexOf('报告生成完成') !== -1) {
-      return '<span class="c-done">' + esc(line) + '</span>';
-    }
-    if (line.indexOf('Generated on') === 0) {
-      return '<span class="c-dim">' + esc(line) + '</span>';
-    }
-
-    // Section headers: ┌─ Title ──… (no internal │)
-    if (/^[┌├]─ /.test(line) && line.indexOf('│') === -1) {
-      const m = line.match(/^([┌├]─\s*)(.+?)(─*)$/);
-      if (m) {
-        return (
-          '<span class="c-frame">' + esc(m[1]) + '</span>' +
-          '<span class="c-title">' + esc(m[2]) + '</span>' +
-          '<span class="c-frame">' + esc(m[3]) + '</span>'
-        );
-      }
-    }
-
-    // Prompt
-    if (line.indexOf('curl -sL') !== -1) {
-      const m = line.match(/^(root@pve)(:)(~)(\$.*)$/);
-      if (m) {
-        return (
-          '<span class="c-prompt-u">' + esc(m[1]) + '</span>' +
-          esc(m[2]) +
-          '<span class="c-prompt-p">' + esc(m[3]) + '</span>' +
-          esc(m[4])
-        );
-      }
-    }
-
-    // Content lines — left-to-right token walk, preserve every char
-    if (line.charAt(0) === '│' || line.charAt(0) === '├' || line.charAt(0) === '└') {
-      let html = '';
-      let i = 0;
-      const n = line.length;
-      while (i < n) {
-        const rest = line.slice(i);
-        let m;
-
-        // warning / info rest of line
-        if ((m = rest.match(/^(⚠.*)$/))) {
-          html += '<span class="c-warn">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-        if ((m = rest.match(/^(ℹ.*)$/))) {
-          html += '<span class="c-info">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-
-        // device path
-        if ((m = rest.match(/^(\/dev\/[A-Za-z0-9_./+-]+)/))) {
-          html += '<span class="c-dev">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-
-        // temperatures
-        if ((m = rest.match(/^(\+?\d+(?:\.\d+)?°C)/))) {
-          html += '<span class="c-good">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-
-        // status words (word boundary)
-        if ((m = rest.match(/^(PASS|OK)(?![A-Za-z0-9_])/))) {
-          html += '<span class="c-ok">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-        if ((m = rest.match(/^(UP)(?![A-Za-z0-9_])/))) {
-          html += '<span class="c-up">UP</span>';
-          i += 2;
-          continue;
-        }
-        if ((m = rest.match(/^(DOWN)(?![A-Za-z0-9_])/))) {
-          html += '<span class="c-down">DOWN</span>';
-          i += 4;
-          continue;
-        }
-
-        // box-drawing run
-        if ((m = rest.match(/^([\u2500-\u257F]+)/))) {
-          html += '<span class="c-frame">' + esc(m[1]) + '</span>';
-          i += m[1].length;
-          continue;
-        }
-
-        // plain run until next special
-        let j = i + 1;
-        while (j < n) {
-          const r = line.slice(j);
-          if (/^(⚠|ℹ|\/dev\/|PASS(?![A-Za-z0-9_])|OK(?![A-Za-z0-9_])|UP(?![A-Za-z0-9_])|DOWN(?![A-Za-z0-9_])|\+?\d+(?:\.\d+)?°C|[\u2500-\u257F])/.test(r)) {
-            break;
-          }
-          j++;
-        }
-        html += esc(line.slice(i, j));
-        i = j;
-      }
-      return html;
-    }
-
-    return esc(line);
-  }
-
-  out.innerHTML = text.split('\n').map(colorLine).join('\n');
-})();
-</script>
-
+<script src="/assets/site.js"></script>
 </body>
 </html>

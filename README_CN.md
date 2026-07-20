@@ -1,10 +1,23 @@
+# 猫脚本 · Catbash
+
+开源 Linux 服务器脚本站点 **[catbash.net](https://catbash.net/)**：
+
+| 项目 | 用途 | 运行 | 文档 |
+|------|------|------|------|
+| **[SICK](https://catbash.net/sick.html)** | 一次性硬件盘点 | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · 本 README |
+| **[NETS](https://catbash.net/nets/)** | 公网 iperf3 吞吐采样 | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets/) · [nets/README.md](nets/README.md) |
+
+短链（含 ba.sh）：`https://ba.sh/sick` · `https://ba.sh/nets`
+
+---
+
 # SICK — 服务器信息检查工具包 (Server Info & Check Kit)
 
 > 一款“一次性”的 Linux 服务器硬件盘点工具。单次运行即可采集整台机器的硬件信息，并输出一份干净、彩色、对齐的报告（或 JSON）。它不会安装守护进程、不落地任何数据、也不作为监控常驻运行。
 
 **语言 / Language:** [中文](README_CN.md) | [English](README.md)
 
-**官网:** [https://catbash.net/](https://catbash.net/)
+**官网:** [https://catbash.net/](https://catbash.net/) · [SICK 介绍](https://catbash.net/sick.html)
 
 ## 简介
 

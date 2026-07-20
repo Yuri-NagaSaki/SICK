@@ -1,14 +1,32 @@
 # NETS — Network Endpoint Throughput Sampler
 
+Part of **[猫脚本 / Catbash](https://catbash.net/)** · [Docs page](https://catbash.net/nets/)
+
 Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, Advin, InterServer, …) with **IPv4 and IPv6** send/recv tests.
 
 > Shared public nodes are often **busy**. Numbers are comparative, not lab-grade capacity.
+
+## One-line run
+
+Short install URLs (same script):
+
+- `https://ba.sh/nets`
+- `https://catbash.net/nets`
+
+```bash
+curl -sL https://ba.sh/nets | bash
+# curl -sL https://catbash.net/nets | bash
+
+# Reduced set
+curl -sL https://catbash.net/nets | bash -s -- -r
+```
 
 ## Layout
 
 ```
 nets/
-  nets.sh           # main script
+  index.html        # intro page (served at /nets/)
+  nets.sh           # main script (served at /nets)
   endpoints.json    # machine-readable endpoint catalog
   endpoints.md      # human-readable list + probe notes
   probe-results.txt # last TCP probe snapshot (optional)
@@ -25,7 +43,7 @@ nets/
 sudo apt install iperf3 python3
 ```
 
-## Quick start
+## Quick start (local)
 
 ```bash
 cd nets

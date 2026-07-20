@@ -1,8 +1,19 @@
 /**
- * Short install URLs for catbash.net
- *   /sick  → hardware_info.sh
- *   /nets  → nets/nets.sh  (curl|bash)
- *   /nets/ → nets/index.html when present, else nets README
+ * catbash.net / 猫脚本 — short install URLs + static site
+ *
+ * Pages (HTML):
+ *   /           → 猫脚本 hub (index.html)
+ *   /sick.html  → SICK intro
+ *   /nets/      → NETS intro
+ *
+ * Scripts (text/plain, curl|bash):
+ *   /sick       → hardware_info.sh
+ *   /nets       → nets/nets.sh
+ *   /nets.sh    → nets/nets.sh
+ *
+ * External short links (configured on ba.sh, not here):
+ *   https://ba.sh/sick → raw/main/hardware_info.sh (or this /sick)
+ *   https://ba.sh/nets → raw/main/nets/nets.sh
  */
 function asScript(res) {
   const headers = new Headers(res.headers);
@@ -26,7 +37,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // SICK one-shot hardware script
+    // SICK one-shot hardware script (page is /sick.html — no conflict)
     if (path === "/sick" || path === "/sick/") {
       return asScript(await asset(env, request, "/hardware_info.sh"));
     }
@@ -36,7 +47,7 @@ export default {
       return asScript(await asset(env, request, "/nets/nets.sh"));
     }
 
-    // /nets/ → landing page if available
+    // /nets/ → landing page
     if (path === "/nets/") {
       const page = await asset(env, request, "/nets/index.html");
       if (page.status === 200) return page;

@@ -1,10 +1,23 @@
+# 猫脚本 · Catbash
+
+Open-source Linux server scripts on **[catbash.net](https://catbash.net/)**:
+
+| Project | What it does | Run | Docs |
+|---------|--------------|-----|------|
+| **[SICK](https://catbash.net/sick.html)** | One-shot hardware inventory | `curl -sL https://catbash.net/sick \| bash` | [sick.html](https://catbash.net/sick.html) · this README |
+| **[NETS](https://catbash.net/nets/)** | Public iperf3 throughput sampler | `curl -sL https://catbash.net/nets \| bash` | [nets/](https://catbash.net/nets/) · [nets/README.md](nets/README.md) |
+
+Short links (also on ba.sh): `https://ba.sh/sick` · `https://ba.sh/nets`
+
+---
+
 # SICK — Server Info & Check Kit
 
 > A one-shot Linux server hardware inventory tool. It collects everything about a box in a single run and prints a clean, colorized report (or JSON). It never installs a daemon, never persists data, and never runs as a monitor.
 
 **Language / 语言:** [English](README.md) | [中文](README_CN.md)
 
-**Website:** [https://catbash.net/](https://catbash.net/)
+**Website:** [https://catbash.net/](https://catbash.net/) · [SICK docs](https://catbash.net/sick.html)
 
 ## About
 
