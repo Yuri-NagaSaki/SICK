@@ -10,13 +10,16 @@ Open-source Linux server scripts on **[catbash.net](https://catbash.net/)**:
 
 ```bash
 # Interactive menu (1 = SICK, 2 = NETS)
-curl -sL https://catbash.net/menu | bash
+curl -sL https://ba.sh/menu | bash
+# curl -sL https://catbash.net/menu | bash
+
 # Skip menu
-curl -sL https://catbash.net/menu | bash -s -- sick -cn
-curl -sL https://catbash.net/menu | bash -s -- nets -r
+curl -sL https://ba.sh/menu | bash -s -- sick -cn
+curl -sL https://ba.sh/menu | bash -s -- nets -r
 ```
 
-Short links (also on ba.sh): `https://ba.sh/sick` · `https://ba.sh/nets` · menu: `https://catbash.net/menu`
+Short links: `https://ba.sh/menu` · `https://ba.sh/sick` · `https://ba.sh/nets`  
+(also `https://catbash.net/menu` · `/sick` · `/nets`)
 
 ---
 

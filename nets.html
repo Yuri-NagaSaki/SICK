@@ -66,7 +66,6 @@
       <a class="active" href="/nets.html">NETS</a>
       <a class="nav-hide-sm" href="#install" data-en="Install" data-zh="安装">Install</a>
       <a class="nav-hide-sm" href="#usage" data-en="Usage" data-zh="用法">Usage</a>
-      <a class="nav-hide-sm" href="#endpoints" data-en="Endpoints" data-zh="节点">Endpoints</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
       </a>
@@ -83,14 +82,14 @@
       Network Endpoint <span class="mark">Throughput</span> Sampler
     </h1>
     <p class="lede"
-       data-en="Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — DataPacket, Fiberby, Kamel, BuyVM, Leaseweb, Clouvider, Eranium, and more. One curl."
-       data-zh="对精选公网节点跑 <strong>iperf3</strong> 上下行（IPv4 / IPv6）：DataPacket、Fiberby、Kamel、BuyVM、Leaseweb、Clouvider、Eranium 等。一条命令。">
-      Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — DataPacket, Fiberby, Kamel, BuyVM, Leaseweb, Clouvider, Eranium, and more. One curl.
+       data-en="Public <strong>iperf3</strong> tests (IPv4 / IPv6) against curated providers worldwide — Leaseweb, Wobcom, Cosmonova, Gigahost, Scaleway, Fiberby, Eranium, and more. One curl."
+       data-zh="对精选公网节点跑 <strong>iperf3</strong> 上下行（IPv4 / IPv6）：Leaseweb、Wobcom、Cosmonova、Gigahost、Scaleway、Fiberby、Eranium 等。一条命令。">
+      Public <strong>iperf3</strong> tests (IPv4 / IPv6) against curated providers worldwide — Leaseweb, Wobcom, Cosmonova, Gigahost, Scaleway, Fiberby, Eranium, and more. One curl.
     </p>
     <div class="pills">
       <span class="pill"><b>iperf3</b> send + recv</span>
       <span class="pill"><b>IPv4</b> · <b>IPv6</b></span>
-      <span class="pill"><b>24</b> endpoints</span>
+      <span class="pill" data-en="<b>NA</b> · <b>EU</b> · <b>APAC</b>" data-zh="<b>北美</b> · <b>欧洲</b> · <b>亚太</b>"><b>NA</b> · <b>EU</b> · <b>APAC</b></span>
       <span class="pill">MIT</span>
     </div>
   </div>
@@ -113,13 +112,13 @@
       </div>
       <div class="cmd-row">
         <span class="prompt">$</span>
-        <code>curl -sL https://catbash.net/nets | bash -s -- -r</code>
-        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash -s -- -r" data-en="copy" data-zh="复制">copy</button>
+        <code>curl -sL https://ba.sh/nets | bash -s -- -r</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- -r" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="Needs <code>iperf3</code> + <code>python3</code>. Pass options after <code>bash -s --</code>."
+         data-en="Requires <code>iperf3</code> + <code>python3</code>. Options go after <code>bash -s --</code>."
          data-zh="需要 <code>iperf3</code> + <code>python3</code>。参数写在 <code>bash -s --</code> 后面。">
-        Needs <code>iperf3</code> + <code>python3</code>. Pass options after <code>bash -s --</code>.
+        Requires <code>iperf3</code> + <code>python3</code>. Options go after <code>bash -s --</code>.
       </p>
     </div>
   </div>
@@ -127,31 +126,6 @@
 
 <section class="rule" id="usage">
   <div class="wrap">
-    <h2 data-en="Requirements" data-zh="依赖">Requirements</h2>
-    <div class="report-map" style="margin-bottom:1.25rem">
-      <div class="rm-item"><strong>iperf3</strong><span data-en="Throughput tests" data-zh="吞吐测试">Throughput tests</span></div>
-      <div class="rm-item"><strong>python3</strong><span data-en="Parse results &amp; catalog" data-zh="解析结果与节点表">Parse results &amp; catalog</span></div>
-      <div class="rm-item"><strong>bash</strong><span data-en="4.x recommended" data-zh="建议 4.x">4.x recommended</span></div>
-      <div class="rm-item"><strong data-en="Network" data-zh="网络">Network</strong><span data-en="Outbound TCP to public iperf ports" data-zh="出站 TCP 访问公网 iperf 端口">Outbound TCP to public iperf ports</span></div>
-    </div>
-    <div class="cmd-panel" style="margin-bottom:1.75rem">
-      <div class="cmd-head">
-        <span class="label" data-en="Install deps" data-zh="安装依赖">Install deps</span>
-      </div>
-      <div class="cmd-body">
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>sudo apt install -y iperf3 python3</code>
-          <button class="copy" type="button" data-copy="sudo apt install -y iperf3 python3" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>sudo dnf install -y iperf3 python3</code>
-          <button class="copy" type="button" data-copy="sudo dnf install -y iperf3 python3" data-en="copy" data-zh="复制">copy</button>
-        </div>
-      </div>
-    </div>
-
     <h2 data-en="Options" data-zh="参数">Options</h2>
     <table class="opts" style="margin-bottom:1.75rem">
       <thead>
@@ -161,31 +135,43 @@
         </tr>
       </thead>
       <tbody>
-        <tr><td>NA</td><td>Clouvider</td><td>Los Angeles, US</td><td>la.speedtest.clouvider.net</td></tr>
-        <tr><td>NA</td><td>InterServer</td><td>Los Angeles, US</td><td>lax.speedtest.is.cc</td></tr>
-        <tr><td>NA</td><td>Leaseweb</td><td>Montreal, CA</td><td>speedtest.mtl2.ca.leaseweb.net</td></tr>
-        <tr><td>NA</td><td>Nocix</td><td>Kansas City, US</td><td>speedtest.nocix.net</td></tr>
-        <tr><td>NA</td><td>PureVoltage</td><td>New York, US</td><td>speedtest.nyc.purevoltage.com</td></tr>
-        <tr><td>EU</td><td>Alwyzon</td><td>Vienna, AT</td><td>iperf3-vie-at.alwyzon.net</td></tr>
-        <tr><td>EU</td><td>BuyVM</td><td>Bissen, LU</td><td>speedtest.lu.buyvm.net</td></tr>
-        <tr><td>EU</td><td>Clouvider</td><td>London, UK</td><td>lon.speedtest.clouvider.net</td></tr>
-        <tr><td>EU</td><td>Cosmonova</td><td>Kyiv, UA</td><td>speed.cosmonova.net</td></tr>
-        <tr><td>EU</td><td>Eranium</td><td>Amsterdam, NL</td><td>iperf-ams-nl.eranium.net</td></tr>
-        <tr><td>EU</td><td>Fiberby</td><td>Copenhagen, DK</td><td>speed2.fiberby.dk</td></tr>
-        <tr><td>EU</td><td>Gigahost</td><td>Sandefjord, NO</td><td>lg.gigahost.no</td></tr>
-        <tr><td>EU</td><td>Kamel Networks</td><td>Kista, SE</td><td>speedtest.kamel.network</td></tr>
-        <tr><td>EU</td><td>Leaseweb</td><td>Frankfurt, DE</td><td>speedtest.fra1.de.leaseweb.net</td></tr>
-        <tr><td>EU</td><td>OnlyServers</td><td>United Kingdom</td><td>speedtest.onlyservers.com</td></tr>
-        <tr><td>EU</td><td>RedSwitches</td><td>Amsterdam, NL</td><td>43.250.53.56</td></tr>
-        <tr><td>EU</td><td>Scaleway</td><td>Paris, FR</td><td>iperf.online.net</td></tr>
-        <tr><td>EU</td><td>Wobcom</td><td>Frankfurt, DE</td><td>a205.speedtest.wobcom.de</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong, HK</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Singapore, SG</td><td>speedtest.sin1.sg.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Sydney, AU</td><td>speedtest.syd12.au.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Tokyo, JP</td><td>speedtest.tyo11.jp.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>OVH</td><td>Mumbai, IN</td><td>bom.proof.ovh.net</td></tr>
-        <tr><td>APAC</td><td>UZ Telecom</td><td>Tashkent, UZ</td><td>speedtest.uztelecom.uz</td></tr>
-    </tbody>
+        <tr>
+          <td>-r, --reduced</td>
+          <td data-en="Short list (~8 endpoints) for a quick pass" data-zh="精简列表（约 8 个节点），快速摸底">Short list (~8 endpoints) for a quick pass</td>
+        </tr>
+        <tr>
+          <td>--region na|eu|apac|global|reduced</td>
+          <td data-en="Filter by region (default: global)" data-zh="按区域筛选（默认 global）">Filter by region (default: global)</td>
+        </tr>
+        <tr>
+          <td>-4 / -6</td>
+          <td data-en="IPv4 only / IPv6 only" data-zh="仅 IPv4 / 仅 IPv6">IPv4 only / IPv6 only</td>
+        </tr>
+        <tr>
+          <td>-t, --time &lt;sec&gt;</td>
+          <td data-en="iperf3 duration per direction (default: 10)" data-zh="每个方向测试秒数（默认 10）">iperf3 duration per direction (default: 10)</td>
+        </tr>
+        <tr>
+          <td>-P, --parallel &lt;n&gt;</td>
+          <td data-en="Parallel streams (default: 4). Keep low on shared nodes." data-zh="并行流数（默认 4）。公网节点请勿过大。">Parallel streams (default: 4). Keep low on shared nodes.</td>
+        </tr>
+        <tr>
+          <td>--send-only</td>
+          <td data-en="Upload only (client → server)" data-zh="只测上传（客户端 → 服务端）">Upload only (client → server)</td>
+        </tr>
+        <tr>
+          <td>--recv-only</td>
+          <td data-en="Download only (server → client, iperf -R)" data-zh="只测下载（服务端 → 客户端，iperf -R）">Download only (server → client, iperf -R)</td>
+        </tr>
+        <tr>
+          <td>-l, --list</td>
+          <td data-en="List endpoints and exit" data-zh="列出节点后退出">List endpoints and exit</td>
+        </tr>
+        <tr>
+          <td>-h / -v</td>
+          <td data-en="Help / version" data-zh="帮助 / 版本">Help / version</td>
+        </tr>
+      </tbody>
     </table>
 
     <h2 data-en="Examples" data-zh="示例">Examples</h2>
@@ -211,7 +197,7 @@
           <code>curl -sL https://ba.sh/nets | bash -s -- --region eu --recv-only -t 8</code>
           <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- --region eu --recv-only -t 8" data-en="copy" data-zh="复制">copy</button>
         </div>
-        <p class="cmd-hint" data-en="Europe download-only (saves half the traffic)." data-zh="欧洲只测下载（大约一半流量）。">Europe download-only (saves half the traffic).</p>
+        <p class="cmd-hint" data-en="Europe download-only (saves about half the traffic)." data-zh="欧洲只测下载（大约一半流量）。">Europe download-only (saves about half the traffic).</p>
         <div class="cmd-row">
           <span class="prompt">$</span>
           <code>curl -sL https://ba.sh/nets | bash -s -- -l</code>
@@ -220,104 +206,50 @@
         <p class="cmd-hint" data-en="Print the catalog without running tests." data-zh="只打印节点表，不跑测试。">Print the catalog without running tests.</p>
         <div class="cmd-row">
           <span class="prompt">$</span>
-          <code>curl -sLO https://catbash.net/nets/nets.sh &amp;&amp; chmod +x nets.sh &amp;&amp; ./nets.sh -r</code>
-          <button class="copy" type="button" data-copy="curl -sLO https://catbash.net/nets/nets.sh && chmod +x nets.sh && ./nets.sh -r" data-en="copy" data-zh="复制">copy</button>
+          <code>curl -sL https://ba.sh/menu | bash -s -- nets -r</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- nets -r" data-en="copy" data-zh="复制">copy</button>
         </div>
-        <p class="cmd-hint" data-en="Download once, run locally (uses local endpoints.json if present)." data-zh="下载到本地再跑（同目录有 endpoints.json 时优先用）。">Download once, run locally (uses local endpoints.json if present).</p>
+        <p class="cmd-hint" data-en="Via the Catbash launcher menu." data-zh="通过猫脚本主菜单启动 NETS。">Via the Catbash launcher menu.</p>
       </div>
     </div>
 
     <h2 data-en="How to read the output" data-zh="如何阅读输出">How to read the output</h2>
     <div class="report-map" style="margin-bottom:1.25rem">
-      <div class="rm-item"><strong>Send</strong><span data-en="Upload: your machine → remote iperf3" data-zh="上传：本机 → 远端 iperf3">Upload: your machine → remote iperf3</span></div>
-      <div class="rm-item"><strong>Recv</strong><span data-en="Download: remote → your machine (-R)" data-zh="下载：远端 → 本机 (-R)">Download: remote → your machine (-R)</span></div>
-      <div class="rm-item"><strong>Link</strong><span data-en="Advertised peer capacity (not a guarantee)" data-zh="节点标称链路（非保证值）">Advertised peer capacity (not a guarantee)</span></div>
-      <div class="rm-item"><strong>Traffic</strong><span data-en="Bytes transferred this run (summary)" data-zh="本轮实际传输量（汇总）">Bytes transferred this run (summary)</span></div>
+      <div class="rm-item"><strong>Send</strong><span data-en="Upload: your machine → remote" data-zh="上传：本机 → 远端">Upload: your machine → remote</span></div>
+      <div class="rm-item"><strong>Recv</strong><span data-en="Download: remote → your machine" data-zh="下载：远端 → 本机">Download: remote → your machine</span></div>
+      <div class="rm-item"><strong>Link</strong><span data-en="Advertised peer capacity (not guaranteed)" data-zh="节点标称链路（非保证值）">Advertised peer capacity (not guaranteed)</span></div>
+      <div class="rm-item"><strong>Traffic</strong><span data-en="Bytes transferred this run" data-zh="本轮实际传输量">Bytes transferred this run</span></div>
     </div>
     <ul class="lede" style="max-width:none;margin:0 0 1.5rem;padding-left:1.2rem;list-style:disc">
       <li data-en="Speeds print as <b>Mbps</b> or <b>Gbps</b> (≥1000 Mbps). Compare ranks more than absolute peaks."
           data-zh="速率单位为 <b>Mbps</b> / <b>Gbps</b>（≥1000 Mbps 时用 Gbps）。更关注相对高低。">
         Speeds print as <b>Mbps</b> or <b>Gbps</b> (≥1000 Mbps). Compare ranks more than absolute peaks.
       </li>
-      <li data-en="<b>busy</b> = peer is running someone else's test. Re-run later."
-          data-zh="<b>busy</b> = 对端正被占用，稍后再试。">
-        <b>busy</b> = peer is running someone else's test. Re-run later.
+      <li data-en="<b>busy</b> = peer is busy. Re-run later. <b>fail</b> = connect/timeout/error."
+          data-zh="<b>busy</b> = 对端占用，稍后再试。<b>fail</b> = 连接失败/超时。">
+        <b>busy</b> = peer is busy. Re-run later. <b>fail</b> = connect/timeout/error.
       </li>
-      <li data-en="<b>fail</b> = connect/timeout/error. Firewall, routing, or dead public node."
-          data-zh="<b>fail</b> = 连接失败/超时。可能是防火墙、路由或节点失效。">
-        <b>fail</b> = connect/timeout/error. Firewall, routing, or dead public node.
-      </li>
-      <li data-en="Ports are retried internally and <b>not printed</b> (keeps the table clean)."
-          data-zh="端口在内部自动重试，<b>表格不显示端口</b>，避免杂乱。">
-        Ports are retried internally and <b>not printed</b> (keeps the table clean).
-      </li>
-      <li data-en="A full global dual-stack run moves a lot of data (tens of GiB). Prefer <code>-r</code> or <code>--region</code> first."
-          data-zh="全量双栈一轮流量很大（可达数十 GiB）。建议先用 <code>-r</code> 或 <code>--region</code>。">
-        A full global dual-stack run moves a lot of data (tens of GiB). Prefer <code>-r</code> or <code>--region</code> first.
+      <li data-en="Ports are retried internally and <b>not printed</b>. Prefer <code>-r</code> or <code>--region</code> first — a full dual-stack run moves a lot of data."
+          data-zh="端口在内部重试，表格不显示。建议先 <code>-r</code> 或 <code>--region</code>——全量双栈流量很大。">
+        Ports are retried internally and <b>not printed</b>. Prefer <code>-r</code> or <code>--region</code> first — a full dual-stack run moves a lot of data.
       </li>
     </ul>
 
-    <h2 data-en="Tips" data-zh="建议">Tips</h2>
-    <ul class="lede" style="max-width:none;margin:0;padding-left:1.2rem;list-style:disc">
-      <li data-en="Be polite on public nodes: default <code>-P 4</code>, avoid long <code>-t</code> storms."
-          data-zh="公网节点请克制：默认 <code>-P 4</code>，不要长时间高并行轰炸。">
-        Be polite on public nodes: default <code>-P 4</code>, avoid long <code>-t</code> storms.
-      </li>
-      <li data-en="Results are comparative, not lab-grade capacity of your NIC or the peer DC."
-          data-zh="结果用于对比，不等于本机网卡或对端机房的实验室带宽。">
-        Results are comparative, not lab-grade capacity of your NIC or the peer DC.
-      </li>
-      <li data-en="Override catalog: <code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>"
-          data-zh="自定义节点表：<code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>">
-        Override catalog: <code>NETS_ENDPOINTS_JSON=/path/to.json ./nets.sh</code>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<section class="rule" id="endpoints">
-  <div class="wrap">
-    <h2 data-en="Default endpoints (v6)" data-zh="默认节点 (v6)">Default endpoints (v6)</h2>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th data-en="Region" data-zh="区域">Region</th>
-          <th data-en="Provider" data-zh="厂商">Provider</th>
-          <th data-en="City" data-zh="城市">City</th>
-          <th data-en="Host" data-zh="主机">Host</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>NA</td><td>PureVoltage</td><td>New York</td><td>speedtest.nyc.purevoltage.com</td></tr>
-        <tr><td>NA</td><td>Clouvider</td><td>Los Angeles</td><td>la.speedtest.clouvider.net</td></tr>
-        <tr><td>NA</td><td>InterServer</td><td>Los Angeles</td><td>lax.speedtest.is.cc</td></tr>
-        <tr><td>NA</td><td>Nocix</td><td>Kansas City</td><td>speedtest.nocix.net</td></tr>
-        <tr><td>NA</td><td>Leaseweb</td><td>Montreal, CA</td><td>speedtest.mtl2.ca.leaseweb.net</td></tr>
-        <tr><td>EU</td><td>OnlyServers</td><td>United Kingdom</td><td>speedtest.onlyservers.com</td></tr>
-        <tr><td>EU</td><td>Clouvider</td><td>London</td><td>lon.speedtest.clouvider.net</td></tr>
-        <tr><td>EU</td><td>Eranium</td><td>Amsterdam</td><td>iperf-ams-nl.eranium.net</td></tr>
-        <tr><td>EU</td><td>RedSwitches</td><td>AMS 25G</td><td>43.250.53.56</td></tr>
-        <tr><td>EU</td><td>Online.net</td><td>Paris</td><td>iperf.online.net</td></tr>
-        <tr><td>EU</td><td>Alwyzon</td><td>Vienna</td><td>iperf3-vie-at.alwyzon.net</td></tr>
-        <tr><td>EU</td><td>Kamel Networks</td><td>Kista, SE</td><td>speedtest.kamel.network</td></tr>
-        <tr><td>EU</td><td>Fiberby</td><td>Copenhagen, DK</td><td>speed2.fiberby.dk</td></tr>
-        <tr><td>EU</td><td>BuyVM</td><td>Bissen, LU</td><td>speedtest.lu.buyvm.net</td></tr>
-        <tr><td>APAC</td><td>DataPacket</td><td>Tokyo, JP</td><td>89.187.160.1</td></tr>
-        <tr><td>APAC</td><td>DataPacket</td><td>Singapore, SG</td><td>89.187.162.1</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>Leaseweb</td><td>Sydney</td><td>speedtest.syd12.au.leaseweb.net</td></tr>
-        <tr><td>APAC</td><td>OVH</td><td>Mumbai</td><td>bom.proof.ovh.net</td></tr>
-        <tr><td>APAC</td><td>UZ Telecom</td><td>Tashkent, UZ</td><td>speedtest.uztelecom.uz</td></tr>
-    </tbody>
-    </table>
-    <p class="hint mt-1"
-       data-en="Full catalog: <a href=&quot;/nets/endpoints.json&quot;>endpoints.json</a> · <a href=&quot;/nets/endpoints.md&quot;>endpoints.md</a> · <a href=&quot;https://github.com/Yuri-NagaSaki/SICK/tree/main/nets&quot;>source</a>"
-       data-zh="完整目录：<a href=&quot;/nets/endpoints.json&quot;>endpoints.json</a> · <a href=&quot;/nets/endpoints.md&quot;>endpoints.md</a> · <a href=&quot;https://github.com/Yuri-NagaSaki/SICK/tree/main/nets&quot;>源码</a>">
-      Full catalog: <a href="/nets/endpoints.json">endpoints.json</a> · <a href="/nets/endpoints.md">endpoints.md</a> · <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">source</a>
+    <h2 data-en="Endpoint catalog" data-zh="节点目录">Endpoint catalog</h2>
+    <p class="lede" style="max-width:none;margin-bottom:0.75rem"
+       data-en="Default list is embedded in the script and grouped by <b>NA</b> / <b>EU</b> / <b>APAC</b>. Full machine-readable and human-readable catalogs:"
+       data-zh="默认节点表内嵌在脚本中，按 <b>NA</b> / <b>EU</b> / <b>APAC</b> 分组。完整目录：">
+      Default list is embedded in the script and grouped by <b>NA</b> / <b>EU</b> / <b>APAC</b>. Full machine-readable and human-readable catalogs:
+    </p>
+    <p class="lede" style="max-width:none;margin:0">
+      <a href="/nets/endpoints.md">endpoints.md</a>
+      ·
+      <a href="/nets/endpoints.json">endpoints.json</a>
+      ·
+      <a href="https://github.com/Yuri-NagaSaki/SICK/tree/main/nets">source</a>
     </p>
   </div>
 </section>
-
 
 <footer>
   <div class="wrap foot-in">

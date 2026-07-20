@@ -56,8 +56,9 @@ Usage:
   $(basename "$0") -h | --help
 
 One-liner:
+  curl -sL https://ba.sh/menu | bash
   curl -sL https://catbash.net/menu | bash
-  curl -sL https://catbash.net/menu | bash -s -- nets -r
+  curl -sL https://ba.sh/menu | bash -s -- nets -r
 
 Docs:
   https://catbash.net/          hub

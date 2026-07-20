@@ -10,13 +10,16 @@
 
 ```bash
 # 交互菜单（1 = SICK，2 = NETS）
-curl -sL https://catbash.net/menu | bash
+curl -sL https://ba.sh/menu | bash
+# curl -sL https://catbash.net/menu | bash
+
 # 跳过菜单
-curl -sL https://catbash.net/menu | bash -s -- sick -cn
-curl -sL https://catbash.net/menu | bash -s -- nets -r
+curl -sL https://ba.sh/menu | bash -s -- sick -cn
+curl -sL https://ba.sh/menu | bash -s -- nets -r
 ```
 
-短链（含 ba.sh）：`https://ba.sh/sick` · `https://ba.sh/nets` · 菜单：`https://catbash.net/menu`
+短链：`https://ba.sh/menu` · `https://ba.sh/sick` · `https://ba.sh/nets`  
+（以及 `https://catbash.net/menu` · `/sick` · `/nets`）
 
 ---
 
