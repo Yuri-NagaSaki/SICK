@@ -48,18 +48,14 @@ chmod +x nets.sh
 | `--send-only` / `--recv-only` | One direction only |
 | `-l` | List endpoints |
 
-## Endpoint policy (v0.1)
+## Endpoint policy (v2)
 
-- **RedSwitches**: Amsterdam **25G** only (`43.250.53.56`)
-- **Advin**: all published LG regions
-- **OnlyServers**: UK `speedtest.onlyservers.com`
-- **Eranium**: Amsterdam 100G (required)
-- **Canada**: Leaseweb Montreal
-- **No FiberState**
-- **Hong Kong**: Leaseweb HKG; **no dedicated Taiwan** public 10G (use Tokyo as nearby)
-- DATAPACKET full mesh: not in default (see planning notes)
+- **NYC** PureVoltage · **LA** Clouvider + InterServer · **KC** Nocix · **Canada** Leaseweb MTL  
+- **UK** OnlyServers + Clouvider LON · **AMS** Eranium + RedSwitches **25G**  
+- **Japan / SE Asia** Advin only (Osaka + Johor) · **HKG / SYD / BOM** Leaseweb/OVH  
+- No FiberState; no Advin NA/EU; no Leaseweb NYC/LAX/SIN/TYO  
 
-See [endpoints.md](endpoints.md).
+See [endpoints.md](endpoints.md). Full reverse-proxy URL list: [PROXY.md](PROXY.md).
 
 ## Disclaimer
 

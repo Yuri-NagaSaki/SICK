@@ -1,48 +1,23 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-07-20",
   "notes": [
     "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
-    "port_range is inclusive. Script picks a free-looking port then falls back across the range.",
-    "stack is planning metadata; runtime still probes IPv4/IPv6 connectivity.",
-    "probe_tcp from build host 2026-07-20 is informational only."
+    "port_range is inclusive. Script tries ports on busy/fail.",
+    "stack is planning metadata; runtime still probes IPv4/IPv6.",
+    "v2 trim: one (or intentionally two) providers per metro; FiberState removed; Advin only JP+MY."
   ],
   "endpoints": [
     {
-      "id": "leaseweb-nyc",
-      "provider": "Leaseweb",
+      "id": "purevoltage-nyc",
+      "provider": "PureVoltage",
       "city": "New York, US",
       "region": "na",
-      "host": "speedtest.nyc1.us.leaseweb.net",
+      "host": "speedtest.nyc.purevoltage.com",
       "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "yabs",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "leaseweb-lax",
-      "provider": "Leaseweb",
-      "city": "Los Angeles, US",
-      "region": "na",
-      "host": "speedtest.lax12.us.leaseweb.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "leaseweb-mtl",
-      "provider": "Leaseweb",
-      "city": "Montreal, CA",
-      "region": "na",
-      "host": "speedtest.mtl2.ca.leaseweb.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "iperf3serverlist",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "speed": "40G",
+      "stack": "IPv4",
+      "source": "nws"
     },
     {
       "id": "clouvider-la",
@@ -53,44 +28,7 @@
       "port_range": [5200, 5209],
       "speed": "10G",
       "stack": "IPv4|IPv6",
-      "source": "yabs",
-      "probe_tcp": {"v4": "open", "v6": "refused@5200"}
-    },
-    {
-      "id": "purevoltage-nyc",
-      "provider": "PureVoltage",
-      "city": "New York, US",
-      "region": "na",
-      "host": "speedtest.nyc.purevoltage.com",
-      "port_range": [5201, 5210],
-      "speed": "40G",
-      "stack": "IPv4",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "none"}
-    },
-    {
-      "id": "nocix-kc",
-      "provider": "Nocix",
-      "city": "Kansas City, US",
-      "region": "na",
-      "host": "speedtest.nocix.net",
-      "port_range": [5201, 5205],
-      "speed": "200G",
-      "stack": "IPv4|IPv6",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "interserver-nyc",
-      "provider": "InterServer",
-      "city": "Secaucus/NYC, US",
-      "region": "na",
-      "host": "nyc.speedtest.is.cc",
-      "port_range": [5201, 5209],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "interserver.net/speedtest",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "source": "yabs"
     },
     {
       "id": "interserver-lax",
@@ -101,56 +39,29 @@
       "port_range": [5201, 5209],
       "speed": "10G",
       "stack": "IPv4",
-      "source": "interserver.net/speedtest",
-      "probe_tcp": {"v4": "open", "v6": "none"}
+      "source": "interserver.net/speedtest"
     },
     {
-      "id": "advin-lax",
-      "provider": "Advin Servers",
-      "city": "Los Angeles, US",
-      "region": "na",
-      "host": "lg-lax.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "advin-ewr",
-      "provider": "Advin Servers",
-      "city": "Secaucus, US",
-      "region": "na",
-      "host": "lg-ewr.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "timeout", "v6": "open"}
-    },
-    {
-      "id": "advin-mia",
-      "provider": "Advin Servers",
-      "city": "Miami, US",
-      "region": "na",
-      "host": "lg-mia.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "advin-mci",
-      "provider": "Advin Servers",
+      "id": "nocix-kc",
+      "provider": "Nocix",
       "city": "Kansas City, US",
       "region": "na",
-      "host": "lg-mci.advinservers.com",
-      "port_range": [5201, 5201],
+      "host": "speedtest.nocix.net",
+      "port_range": [5201, 5205],
+      "speed": "200G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    },
+    {
+      "id": "leaseweb-mtl",
+      "provider": "Leaseweb",
+      "city": "Montreal, CA",
+      "region": "na",
+      "host": "speedtest.mtl2.ca.leaseweb.net",
+      "port_range": [5201, 5210],
       "speed": "10G",
       "stack": "IPv4|IPv6",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "source": "iperf3serverlist"
     },
     {
       "id": "onlyservers-uk",
@@ -161,20 +72,7 @@
       "port_range": [5201, 5201],
       "speed": "10G",
       "stack": "IPv4",
-      "source": "speedtest.onlyservers.com",
-      "probe_tcp": {"v4": "open", "v6": "none"}
-    },
-    {
-      "id": "eranium-ams",
-      "provider": "Eranium",
-      "city": "Amsterdam, NL",
-      "region": "eu",
-      "host": "iperf-ams-nl.eranium.net",
-      "port_range": [5201, 5210],
-      "speed": "100G",
-      "stack": "IPv4|IPv6",
-      "source": "yabs",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "source": "speedtest.onlyservers.com"
     },
     {
       "id": "clouvider-lon",
@@ -185,32 +83,18 @@
       "port_range": [5200, 5209],
       "speed": "10G",
       "stack": "IPv4|IPv6",
-      "source": "yabs",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "source": "yabs"
     },
     {
-      "id": "online-paris",
-      "provider": "Online.net/Scaleway",
-      "city": "Paris, FR",
+      "id": "eranium-ams",
+      "provider": "Eranium",
+      "city": "Amsterdam, NL",
       "region": "eu",
-      "host": "iperf.online.net",
-      "port_range": [5200, 5209],
-      "speed": "100G",
-      "stack": "IPv4",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "none"}
-    },
-    {
-      "id": "alwyzon-vie",
-      "provider": "Alwyzon",
-      "city": "Vienna, AT",
-      "region": "eu",
-      "host": "iperf3-vie-at.alwyzon.net",
+      "host": "iperf-ams-nl.eranium.net",
       "port_range": [5201, 5210],
-      "speed": "200G",
+      "speed": "100G",
       "stack": "IPv4|IPv6",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "open"}
+      "source": "yabs"
     },
     {
       "id": "redswitches-ams25g",
@@ -221,83 +105,29 @@
       "port_range": [5201, 5201],
       "speed": "25G",
       "stack": "IPv4",
-      "source": "lg.redswitches.com",
-      "probe_tcp": {"v4": "open", "v6": "none"}
+      "source": "lg.redswitches.com"
     },
     {
-      "id": "advin-nbg",
-      "provider": "Advin Servers",
-      "city": "Nuremberg, DE",
+      "id": "online-paris",
+      "provider": "Online.net/Scaleway",
+      "city": "Paris, FR",
       "region": "eu",
-      "host": "lg-nbg.advinservers.com",
-      "port_range": [5201, 5201],
-      "speed": "10G",
+      "host": "iperf.online.net",
+      "port_range": [5200, 5209],
+      "speed": "100G",
       "stack": "IPv4",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "timeout", "v6": "timeout"},
-      "enabled": true,
-      "note": "TCP probe timed out from build host; keep for other networks"
+      "source": "nws"
     },
     {
-      "id": "leaseweb-sin",
-      "provider": "Leaseweb",
-      "city": "Singapore, SG",
-      "region": "apac",
-      "host": "speedtest.sin1.sg.leaseweb.net",
+      "id": "alwyzon-vie",
+      "provider": "Alwyzon",
+      "city": "Vienna, AT",
+      "region": "eu",
+      "host": "iperf3-vie-at.alwyzon.net",
       "port_range": [5201, 5210],
-      "speed": "10G",
+      "speed": "200G",
       "stack": "IPv4|IPv6",
-      "source": "yabs",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "leaseweb-hkg",
-      "provider": "Leaseweb",
-      "city": "Hong Kong, HK",
-      "region": "apac",
-      "host": "speedtest.hkg12.hk.leaseweb.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "iperf3serverlist",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "leaseweb-tyo",
-      "provider": "Leaseweb",
-      "city": "Tokyo, JP",
-      "region": "apac",
-      "host": "speedtest.tyo11.jp.leaseweb.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "iperf3serverlist",
-      "probe_tcp": {"v4": "open", "v6": "open"},
-      "note": "Nearest common public 10G proxy for Taiwan paths"
-    },
-    {
-      "id": "leaseweb-syd",
-      "provider": "Leaseweb",
-      "city": "Sydney, AU",
-      "region": "apac",
-      "host": "speedtest.syd12.au.leaseweb.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "nws",
-      "probe_tcp": {"v4": "open", "v6": "open"}
-    },
-    {
-      "id": "ovh-bom",
-      "provider": "OVH",
-      "city": "Mumbai, IN",
-      "region": "apac",
-      "host": "bom.proof.ovh.net",
-      "port_range": [5201, 5210],
-      "speed": "10G",
-      "stack": "IPv4|IPv6",
-      "source": "nws",
-      "probe_tcp": {"v4": "timeout", "v6": "open"}
+      "source": "nws"
     },
     {
       "id": "advin-kix",
@@ -308,9 +138,7 @@
       "port_range": [5201, 5201],
       "speed": "10G",
       "stack": "IPv4",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "timeout", "v6": "timeout"},
-      "note": "TCP probe timed out from build host; keep for other networks"
+      "source": "lg.advinservers.com"
     },
     {
       "id": "advin-jhb",
@@ -321,19 +149,50 @@
       "port_range": [5201, 5201],
       "speed": "10G",
       "stack": "IPv4",
-      "source": "lg.advinservers.com",
-      "probe_tcp": {"v4": "fail", "v6": "fail"},
-      "note": "TCP probe failed from build host; keep for other networks"
+      "source": "lg.advinservers.com"
+    },
+    {
+      "id": "leaseweb-hkg",
+      "provider": "Leaseweb",
+      "city": "Hong Kong, HK",
+      "region": "apac",
+      "host": "speedtest.hkg12.hk.leaseweb.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "iperf3serverlist"
+    },
+    {
+      "id": "leaseweb-syd",
+      "provider": "Leaseweb",
+      "city": "Sydney, AU",
+      "region": "apac",
+      "host": "speedtest.syd12.au.leaseweb.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    },
+    {
+      "id": "ovh-bom",
+      "provider": "OVH",
+      "city": "Mumbai, IN",
+      "region": "apac",
+      "host": "bom.proof.ovh.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
     }
   ],
   "reduced_ids": [
-    "leaseweb-nyc",
-    "leaseweb-lax",
+    "purevoltage-nyc",
+    "clouvider-la",
     "leaseweb-mtl",
     "onlyservers-uk",
     "eranium-ams",
     "redswitches-ams25g",
-    "leaseweb-hkg",
-    "leaseweb-sin"
+    "advin-kix",
+    "leaseweb-hkg"
   ]
 }
