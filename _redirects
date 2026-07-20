@@ -1,0 +1,4 @@
+# Cloudflare static-assets / Pages style rewrite (200 = proxy, not 302)
+# Backup for hosts that honor _redirects without a Worker.
+/sick              /hardware_info.sh    200
+/sick/             /hardware_info.sh    200

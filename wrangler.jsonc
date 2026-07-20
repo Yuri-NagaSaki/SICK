@@ -1,12 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sick",
+  "main": "worker.js",
   "compatibility_date": "2026-07-20",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS",
+    // Run the Worker for short install paths so /sick is never a bare 404.
+    "run_worker_first": ["/sick", "/sick/"]
   },
   "compatibility_flags": [
     "nodejs_compat"

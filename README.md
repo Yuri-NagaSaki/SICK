@@ -40,16 +40,16 @@
 
 ```bash
 # English (default)
-curl -sL https://catbash.net/hardware_info.sh | bash
+curl -sL https://catbash.net/sick | bash
 
 # Chinese
-curl -sL https://catbash.net/hardware_info.sh | bash -s -- -cn
+curl -sL https://catbash.net/sick | bash -s -- -cn
 
 # Auto-install any missing tools without prompting
-curl -sL https://catbash.net/hardware_info.sh | bash -s -- -y
+curl -sL https://catbash.net/sick | bash -s -- -y
 
 # JSON to stdout
-curl -sL https://catbash.net/hardware_info.sh | bash -s -- --json
+curl -sL https://catbash.net/sick | bash -s -- --json
 ```
 
 When passing options through `curl | bash`, use `bash -s -- <options>`.
