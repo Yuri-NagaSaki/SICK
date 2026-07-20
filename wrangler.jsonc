@@ -9,6 +9,10 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
+    // Default auto-trailing-slash redirects /sick.html → /sick and /nets.html → /nets,
+    // which collides with curl|bash install short links. Serve .html paths literally.
+    "html_handling": "none",
+    "not_found_handling": "none",
     // Worker handles short install paths before static 404.
     "run_worker_first": [
       "/sick",
