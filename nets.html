@@ -58,9 +58,7 @@
 
 <nav class="nav">
   <div class="wrap nav-in">
-    <a class="brand" href="/">
-      <span class="cat" aria-hidden="true">🐱</span>
-      <span data-en="<em>Cat</em>bash" data-zh="<em>猫</em>脚本"><em>Cat</em>bash</span>
+    <a class="brand" href="/"><span data-en="<em>Cat</em>bash" data-zh="<em>猫</em>脚本"><em>Cat</em>bash</span>
     </a>
     <div class="nav-links">
       <a class="nav-hide-sm" href="/" data-en="Home" data-zh="首页">Home</a>
@@ -84,14 +82,14 @@
       Network Endpoint <span class="mark">Throughput</span> Sampler
     </h1>
     <p class="lede"
-       data-en="Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, and more. One curl."
-       data-zh="对精选公网节点跑 <strong>iperf3</strong> 上下行（IPv4 / IPv6）：Leaseweb、Clouvider、Eranium、OnlyServers、RedSwitches 25G 等。一条命令。">
-      Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, and more. One curl.
+       data-en="Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — DataPacket, Fiberby, Kamel, BuyVM, Leaseweb, Clouvider, Eranium, and more. One curl."
+       data-zh="对精选公网节点跑 <strong>iperf3</strong> 上下行（IPv4 / IPv6）：DataPacket、Fiberby、Kamel、BuyVM、Leaseweb、Clouvider、Eranium 等。一条命令。">
+      Public <strong>iperf3</strong> tests (IPv4 / IPv6) against a curated set of providers — DataPacket, Fiberby, Kamel, BuyVM, Leaseweb, Clouvider, Eranium, and more. One curl.
     </p>
     <div class="pills">
       <span class="pill"><b>iperf3</b> send + recv</span>
       <span class="pill"><b>IPv4</b> · <b>IPv6</b></span>
-      <span class="pill"><b>14</b> endpoints</span>
+      <span class="pill"><b>20</b> endpoints</span>
       <span class="pill">MIT</span>
     </div>
   </div>
@@ -128,7 +126,7 @@
 
 <section class="rule" id="endpoints">
   <div class="wrap">
-    <h2 data-en="Default endpoints (v2)" data-zh="默认节点 (v2)">Default endpoints (v2)</h2>
+    <h2 data-en="Default endpoints (v4)" data-zh="默认节点 (v4)">Default endpoints (v4)</h2>
     <table class="data-table">
       <thead>
         <tr>
@@ -149,10 +147,17 @@
         <tr><td>EU</td><td>Eranium</td><td>Amsterdam</td><td>iperf-ams-nl.eranium.net</td></tr>
         <tr><td>EU</td><td>RedSwitches</td><td>AMS 25G</td><td>43.250.53.56</td></tr>
         <tr><td>EU</td><td>Online.net</td><td>Paris</td><td>iperf.online.net</td></tr>
-        <tr><td>EU</td><td>Alwyzon</td><td>Vienna</td><td>iperf3-vie-at.alwyzon.net</td></tr>        <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
+        <tr><td>EU</td><td>Alwyzon</td><td>Vienna</td><td>iperf3-vie-at.alwyzon.net</td></tr>
+        <tr><td>EU</td><td>Kamel Networks</td><td>Kista, SE</td><td>speedtest.kamel.network</td></tr>
+        <tr><td>EU</td><td>Fiberby</td><td>Copenhagen, DK</td><td>speed2.fiberby.dk</td></tr>
+        <tr><td>EU</td><td>BuyVM</td><td>Bissen, LU</td><td>speedtest.lu.buyvm.net</td></tr>
+        <tr><td>APAC</td><td>DataPacket</td><td>Tokyo, JP</td><td>89.187.160.1</td></tr>
+        <tr><td>APAC</td><td>DataPacket</td><td>Singapore, SG</td><td>89.187.162.1</td></tr>
+        <tr><td>APAC</td><td>Leaseweb</td><td>Hong Kong</td><td>speedtest.hkg12.hk.leaseweb.net</td></tr>
         <tr><td>APAC</td><td>Leaseweb</td><td>Sydney</td><td>speedtest.syd12.au.leaseweb.net</td></tr>
         <tr><td>APAC</td><td>OVH</td><td>Mumbai</td><td>bom.proof.ovh.net</td></tr>
-      </tbody>
+        <tr><td>APAC</td><td>UZ Telecom</td><td>Tashkent, UZ</td><td>speedtest.uztelecom.uz</td></tr>
+    </tbody>
     </table>
     <p class="hint mt-1"
        data-en="Full catalog: <a href=&quot;/nets/endpoints.json&quot;>endpoints.json</a> · <a href=&quot;/nets/endpoints.md&quot;>endpoints.md</a> · <a href=&quot;https://github.com/Yuri-NagaSaki/SICK/tree/main/nets&quot;>source</a>"
@@ -162,31 +167,6 @@
   </div>
 </section>
 
-<section id="donate">
-  <div class="wrap">
-    <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
-    <div class="donate-grid">
-      <div class="donate-card">
-        <h3>USDT — TRC20</h3>
-        <p class="lead" data-en="Tron network (TRC20). Double-check the network before sending."
-           data-zh="Tron 网络 (TRC20)。转账前请再次确认网络。">Tron network (TRC20). Double-check the network before sending.</p>
-        <div class="addr">
-          <code>TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
-          <button class="copy" type="button" onclick="copyText('TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5', this)" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <span class="net-tag">TRC20 · Tron</span>
-      </div>
-      <div class="donate-card" style="display:flex;flex-direction:column;justify-content:center">
-        <h3 data-en="Afdian / 爱发电" data-zh="爱发电">Afdian / 爱发电</h3>
-        <p class="lead" data-en="Recurring or one-time support." data-zh="支持一次或持续赞助。">Recurring or one-time support.</p>
-        <a class="afd-btn" href="https://afdian.com/a/ellye" target="_blank" rel="noopener">
-          <span class="heart">♥</span>
-          <span data-en="Support on Afdian" data-zh="在爱发电支持">Support on Afdian</span>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
 
 <footer>
   <div class="wrap foot-in">

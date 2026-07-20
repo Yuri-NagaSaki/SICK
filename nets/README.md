@@ -66,12 +66,12 @@ chmod +x nets.sh
 | `--send-only` / `--recv-only` | One direction only |
 | `-l` | List endpoints |
 
-## Endpoint policy (v3)
+## Endpoint policy (v4)
 
 - **NYC** PureVoltage · **LA** Clouvider + InterServer · **KC** Nocix · **Canada** Leaseweb MTL  
-- **UK** OnlyServers + Clouvider LON · **AMS** Eranium + RedSwitches **25G**  
-- **APAC** Leaseweb HKG / SYD · OVH Mumbai (Advin JP/MY removed — public iperf down)  
-- Ports are tried internally; default table hides them. Summary shows **↑/↓ traffic** for the run.
+- **EU** OnlyServers, Clouvider LON, Eranium, RS 25G, Kamel SE, Fiberby DK, BuyVM LU, …  
+- **APAC** DataPacket Tokyo/Singapore · Leaseweb HKG/SYD · OVH Mumbai · UZ Telecom  
+- Ports tried internally (capped); table hides them. Summary shows **↑/↓ traffic** for the run.
 
 See [endpoints.md](endpoints.md). Full reverse-proxy URL list: [PROXY.md](PROXY.md).
 

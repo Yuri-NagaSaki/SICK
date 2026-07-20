@@ -23,7 +23,7 @@
   --font-mono: "Azeret Mono", ui-monospace, monospace;
   --pad-x: clamp(1rem, 3.5vw, 2.5rem);
   --max: min(92vw, 1100px);
-  --max-wide: min(92vw, 1480px);
+  --max-wide: min(92vw, 1100px);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -643,3 +643,24 @@ footer {
   clip: rect(0,0,0,0);
   border: 0;
 }
+
+/* Sample terminal: never exceed page/nav width */
+.section-output {
+  overflow: hidden;
+}
+.term {
+  max-width: 100%;
+  width: 100%;
+}
+.term-body {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.term-body pre {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+}
+.brand .cat { display: none; }

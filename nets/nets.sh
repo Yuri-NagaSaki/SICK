@@ -13,7 +13,7 @@
 #
 set -uo pipefail
 
-VERSION="0.2.0"
+VERSION="0.2.1"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,13 +34,13 @@ write_embedded_endpoints() {
   # Writes embedded catalog to $1
   cat >"$1" <<'NETS_ENDPOINTS_JSON'
 {
-  "version": 3,
+  "version": 4,
   "updated": "2026-07-20",
   "notes": [
-    "Public shared iperf3 endpoints \u2014 results may show busy and do not equal raw DC capacity.",
-    "port_range is inclusive. Script tries ports on busy/fail (ports not shown in UI).",
+    "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
+    "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v3: removed Advin Osaka/Johor (public iperf unreachable)."
+    "v4: +DataPacket TYO/SIN, Kamel SE, UZ Telecom, Fiberby DK, BuyVM LU; Advin removed in v3."
   ],
   "endpoints": [
     {
@@ -238,6 +238,90 @@ write_embedded_endpoints() {
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "nws"
+    },
+    {
+      "id": "datapacket-tyo",
+      "provider": "DataPacket",
+      "city": "Tokyo, JP",
+      "region": "apac",
+      "host": "89.187.160.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "datapacket-sin",
+      "provider": "DataPacket",
+      "city": "Singapore, SG",
+      "region": "apac",
+      "host": "89.187.162.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "kamel-kista",
+      "provider": "Kamel Networks",
+      "city": "Kista, SE",
+      "region": "eu",
+      "host": "speedtest.kamel.network",
+      "port_range": [
+        5201,
+        5205
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "kamel.network"
+    },
+    {
+      "id": "uztelecom-tas",
+      "provider": "UZ Telecom",
+      "city": "Tashkent, UZ",
+      "region": "apac",
+      "host": "speedtest.uztelecom.uz",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "uztelecom.uz"
+    },
+    {
+      "id": "fiberby-cph",
+      "provider": "Fiberby",
+      "city": "Copenhagen, DK",
+      "region": "eu",
+      "host": "speed2.fiberby.dk",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "25G",
+      "stack": "IPv4|IPv6",
+      "source": "fiberby.dk"
+    },
+    {
+      "id": "buyvm-lux",
+      "provider": "BuyVM",
+      "city": "Bissen, LU",
+      "region": "eu",
+      "host": "speedtest.lu.buyvm.net",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "buyvm.net"
     }
   ],
   "reduced_ids": [
@@ -246,9 +330,9 @@ write_embedded_endpoints() {
     "leaseweb-mtl",
     "onlyservers-uk",
     "eranium-ams",
-    "redswitches-ams25g",
-    "leaseweb-hkg",
-    "leaseweb-syd"
+    "fiberby-cph",
+    "datapacket-tyo",
+    "leaseweb-hkg"
   ]
 }
 NETS_ENDPOINTS_JSON
@@ -629,8 +713,11 @@ print("ok|%.2f|%d" % (mbps, bytes_))
 # Prints: status|mbps|bytes  (port not exposed)
 run_iperf_range() {
   local host="$1" p0="$2" p1="$3" ipver="$4" reverse="$5"
-  local p st mb by st_last="fail"
+  local p st mb by st_last="fail" tries=0
+  # Cap attempts so wide ranges (e.g. Fiberby 9201-9240) stay usable
+  local max_tries=12
   for ((p = p0; p <= p1; p++)); do
+    tries=$((tries + 1))
     IFS='|' read -r st mb by <<<"$(run_iperf_once "$host" "$p" "$ipver" "$reverse")"
     st_last="$st"
     if [[ "$st" == "ok" ]]; then
@@ -640,6 +727,9 @@ run_iperf_range() {
     if [[ "$st" == "fail" && "$p0" == "$p1" ]]; then
       echo "fail||0"
       return 0
+    fi
+    if (( tries >= max_tries )); then
+      break
     fi
   done
   if [[ "$st_last" == "busy" ]]; then

@@ -1,11 +1,11 @@
 {
-  "version": 3,
+  "version": 4,
   "updated": "2026-07-20",
   "notes": [
-    "Public shared iperf3 endpoints \u2014 results may show busy and do not equal raw DC capacity.",
-    "port_range is inclusive. Script tries ports on busy/fail (ports not shown in UI).",
+    "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
+    "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v3: removed Advin Osaka/Johor (public iperf unreachable)."
+    "v4: +DataPacket TYO/SIN, Kamel SE, UZ Telecom, Fiberby DK, BuyVM LU; Advin removed in v3."
   ],
   "endpoints": [
     {
@@ -203,6 +203,90 @@
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "nws"
+    },
+    {
+      "id": "datapacket-tyo",
+      "provider": "DataPacket",
+      "city": "Tokyo, JP",
+      "region": "apac",
+      "host": "89.187.160.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "datapacket-sin",
+      "provider": "DataPacket",
+      "city": "Singapore, SG",
+      "region": "apac",
+      "host": "89.187.162.1",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "datapacket.com"
+    },
+    {
+      "id": "kamel-kista",
+      "provider": "Kamel Networks",
+      "city": "Kista, SE",
+      "region": "eu",
+      "host": "speedtest.kamel.network",
+      "port_range": [
+        5201,
+        5205
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "kamel.network"
+    },
+    {
+      "id": "uztelecom-tas",
+      "provider": "UZ Telecom",
+      "city": "Tashkent, UZ",
+      "region": "apac",
+      "host": "speedtest.uztelecom.uz",
+      "port_range": [
+        5200,
+        5209
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "uztelecom.uz"
+    },
+    {
+      "id": "fiberby-cph",
+      "provider": "Fiberby",
+      "city": "Copenhagen, DK",
+      "region": "eu",
+      "host": "speed2.fiberby.dk",
+      "port_range": [
+        9201,
+        9240
+      ],
+      "speed": "25G",
+      "stack": "IPv4|IPv6",
+      "source": "fiberby.dk"
+    },
+    {
+      "id": "buyvm-lux",
+      "provider": "BuyVM",
+      "city": "Bissen, LU",
+      "region": "eu",
+      "host": "speedtest.lu.buyvm.net",
+      "port_range": [
+        5201,
+        5201
+      ],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "buyvm.net"
     }
   ],
   "reduced_ids": [
@@ -211,8 +295,8 @@
     "leaseweb-mtl",
     "onlyservers-uk",
     "eranium-ams",
-    "redswitches-ams25g",
-    "leaseweb-hkg",
-    "leaseweb-syd"
+    "fiberby-cph",
+    "datapacket-tyo",
+    "leaseweb-hkg"
   ]
 }
