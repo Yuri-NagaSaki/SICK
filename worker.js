@@ -7,6 +7,7 @@
  *   /nets.html  → NETS intro
  *
  * Scripts (text/plain, curl|bash):
+ *   /menu /catbash /catbash.sh → catbash.sh (launcher menu)
  *   /sick  /sick/  → hardware_info.sh
  *   /nets  /nets/  → nets/nets.sh
  *   /nets.sh       → nets/nets.sh
@@ -15,7 +16,7 @@
  * (which would collide with the install short link).
  *
  * External short links (ba.sh):
- *   https://ba.sh/sick · https://ba.sh/nets
+ *   https://ba.sh/sick · https://ba.sh/nets · (optional ba.sh/menu → catbash.sh)
  */
 function asScript(res) {
   const headers = new Headers(res.headers);
@@ -42,6 +43,17 @@ export default {
     // Hub home — assets.html_handling=none does not auto-serve index.html for /
     if (path === "/" || path === "") {
       return asset(env, request, "/index.html");
+    }
+
+    // Launcher menu (猫脚本)
+    if (
+      path === "/menu" ||
+      path === "/menu/" ||
+      path === "/catbash" ||
+      path === "/catbash/" ||
+      path === "/catbash.sh"
+    ) {
+      return asScript(await asset(env, request, "/catbash.sh"));
     }
 
     // SICK one-shot hardware script (page is /sick.html)

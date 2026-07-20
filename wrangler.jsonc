@@ -16,6 +16,11 @@
     // Worker handles short install paths before static 404.
     "run_worker_first": [
       "/",
+      "/menu",
+      "/menu/",
+      "/catbash",
+      "/catbash/",
+      "/catbash.sh",
       "/sick",
       "/sick/",
       "/nets",

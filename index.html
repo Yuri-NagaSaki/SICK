@@ -137,6 +137,41 @@
 
 <section>
   <div class="wrap">
+    <h2 data-en="Launcher menu" data-zh="主菜单">Launcher menu</h2>
+    <p class="lede" style="margin-bottom:1rem"
+       data-en="One entry point: pick <strong>SICK</strong> or <strong>NETS</strong> interactively, or pass the name as an argument."
+       data-zh="统一入口：交互选择 <strong>SICK</strong> / <strong>NETS</strong>，也可直接传参数跳过菜单。">
+      One entry point: pick <strong>SICK</strong> or <strong>NETS</strong> interactively, or pass the name as an argument.
+    </p>
+    <div class="cmd-panel" id="install-menu" style="margin-bottom:1.75rem">
+      <div class="cmd-head">
+        <span class="label" data-en="Menu" data-zh="菜单">Menu</span>
+        <span class="label">catbash.net/menu</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://catbash.net/menu | bash</code>
+          <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://catbash.net/menu | bash -s -- nets -r</code>
+          <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash -s -- nets -r" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://catbash.net/menu | bash -s -- sick -cn</code>
+          <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash -s -- sick -cn" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint"
+           data-en="Interactive: type <code>1</code>/<code>2</code>. Non-interactive: <code>sick</code> or <code>nets</code> + options after <code>bash -s --</code>. Alias: <code>/catbash</code>"
+           data-zh="交互：输入 <code>1</code>/<code>2</code>。非交互：在 <code>bash -s --</code> 后写 <code>sick</code> 或 <code>nets</code> 及参数。别名：<code>/catbash</code>">
+          Interactive: type <code>1</code>/<code>2</code>. Non-interactive: <code>sick</code> or <code>nets</code> + options after <code>bash -s --</code>. Alias: <code>/catbash</code>
+        </p>
+      </div>
+    </div>
+
     <h2 data-en="Quick install" data-zh="快速安装">Quick install</h2>
     <div class="product-grid">
       <div class="cmd-panel" id="install-sick">
