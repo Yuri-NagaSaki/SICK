@@ -29,6 +29,213 @@ ENDPOINTS_URLS=(
   "https://ba.sh/nets/endpoints.json"
 )
 
+# BEGIN_EMBEDDED_ENDPOINTS
+write_embedded_endpoints() {
+  # Writes embedded catalog to $1
+  cat >"$1" <<'NETS_ENDPOINTS_JSON'
+{
+  "version": 2,
+  "updated": "2026-07-20",
+  "notes": [
+    "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
+    "port_range is inclusive. Script tries ports on busy/fail.",
+    "stack is planning metadata; runtime still probes IPv4/IPv6.",
+    "v2 trim: one (or intentionally two) providers per metro; FiberState removed; Advin only JP+MY."
+  ],
+  "endpoints": [
+    {
+      "id": "purevoltage-nyc",
+      "provider": "PureVoltage",
+      "city": "New York, US",
+      "region": "na",
+      "host": "speedtest.nyc.purevoltage.com",
+      "port_range": [5201, 5210],
+      "speed": "40G",
+      "stack": "IPv4",
+      "source": "nws"
+    },
+    {
+      "id": "clouvider-la",
+      "provider": "Clouvider",
+      "city": "Los Angeles, US",
+      "region": "na",
+      "host": "la.speedtest.clouvider.net",
+      "port_range": [5200, 5209],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "interserver-lax",
+      "provider": "InterServer",
+      "city": "Los Angeles, US",
+      "region": "na",
+      "host": "lax.speedtest.is.cc",
+      "port_range": [5201, 5209],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "interserver.net/speedtest"
+    },
+    {
+      "id": "nocix-kc",
+      "provider": "Nocix",
+      "city": "Kansas City, US",
+      "region": "na",
+      "host": "speedtest.nocix.net",
+      "port_range": [5201, 5205],
+      "speed": "200G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    },
+    {
+      "id": "leaseweb-mtl",
+      "provider": "Leaseweb",
+      "city": "Montreal, CA",
+      "region": "na",
+      "host": "speedtest.mtl2.ca.leaseweb.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "iperf3serverlist"
+    },
+    {
+      "id": "onlyservers-uk",
+      "provider": "OnlyServers",
+      "city": "United Kingdom",
+      "region": "eu",
+      "host": "speedtest.onlyservers.com",
+      "port_range": [5201, 5201],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "speedtest.onlyservers.com"
+    },
+    {
+      "id": "clouvider-lon",
+      "provider": "Clouvider",
+      "city": "London, UK",
+      "region": "eu",
+      "host": "lon.speedtest.clouvider.net",
+      "port_range": [5200, 5209],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "eranium-ams",
+      "provider": "Eranium",
+      "city": "Amsterdam, NL",
+      "region": "eu",
+      "host": "iperf-ams-nl.eranium.net",
+      "port_range": [5201, 5210],
+      "speed": "100G",
+      "stack": "IPv4|IPv6",
+      "source": "yabs"
+    },
+    {
+      "id": "redswitches-ams25g",
+      "provider": "RedSwitches",
+      "city": "Amsterdam (Iron Mountain), NL",
+      "region": "eu",
+      "host": "43.250.53.56",
+      "port_range": [5201, 5201],
+      "speed": "25G",
+      "stack": "IPv4",
+      "source": "lg.redswitches.com"
+    },
+    {
+      "id": "online-paris",
+      "provider": "Online.net/Scaleway",
+      "city": "Paris, FR",
+      "region": "eu",
+      "host": "iperf.online.net",
+      "port_range": [5200, 5209],
+      "speed": "100G",
+      "stack": "IPv4",
+      "source": "nws"
+    },
+    {
+      "id": "alwyzon-vie",
+      "provider": "Alwyzon",
+      "city": "Vienna, AT",
+      "region": "eu",
+      "host": "iperf3-vie-at.alwyzon.net",
+      "port_range": [5201, 5210],
+      "speed": "200G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    },
+    {
+      "id": "advin-kix",
+      "provider": "Advin Servers",
+      "city": "Osaka, JP",
+      "region": "apac",
+      "host": "lg-kix.advinservers.com",
+      "port_range": [5201, 5201],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "lg.advinservers.com"
+    },
+    {
+      "id": "advin-jhb",
+      "provider": "Advin Servers",
+      "city": "Johor, MY",
+      "region": "apac",
+      "host": "lg-jhb.advinservers.com",
+      "port_range": [5201, 5201],
+      "speed": "10G",
+      "stack": "IPv4",
+      "source": "lg.advinservers.com"
+    },
+    {
+      "id": "leaseweb-hkg",
+      "provider": "Leaseweb",
+      "city": "Hong Kong, HK",
+      "region": "apac",
+      "host": "speedtest.hkg12.hk.leaseweb.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "iperf3serverlist"
+    },
+    {
+      "id": "leaseweb-syd",
+      "provider": "Leaseweb",
+      "city": "Sydney, AU",
+      "region": "apac",
+      "host": "speedtest.syd12.au.leaseweb.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    },
+    {
+      "id": "ovh-bom",
+      "provider": "OVH",
+      "city": "Mumbai, IN",
+      "region": "apac",
+      "host": "bom.proof.ovh.net",
+      "port_range": [5201, 5210],
+      "speed": "10G",
+      "stack": "IPv4|IPv6",
+      "source": "nws"
+    }
+  ],
+  "reduced_ids": [
+    "purevoltage-nyc",
+    "clouvider-la",
+    "leaseweb-mtl",
+    "onlyservers-uk",
+    "eranium-ams",
+    "redswitches-ams25g",
+    "advin-kix",
+    "leaseweb-hkg"
+  ]
+}
+NETS_ENDPOINTS_JSON
+}
+# END_EMBEDDED_ENDPOINTS
+
+
 # Defaults
 TEST_TIME=10
 PARALLEL=4
@@ -151,9 +358,17 @@ resolve_endpoints_json() {
       fi
     fi
   done
+  # 5) embedded catalog (works when only /nets is reverse-proxied)
+  if declare -F write_embedded_endpoints >/dev/null 2>&1; then
+    write_embedded_endpoints "$ENDPOINTS_TMP"
+    if [[ -s "$ENDPOINTS_TMP" ]]; then
+      ENDPOINTS_JSON="$ENDPOINTS_TMP"
+      return 0
+    fi
+  fi
   rm -f "$ENDPOINTS_TMP"
   ENDPOINTS_TMP=""
-  err "Could not load endpoints.json (local or https://catbash.net/nets/endpoints.json)."
+  err "Could not load endpoints.json (local, remote, or embedded)."
   return 1
 }
 
