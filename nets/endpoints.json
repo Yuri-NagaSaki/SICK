@@ -1,11 +1,12 @@
 {
-  "version": 6,
-  "updated": "2026-07-20",
+  "version": 7,
+  "updated": "2026-07-24",
   "notes": [
     "Public shared iperf3 endpoints — results may show busy and do not equal raw DC capacity.",
     "port_range is inclusive. Script tries ports on busy/fail (ports not shown; max tries capped).",
     "stack is planning metadata; runtime still probes IPv4/IPv6.",
-    "v6: drop failing DataPacket TYO/SIN/FRA; +Leaseweb TYO/SIN/FRA, Wobcom FRA, Cosmonova Kyiv; Gigahost IPv4-only (no AAAA)."
+    "v6: drop failing DataPacket TYO/SIN/FRA; +Leaseweb TYO/SIN/FRA, Wobcom FRA, Cosmonova Kyiv; Gigahost IPv4-only (no AAAA).",
+    "v7: drop InterServer LAX (lax.speedtest.is.cc) — consistently fail in practice."
   ],
   "endpoints": [
     {
@@ -21,20 +22,6 @@
       "speed": "10G",
       "stack": "IPv4|IPv6",
       "source": "yabs"
-    },
-    {
-      "id": "interserver-lax",
-      "provider": "InterServer",
-      "city": "Los Angeles, US",
-      "region": "na",
-      "host": "lax.speedtest.is.cc",
-      "port_range": [
-        5201,
-        5209
-      ],
-      "speed": "10G",
-      "stack": "IPv4",
-      "source": "interserver.net/speedtest"
     },
     {
       "id": "leaseweb-mtl",

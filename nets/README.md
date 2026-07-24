@@ -2,7 +2,7 @@
 
 Part of **[猫脚本 / Catbash](https://catbash.net/)** · [Docs page](https://catbash.net/nets.html)
 
-Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, InterServer, …) with **IPv4 and IPv6** send/recv tests.
+Public **iperf3** throughput sampler for Linux servers. Curated endpoints (Leaseweb, Clouvider, Eranium, OnlyServers, RedSwitches 25G, …) with **IPv4 and IPv6** send/recv tests.
 
 > Shared public nodes are often **busy**. Numbers are comparative, not lab-grade capacity.
 
@@ -68,7 +68,7 @@ chmod +x nets.sh
 
 ## Endpoint policy (v6)
 
-- **NA** PureVoltage NYC · Clouvider/InterServer LA · Nocix KC · Leaseweb MTL  
+- **NA** PureVoltage NYC · Clouvider LA · Nocix KC · Leaseweb MTL 
 - **EU** Wobcom/Leaseweb FRA · Cosmonova Kyiv · Gigahost NO · Scaleway · Eranium/RS AMS · Kamel · Fiberby · BuyVM · …  
 - **APAC** Leaseweb TYO/SIN/HKG/SYD · OVH Mumbai · UZ Telecom  
 - Output grouped by area (`NA` / `EU` / `APAC`). Ports capped/hidden. Summary shows Send/Recv traffic.

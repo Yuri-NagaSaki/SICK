@@ -14,7 +14,6 @@ Public **iperf3** targets. Machine-readable: [`endpoints.json`](endpoints.json).
 |----|----------|------|------|-------|-------|
 | purevoltage-nyc | PureVoltage | New York, US | `speedtest.nyc.purevoltage.com` | 40G | IPv4 |
 | clouvider-la | Clouvider | Los Angeles, US | `la.speedtest.clouvider.net` | 10G | IPv4\|IPv6 |
-| interserver-lax | InterServer | Los Angeles, US | `lax.speedtest.is.cc` | 10G | IPv4 |
 | nocix-kc | Nocix | Kansas City, US | `speedtest.nocix.net` | 200G | IPv4\|IPv6 |
 | leaseweb-mtl | Leaseweb | Montreal, CA | `speedtest.mtl2.ca.leaseweb.net` | 10G | IPv4\|IPv6 |
 
