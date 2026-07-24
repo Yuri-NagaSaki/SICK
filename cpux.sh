@@ -22,7 +22,7 @@
 #
 set -uo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 # Pin known-good Geekbench releases (update when new stable drops).
 GB5_VER="5.5.1"
@@ -46,6 +46,11 @@ DO_GB7=0
 INTERACTIVE_PICK=0
 WORKDIR=""
 RESULTS_TSV=""
+STATUS_FILE=""
+SPINNER_PID=""
+PLAN_INDEX=0
+PLAN_TOTAL=0
+RUN_START_TS=0
 
 # ---------- colors ----------
 if [[ -t 1 ]]; then
@@ -67,6 +72,22 @@ ok()   { printf '%b\n' "${C_OK}$*${NC}"; }
 info() { printf '%b\n' "${C_DIM}$*${NC}" >&2; }
 warn() { printf '%b\n' "${C_WARN}$*${NC}" >&2; }
 hdr()  { printf '%b\n' "${C_HDR}$*${NC}" >&2; }
+
+# Human duration: 129 → 2m09s
+format_duration() {
+  local s="${1:-0}"
+  if [[ "$s" -ge 60 ]]; then
+    printf '%dm%02ds' "$((s / 60))" "$((s % 60))"
+  else
+    printf '%ds' "$s"
+  fi
+}
+
+# Update spinner status line (overwritten, not scrolled).
+status_set() {
+  [[ -n "${STATUS_FILE:-}" ]] || return 0
+  printf '%s\n' "$*" >"$STATUS_FILE"
+}
 
 # ---------- i18n helpers ----------
 T() {
@@ -285,7 +306,7 @@ ensure_tools() {
   return 0
 }
 
-# Sets GB_DEST to extracted directory path.
+# Sets GB_DEST to extracted directory path. Progress via status_set only.
 download_and_extract() {
   local ver="$1"
   local dest="$WORKDIR/gb${ver}"
@@ -295,14 +316,13 @@ download_and_extract() {
 
   mkdir -p "$dest"
   if [[ -x "$dest/${GB_BIN}" ]]; then
-    info "$(T "→ Reusing ${GB_LABEL} binary" "→ 复用 ${GB_LABEL} 二进制")"
+    status_set "$(T "reuse binary" "复用二进制")"
     GB_DEST="$dest"
     return 0
   fi
 
-  hdr "$(T "Downloading ${GB_LABEL}…" "正在下载 ${GB_LABEL}…")"
+  status_set "$(T "download" "下载") ${GB_TAR}"
   for url in "${GB_URLS[@]}"; do
-    info "  $url"
     if dl "$url" "$tarpath"; then
       if [[ -s "$tarpath" ]]; then
         ok=1
@@ -316,7 +336,7 @@ download_and_extract() {
     return 1
   fi
 
-  info "$(T "Extracting…" "解压中…")"
+  status_set "$(T "extract" "解压")"
   if ! tar -xzf "$tarpath" -C "$dest" --strip-components=1 2>/dev/null; then
     # some tarballs have a single top-level folder; extract then move
     rm -rf "${dest:?}/"* 2>/dev/null || true
@@ -485,19 +505,25 @@ fetch_scores() {
   return 1
 }
 
-# Spinner while a PID runs; optional status file with latest line.
+# Spinner: one live line — label + status_file detail (overwrites). Quiet if not a TTY.
 start_spinner() {
-  local msg="$1"
-  local status_file="${2:-}"
+  local label="$1"
+  if [[ ! -t 1 ]]; then
+    printf '%b·%b %s\n' "${C_DIM}" "${NC}" "$label" >&2
+    SPINNER_PID=""
+    return 0
+  fi
   (
-    local frames=('|' '/' '-' '\') i=0 line=""
+    local frames=('|' '/' '-' '\') i=0 detail=""
     while true; do
-      if [[ -n "$status_file" && -f "$status_file" ]]; then
-        line="$(tail -n 1 "$status_file" 2>/dev/null | tr -d '\r' | cut -c1-48)"
+      detail=""
+      if [[ -n "${STATUS_FILE:-}" && -f "$STATUS_FILE" ]]; then
+        detail="$(tail -n 1 "$STATUS_FILE" 2>/dev/null | tr -d '\r' | cut -c1-52)"
       fi
-      printf '\r%b[%s]%b %s  %s   ' "${C_ACC}" "${frames[i%4]}" "${NC}" "$msg" "${C_DIM}${line}${NC}"
-      i=$((i+1))
-      sleep 0.15
+      printf '\r%b[%s]%b %s  %b%s%b\033[K' \
+        "${C_ACC}" "${frames[i % 4]}" "${NC}" "$label" "${C_DIM}" "$detail" "${NC}"
+      i=$((i + 1))
+      sleep 0.12
     done
   ) &
   SPINNER_PID=$!
@@ -512,83 +538,113 @@ stop_spinner() {
   printf '\r\033[0K'
 }
 
-# Run one Geekbench version. Prints a result table and appends to RESULTS_TSV.
+# Print one compact suite result to stdout (scannable).
+print_suite_result() {
+  local suite="$1" status="$2" single="$3" multi="$4" url="$5" elapsed="$6"
+  local dur s_disp m_disp
+  dur="$(format_duration "$elapsed")"
+  s_disp="${single:--}"
+  m_disp="${multi:--}"
+
+  if [[ "$status" == "OK" ]]; then
+    printf '  %b%-4s%b  Single %b%-7s%b Multi %b%-7s%b %b%s%b\n' \
+      "${BOLD}" "$suite" "${NC}" \
+      "${C_OK}${BOLD}" "$s_disp" "${NC}" \
+      "${C_OK}${BOLD}" "$m_disp" "${NC}" \
+      "${C_DIM}" "$dur" "${NC}"
+    if [[ -n "$url" && "$url" != "-" ]]; then
+      printf '         %s\n' "$url"
+    fi
+  else
+    printf '  %b%-4s%b  %b%s%b  %b%s%b\n' \
+      "${BOLD}" "$suite" "${NC}" \
+      "${C_ERR}" "$status" "${NC}" \
+      "${C_DIM}" "$dur" "${NC}"
+    [[ -n "$url" && "$url" != "-" ]] && printf '         %s\n' "$url"
+  fi
+}
+
+# Run one Geekbench version. Quiet progress + compact result line.
 run_gb() {
   local ver="$1"
-  local dest bin out log status_file start_ts end_ts elapsed
-  local result_url claim_url single multi
+  local dest bin out log start_ts end_ts elapsed
+  local result_url claim_url single multi label
+  local gb_pid watch_pid gb_rc=0
 
+  PLAN_INDEX=$((PLAN_INDEX + 1))
   setup_gb_meta "$ver" || return 1
-  download_and_extract "$ver" || return 1
+
+  STATUS_FILE="$WORKDIR/gb${ver}.status"
+  out="$WORKDIR/gb${ver}.out"
+  log="$WORKDIR/gb${ver}.log"
+  : >"$out"
+  : >"$STATUS_FILE"
+
+  if [[ "$PLAN_TOTAL" -gt 1 ]]; then
+    label="[$((PLAN_INDEX))/${PLAN_TOTAL}] GB${ver}"
+  else
+    label="GB${ver}"
+  fi
+
+  start_ts="$(date +%s)"
+  start_spinner "$label"
+
+  if ! download_and_extract "$ver"; then
+    stop_spinner
+    elapsed=$(( $(date +%s) - start_ts ))
+    print_suite_result "GB${ver}" "FAIL" "-" "-" "-" "$elapsed"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "FAIL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
+    return 1
+  fi
   dest="$GB_DEST"
   bin="$dest/${GB_BIN}"
 
-  out="$WORKDIR/gb${ver}.out"
-  log="$WORKDIR/gb${ver}.log"
-  status_file="$WORKDIR/gb${ver}.status"
-  : >"$out"
-  : >"$status_file"
-
-  echo
-  hdr "════════════════════════════════════════════════════════"
-  hdr "  ${GB_LABEL}  $(T "benchmark" "跑分中")"
-  hdr "════════════════════════════════════════════════════════"
-  info "$(T "This may take several minutes. Please wait…" "可能需要数分钟，请耐心等待…")"
-
-  start_ts="$(date +%s)"
-  start_spinner "$(T "Running" "运行中") ${GB_LABEL}" "$status_file"
-
-  # Stream stdout: keep full log, update status for spinner
+  status_set "$(T "benchmark" "跑分")"
   # shellcheck disable=SC2094
   "$bin" --cpu >"$out" 2>"$log" &
-  local gb_pid=$!
+  gb_pid=$!
 
-  # Progress watcher: update status from last "Running …" line
+  # Progress watcher: latest workload / section for spinner
   (
     while kill -0 "$gb_pid" 2>/dev/null; do
       if [[ -s "$out" ]]; then
-        # Prefer the latest "Running X" or section header
         local last
         last="$(grep -E '^(Single-Core|Multi-Core|  Running |Upload)' "$out" 2>/dev/null | tail -1 | sed 's/^  //')"
-        [[ -n "$last" ]] && printf '%s\n' "$last" >"$status_file"
+        [[ -n "$last" ]] && printf '%s\n' "$last" >"$STATUS_FILE"
       fi
-      sleep 0.4
+      sleep 0.35
     done
   ) &
-  local watch_pid=$!
+  watch_pid=$!
 
   wait "$gb_pid"
-  local gb_rc=$?
+  gb_rc=$?
   kill "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
 
-  stop_spinner
   end_ts="$(date +%s)"
   elapsed=$((end_ts - start_ts))
 
   if [[ "$gb_rc" -ne 0 ]]; then
-    err "$(T "${GB_LABEL} exited with code ${gb_rc}." "${GB_LABEL} 退出码 ${gb_rc}。")"
-    [[ -s "$log" ]] && info "$(tail -n 20 "$log")"
-    [[ -s "$out" ]] && info "$(tail -n 20 "$out")"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "FAIL" "-" "-" "-" "${elapsed}s" >>"$RESULTS_TSV"
+    stop_spinner
+    err "$(T "${GB_LABEL} exited ${gb_rc}" "${GB_LABEL} 退出码 ${gb_rc}")"
+    print_suite_result "GB${ver}" "FAIL" "-" "-" "-" "$elapsed"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "FAIL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
     return 1
   fi
 
-  # Extract result URL from CLI output
   result_url="$(grep -oE 'https://browser\.geekbench\.com/v[0-9]+/cpu/[0-9]+' "$out" | head -1 || true)"
   claim_url="$(grep -oE 'https://browser\.geekbench\.com/v[0-9]+/cpu/[0-9]+/claim\?key=[0-9]+' "$out" | head -1 || true)"
 
   if [[ -z "$result_url" ]]; then
-    err "$(T "${GB_LABEL}: upload/result URL not found. Check network / tryout limits." "${GB_LABEL}: 未找到结果链接。请检查网络或试用限制。")"
-    tail -n 30 "$out" 2>/dev/null || true
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "NO_URL" "-" "-" "-" "${elapsed}s" >>"$RESULTS_TSV"
+    stop_spinner
+    err "$(T "GB${ver}: no result URL (network / tryout?)" "GB${ver}: 无结果链接（网络/试用？）")"
+    print_suite_result "GB${ver}" "NO_URL" "-" "-" "-" "$elapsed"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "NO_URL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
     return 1
   fi
 
-  info "$(T "Result URL:" "结果链接:") $result_url"
-  info "$(T "Fetching single/multi scores…" "正在获取单核/多核分数…")"
-  start_spinner "$(T "Fetching scores" "获取分数中")" 
-
+  status_set "$(T "fetch scores" "取分")…"
   if fetch_scores "$result_url" 10; then
     single="${SCORE_SINGLE:-}"
     multi="${SCORE_MULTI:-}"
@@ -598,39 +654,14 @@ run_gb() {
   fi
   stop_spinner
 
-  # Display results — never print empty placeholders without explanation
-  echo
-  printf '%b\n' "${C_BAR}${GB_LABEL} $(T "Benchmark Test" "测试结果"):${NC}"
-  printf '%b\n' "${C_BAR}---------------------------------${NC}"
-  printf "%-16s | %-40s\n" "$(T "Test" "项目")" "$(T "Value" "数值")"
-  printf "%-16s | %-40s\n" "----------------" "----------------------------------------"
-
-  if [[ -n "$single" ]]; then
-    printf "%-16s | %b%s%b\n" "$(T "Single Core" "单核分数")" "${C_OK}${BOLD}" "$single" "${NC}"
-  else
-    printf "%-16s | %b%s%b\n" "$(T "Single Core" "单核分数")" "${C_WARN}" "$(T "(unavailable — open Full Test URL)" "（暂不可用 — 请打开完整链接）")" "${NC}"
-  fi
-  if [[ -n "$multi" ]]; then
-    printf "%-16s | %b%s%b\n" "$(T "Multi Core" "多核分数")" "${C_OK}${BOLD}" "$multi" "${NC}"
-  else
-    printf "%-16s | %b%s%b\n" "$(T "Multi Core" "多核分数")" "${C_WARN}" "$(T "(unavailable — open Full Test URL)" "（暂不可用 — 请打开完整链接）")" "${NC}"
-  fi
-  printf "%-16s | %s\n" "$(T "Full Test" "完整报告")" "$result_url"
-  if [[ -n "$claim_url" ]]; then
-    printf "%-16s | %s\n" "$(T "Claim" "认领结果")" "$claim_url"
-  fi
-  printf "%-16s | %s\n" "$(T "Duration" "耗时")" "${elapsed}s"
-
   if [[ -z "$single" || -z "$multi" ]]; then
-    warn "$(T "Could not parse one or more scores (Cloudflare/API). URL above still has full results." "未能解析部分分数（Cloudflare/接口）。上方链接仍有完整结果。")"
-  else
-    ok "$(T "✓ ${GB_LABEL} complete — Single ${single} / Multi ${multi}" "✓ ${GB_LABEL} 完成 — 单核 ${single} / 多核 ${multi}")"
+    warn "$(T "GB${ver}: partial scores — open report URL" "GB${ver}: 分数不完整 — 请打开报告链接")"
   fi
 
+  print_suite_result "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "$elapsed"
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "${elapsed}s" >>"$RESULTS_TSV"
+    "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "$elapsed" >>"$RESULTS_TSV"
 
-  # Optional claim URL save (yabs-compatible)
   if [[ -n "$claim_url" ]]; then
     printf '%s\n' "$claim_url" >>"$WORKDIR/geekbench_claim.url" 2>/dev/null || true
     printf '%s\n' "$claim_url" >>"./geekbench_claim.url" 2>/dev/null || true
@@ -641,49 +672,60 @@ run_gb() {
 
 print_summary() {
   [[ -s "$RESULTS_TSV" ]] || return 0
+  local lines total_elapsed=0
+  lines="$(wc -l <"$RESULTS_TSV" | tr -d ' ')"
+  # Always print a clean table (source of truth for multi-suite runs).
   echo
-  hdr "════════════════════════════════════════════════════════"
-  hdr "  CPUX $(T "Summary" "汇总")"
-  hdr "════════════════════════════════════════════════════════"
-  printf "%-8s | %-8s | %-10s | %-10s | %s\n" "Suite" "Status" "Single" "Multi" "URL / note"
-  printf "%-8s-+-%-8s-+-%-10s-+-%-10s-+-%s\n" "--------" "--------" "----------" "----------" "----------------"
-  while IFS=$'\t' read -r suite status single multi url dur; do
-    printf "%-8s | %-8s | %-10s | %-10s | %s\n" "$suite" "$status" "$single" "$multi" "${url} (${dur})"
+  printf '%b%s%b\n' "${C_BAR}" "── $(T "Summary" "汇总") ──────────────────────────────────────" "${NC}"
+  printf "  %-6s %8s %8s %8s  %s\n" "Suite" "Single" "Multi" "Time" "Report"
+  printf "  %-6s %8s %8s %8s  %s\n" "------" "--------" "--------" "--------" "------"
+  while IFS=$'\t' read -r suite status single multi url secs; do
+    total_elapsed=$((total_elapsed + ${secs:-0}))
+    if [[ "$status" == "OK" ]]; then
+      printf "  %-6s %b%8s%b %b%8s%b %8s  %s\n" \
+        "$suite" "${C_OK}" "${single}" "${NC}" "${C_OK}" "${multi}" "${NC}" \
+        "$(format_duration "$secs")" "$url"
+    else
+      printf "  %-6s %b%8s%b %8s %8s  %s\n" \
+        "$suite" "${C_ERR}" "$status" "${NC}" "-" \
+        "$(format_duration "$secs")" "${url:--}"
+    fi
   done <"$RESULTS_TSV"
-  echo
+  if [[ -n "${RUN_START_TS:-}" && "$RUN_START_TS" -gt 0 ]]; then
+    total_elapsed=$(( $(date +%s) - RUN_START_TS ))
+  fi
+  printf "  %b%s%b %s" "${C_DIM}" "$(T "Total" "合计")" "${NC}" "$(format_duration "$total_elapsed")"
+  if [[ "$lines" -gt 1 ]]; then
+    printf " · %s %s" "$lines" "$(T "suites" "项")"
+  fi
+  if [[ -f ./geekbench_claim.url ]]; then
+    printf " · claim → ./geekbench_claim.url"
+  fi
+  printf '\n\n'
 }
 
 print_sysinfo() {
-  local cpu cores mem virt
+  local cpu cores mem virt plan=""
   cpu="$(awk -F: '/model name/ {gsub(/^[ \t]+/,"",$2); print $2; exit}' /proc/cpuinfo 2>/dev/null || uname -m)"
   cores="$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo "?")"
   mem="$(awk '/MemTotal/ {printf "%.1f GiB", $2/1024/1024}' /proc/meminfo 2>/dev/null || echo "?")"
   virt="$(systemd-detect-virt 2>/dev/null || true)"
-  virt="${virt:-unknown}"
+  virt="${virt:-none}"
+
   echo
-  printf '%b\n' "${C_BAR}+----------------------------------------------------------+${NC}"
-  printf '%b|%b  %bCPUX%b  v%s  —  CPU eXaminer%-22s%b|%b\n' \
-    "${C_BAR}" "${NC}" "${C_HDR}" "${NC}" "$VERSION" "" "${C_BAR}" "${NC}"
-  printf '%b\n' "${C_BAR}+----------------------------------------------------------+${NC}"
-  info "CPU    : $cpu"
-  info "Cores  : $cores"
-  info "RAM    : $mem"
-  info "Arch   : $(uname -m) / virt=${virt}"
-  info "Host   : $(uname -s) $(uname -r)"
-  echo
+  printf '%bCPUX%b v%s · CPU eXaminer\n' "${C_HDR}${BOLD}" "${NC}" "$VERSION"
+  printf '%b%s%b\n' "${C_DIM}" \
+    "${cpu} · ${cores}c · ${mem} · $(uname -m)/${virt}" "${NC}"
 }
 
 print_menu() {
   print_sysinfo
-  printf '  %b1)%b  Geekbench 5   %b(%s)%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB5_VER" "${NC}"
-  printf '  %b2)%b  Geekbench 6   %b(%s)%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB6_VER" "${NC}"
-  printf '  %b3)%b  Geekbench 7   %b(%s)%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB7_VER" "${NC}"
-  printf '  %b4)%b  %b%s%b  %b(5 → 6 → 7)%b\n' \
-    "${C_ACC}" "${NC}" "${BOLD}" "$(T "All versions" "全部版本")" "${NC}" "${C_DIM}" "${NC}"
   echo
-  printf '  %b0)%b  %s\n' "${C_ACC}" "${NC}" "$(T "Exit" "退出")"
-  echo
-  printf '  %b%s%b https://catbash.net/cpux.html\n' "${C_DIM}" "$(T "Docs:" "文档:")" "${NC}"
+  printf '  %b1%b  Geekbench 5   %b%s%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB5_VER" "${NC}"
+  printf '  %b2%b  Geekbench 6   %b%s%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB6_VER" "${NC}"
+  printf '  %b3%b  Geekbench 7   %b%s%b\n' "${C_ACC}" "${NC}" "${C_DIM}" "$GB7_VER" "${NC}"
+  printf '  %b4%b  %s  %b5→6→7%b\n' "${C_ACC}" "${NC}" "$(T "All" "全部")" "${C_DIM}" "${NC}"
+  printf '  %b0%b  %s\n' "${C_ACC}" "${NC}" "$(T "Exit" "退出")"
   echo
 }
 
@@ -783,13 +825,29 @@ main() {
     exit 0
   fi
 
+  # Count planned suites for [n/N] progress
+  PLAN_TOTAL=0
+  PLAN_INDEX=0
+  [[ "$DO_GB5" -eq 1 ]] && PLAN_TOTAL=$((PLAN_TOTAL + 1))
+  [[ "$DO_GB6" -eq 1 ]] && PLAN_TOTAL=$((PLAN_TOTAL + 1))
+  [[ "$DO_GB7" -eq 1 ]] && PLAN_TOTAL=$((PLAN_TOTAL + 1))
+
   print_sysinfo
-  info "$(T "Work dir:" "工作目录:") $WORKDIR"
-  info "$(T "Plan:" "计划:")$([ "$DO_GB5" -eq 1 ] && echo -n " GB5")$([ "$DO_GB6" -eq 1 ] && echo -n " GB6")$([ "$DO_GB7" -eq 1 ] && echo -n " GB7")"
+  local plan_str=""
+  [[ "$DO_GB5" -eq 1 ]] && plan_str+="GB5 "
+  [[ "$DO_GB6" -eq 1 ]] && plan_str+="GB6 "
+  [[ "$DO_GB7" -eq 1 ]] && plan_str+="GB7 "
+  plan_str="${plan_str% }"
+  plan_str="${plan_str// / → }"
+  printf '%b%s%b %s\n' "${C_DIM}" "$(T "Plan" "计划")" "${NC}" "$plan_str"
+  if [[ "$KEEP_FILES" -eq 1 ]]; then
+    info "$(T "Keep:" "保留:") $WORKDIR"
+  fi
   echo
 
+  RUN_START_TS="$(date +%s)"
   local failed=0
-  # Sequential: one at a time (never parallel — CPU contention destroys scores)
+  # Sequential only — parallel GB would corrupt multi-core scores
   if [[ "$DO_GB5" -eq 1 ]]; then
     run_gb 5 || failed=1
   fi
@@ -803,14 +861,13 @@ main() {
   print_summary
 
   if [[ "$KEEP_FILES" -eq 1 ]]; then
-    info "$(T "Kept files in:" "文件保留于:") $WORKDIR"
+    info "$(T "Files kept:" "文件保留:") $WORKDIR"
   fi
 
   if [[ "$failed" -ne 0 ]]; then
-    warn "$(T "One or more benchmarks failed." "有测试失败。")"
+    warn "$(T "Finished with errors." "完成（有失败项）。")"
     exit 1
   fi
-  ok "$(T "All selected benchmarks finished." "所选测试已全部完成。")"
   exit 0
 }
 
