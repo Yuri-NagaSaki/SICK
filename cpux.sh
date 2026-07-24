@@ -22,7 +22,7 @@
 #
 set -uo pipefail
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 
 # Pin known-good Geekbench releases (update when new stable drops).
 GB5_VER="5.5.1"
@@ -80,6 +80,15 @@ format_duration() {
     printf '%dm%02ds' "$((s / 60))" "$((s % 60))"
   else
     printf '%ds' "$s"
+  fi
+}
+
+# Clear terminal when interactive (works under curl|bash via /dev/tty).
+clear_screen() {
+  if [[ -w /dev/tty ]]; then
+    printf '\033[2J\033[H' > /dev/tty 2>/dev/null || true
+  elif [[ -t 1 ]]; then
+    printf '\033[2J\033[H'
   fi
 }
 
@@ -538,8 +547,8 @@ stop_spinner() {
   printf '\r\033[0K'
 }
 
-# Print one compact suite result to stdout (scannable).
-print_suite_result() {
+# Compact list row (multi-suite mode).
+print_suite_list() {
   local suite="$1" status="$2" single="$3" multi="$4" url="$5" elapsed="$6"
   local dur s_disp m_disp
   dur="$(format_duration "$elapsed")"
@@ -561,6 +570,47 @@ print_suite_result() {
       "${C_ERR}" "$status" "${NC}" \
       "${C_DIM}" "$dur" "${NC}"
     [[ -n "$url" && "$url" != "-" ]] && printf '         %s\n' "$url"
+  fi
+}
+
+# Vertical detail table (single-suite mode) — classic scannable report.
+print_suite_detail() {
+  local label="$1" status="$2" single="$3" multi="$4" url="$5" claim="$6" elapsed="$7"
+  local s_disp m_disp
+  s_disp="${single:--}"
+  m_disp="${multi:--}"
+
+  echo
+  printf '%b%s Benchmark Test:%b\n' "${C_BAR}" "$label" "${NC}"
+  printf '%b---------------------------------%b\n' "${C_BAR}" "${NC}"
+  printf "%-16s | %-40s\n" "Test" "Value"
+  printf "%-16s | %-40s\n" "----------------" "----------------------------------------"
+  if [[ "$status" != "OK" ]]; then
+    printf "%-16s | %b%s%b\n" "Status" "${C_ERR}" "$status" "${NC}"
+  fi
+  if [[ -n "$single" && "$single" != "-" ]]; then
+    printf "%-16s | %b%s%b\n" "Single Core" "${C_OK}${BOLD}" "$s_disp" "${NC}"
+  else
+    printf "%-16s | %b%s%b\n" "Single Core" "${C_WARN}" "${s_disp}" "${NC}"
+  fi
+  if [[ -n "$multi" && "$multi" != "-" ]]; then
+    printf "%-16s | %b%s%b\n" "Multi Core" "${C_OK}${BOLD}" "$m_disp" "${NC}"
+  else
+    printf "%-16s | %b%s%b\n" "Multi Core" "${C_WARN}" "${m_disp}" "${NC}"
+  fi
+  [[ -n "$url" && "$url" != "-" ]] && printf "%-16s | %s\n" "Full Test" "$url"
+  [[ -n "$claim" && "$claim" != "-" ]] && printf "%-16s | %s\n" "Claim" "$claim"
+  printf "%-16s | %s\n" "Duration" "$(format_duration "$elapsed")"
+  echo
+}
+
+# Dispatch: detail table if one suite, list row if many.
+emit_suite_result() {
+  local suite="$1" status="$2" single="$3" multi="$4" url="$5" claim="$6" elapsed="$7" label="${8:-$suite}"
+  if [[ "${PLAN_TOTAL:-1}" -le 1 ]]; then
+    print_suite_detail "$label" "$status" "$single" "$multi" "$url" "$claim" "$elapsed"
+  else
+    print_suite_list "$suite" "$status" "$single" "$multi" "$url" "$elapsed"
   fi
 }
 
@@ -592,7 +642,7 @@ run_gb() {
   if ! download_and_extract "$ver"; then
     stop_spinner
     elapsed=$(( $(date +%s) - start_ts ))
-    print_suite_result "GB${ver}" "FAIL" "-" "-" "-" "$elapsed"
+    emit_suite_result "GB${ver}" "FAIL" "-" "-" "-" "-" "$elapsed" "$GB_LABEL"
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "FAIL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
     return 1
   fi
@@ -628,7 +678,7 @@ run_gb() {
   if [[ "$gb_rc" -ne 0 ]]; then
     stop_spinner
     err "$(T "${GB_LABEL} exited ${gb_rc}" "${GB_LABEL} 退出码 ${gb_rc}")"
-    print_suite_result "GB${ver}" "FAIL" "-" "-" "-" "$elapsed"
+    emit_suite_result "GB${ver}" "FAIL" "-" "-" "-" "-" "$elapsed" "$GB_LABEL"
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "FAIL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
     return 1
   fi
@@ -639,7 +689,7 @@ run_gb() {
   if [[ -z "$result_url" ]]; then
     stop_spinner
     err "$(T "GB${ver}: no result URL (network / tryout?)" "GB${ver}: 无结果链接（网络/试用？）")"
-    print_suite_result "GB${ver}" "NO_URL" "-" "-" "-" "$elapsed"
+    emit_suite_result "GB${ver}" "NO_URL" "-" "-" "-" "-" "$elapsed" "$GB_LABEL"
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "GB${ver}" "NO_URL" "-" "-" "-" "$elapsed" >>"$RESULTS_TSV"
     return 1
   fi
@@ -658,7 +708,7 @@ run_gb() {
     warn "$(T "GB${ver}: partial scores — open report URL" "GB${ver}: 分数不完整 — 请打开报告链接")"
   fi
 
-  print_suite_result "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "$elapsed"
+  emit_suite_result "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "${claim_url:--}" "$elapsed" "$GB_LABEL"
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
     "GB${ver}" "OK" "${single:--}" "${multi:--}" "$result_url" "$elapsed" >>"$RESULTS_TSV"
 
@@ -671,10 +721,11 @@ run_gb() {
 }
 
 print_summary() {
+  # Only for multi-suite runs (list mode). Single suite already printed detail.
   [[ -s "$RESULTS_TSV" ]] || return 0
+  [[ "${PLAN_TOTAL:-1}" -gt 1 ]] || return 0
   local lines total_elapsed=0
   lines="$(wc -l <"$RESULTS_TSV" | tr -d ' ')"
-  # Always print a clean table (source of truth for multi-suite runs).
   echo
   printf '%b%s%b\n' "${C_BAR}" "── $(T "Summary" "汇总") ──────────────────────────────────────" "${NC}"
   printf "  %-6s %8s %8s %8s  %s\n" "Suite" "Single" "Multi" "Time" "Report"
@@ -748,6 +799,7 @@ read_choice() {
 
 interactive_menu() {
   local choice
+  clear_screen
   print_menu
   choice="$(read_choice "  $(T "Select [1/2/3/4/0]:" "请选择 [1/2/3/4/0]:") ")" || return 1
   choice="$(printf '%s' "$choice" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -832,6 +884,8 @@ main() {
   [[ "$DO_GB6" -eq 1 ]] && PLAN_TOTAL=$((PLAN_TOTAL + 1))
   [[ "$DO_GB7" -eq 1 ]] && PLAN_TOTAL=$((PLAN_TOTAL + 1))
 
+  # Fresh screen for the run (menu already cleared once)
+  clear_screen
   print_sysinfo
   local plan_str=""
   [[ "$DO_GB5" -eq 1 ]] && plan_str+="GB5 "

@@ -4543,6 +4543,13 @@ main() {
         esac
     done
 
+    # Clear terminal when interactive (works under curl|bash via /dev/tty).
+    if [[ -w /dev/tty ]]; then
+        printf '\033[2J\033[H' > /dev/tty 2>/dev/null || true
+    elif [[ -t 1 ]]; then
+        printf '\033[2J\033[H'
+    fi
+
     generate_report_text() {
         COLLECT_JSON=false
         # Print title

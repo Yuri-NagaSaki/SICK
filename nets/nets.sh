@@ -1229,6 +1229,15 @@ parse_args() {
   esac
 }
 
+# Clear terminal when interactive (works under curl|bash via /dev/tty).
+clear_screen() {
+  if [[ -w /dev/tty ]]; then
+    printf '\033[2J\033[H' > /dev/tty 2>/dev/null || true
+  elif [[ -t 1 ]]; then
+    printf '\033[2J\033[H'
+  fi
+}
+
 main() {
   parse_args "$@"
 
@@ -1246,6 +1255,7 @@ main() {
     exit 0
   fi
 
+  clear_screen
   detect_connectivity
   print_header
 

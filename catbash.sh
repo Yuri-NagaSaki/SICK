@@ -50,6 +50,15 @@ fi
 err()  { printf '%b\n' "${C_ERR}$*${NC}" >&2; }
 info() { printf '%b\n' "${C_DIM}$*${NC}"; }
 
+# Clear terminal when interactive (works under curl|bash via /dev/tty).
+clear_screen() {
+  if [[ -w /dev/tty ]]; then
+    printf '\033[2J\033[H' > /dev/tty 2>/dev/null || true
+  elif [[ -t 1 ]]; then
+    printf '\033[2J\033[H'
+  fi
+}
+
 usage() {
   cat <<EOF
 猫脚本 / Catbash v${VERSION} — launcher for SICK, NETS & CPUX
@@ -171,22 +180,23 @@ read_choice() {
 interactive_menu() {
   local choice
   while true; do
+    clear_screen
     print_menu
     choice="$(read_choice "  Select [1/2/3/0]: ")" || return 1
     choice="$(printf '%s' "$choice" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
     case "$choice" in
       1|sick|s)
-        echo
+        clear_screen
         run_remote sick
         return $?
         ;;
       2|nets|n)
-        echo
+        clear_screen
         run_remote nets
         return $?
         ;;
       3|cpux|c|cpu)
-        echo
+        clear_screen
         run_remote cpux
         return $?
         ;;
@@ -219,6 +229,7 @@ main() {
   # direct dispatch
   if [[ $# -gt 0 ]]; then
     local cmd="$1"; shift
+    clear_screen
     case "$cmd" in
       1|sick|s|SICK)
         run_remote sick "$@"
