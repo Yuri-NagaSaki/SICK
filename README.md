@@ -11,9 +11,10 @@ Open-source **Linux server scripts** you run with one `curl | bash` — no insta
 
 | Tool | Role | One-liner | Docs |
 |------|------|-----------|------|
-| **Menu** | Pick SICK or NETS interactively | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
+| **Menu** | Pick SICK / NETS / CPUX interactively | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
 | **SICK** | One-shot hardware inventory | `curl -sL https://ba.sh/sick \| bash` | [sick.html](https://catbash.net/sick.html) |
 | **NETS** | Public iperf3 throughput sampler | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
+| **CPUX** | Geekbench 5 / 6 / 7 CPU tests | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
 
 Same scripts on **catbash.net**:
 
@@ -22,12 +23,13 @@ Same scripts on **catbash.net**:
 | https://ba.sh/menu · https://catbash.net/menu | [catbash.sh](catbash.sh) launcher |
 | https://ba.sh/sick · https://catbash.net/sick | [hardware_info.sh](hardware_info.sh) |
 | https://ba.sh/nets · https://catbash.net/nets | [nets/nets.sh](nets/nets.sh) |
+| https://ba.sh/cpux · https://catbash.net/cpux | [cpux.sh](cpux.sh) |
 
 ---
 
 ## Quick start — launcher
 
-Interactive menu (`1` = SICK, `2` = NETS, `0` = exit):
+Interactive menu (`1` = SICK, `2` = NETS, `3` = CPUX, `0` = exit):
 
 ```bash
 curl -sL https://ba.sh/menu | bash
@@ -40,6 +42,7 @@ Skip the menu and pass options:
 curl -sL https://ba.sh/menu | bash -s -- sick -cn
 curl -sL https://ba.sh/menu | bash -s -- nets -r -t 5
 curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu
+curl -sL https://ba.sh/menu | bash -s -- cpux all
 ```
 
 Through `curl | bash`, always use `bash -s -- <args>`.
@@ -139,15 +142,41 @@ More: [https://catbash.net/nets.html](https://catbash.net/nets.html)
 
 ---
 
+## CPUX — CPU eXaminer
+
+Sequential **Geekbench 5 / 6 / 7** CPU benchmarks. Terminal prints real **single-core** and **multi-core** scores (not blank columns). Progress spinner while each suite runs.
+
+```bash
+# Interactive (1=GB5, 2=GB6, 3=GB7, 4=all)
+curl -sL https://ba.sh/cpux | bash
+
+# Geekbench 6 only
+curl -sL https://ba.sh/cpux | bash -s -- 6
+
+# All three suites, one after another
+curl -sL https://ba.sh/cpux | bash -s -- all
+
+# Chinese UI
+curl -sL https://ba.sh/cpux | bash -s -- all -cn
+```
+
+Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. Binaries are large; run on a host that can take full CPU load.
+
+More: [https://catbash.net/cpux.html](https://catbash.net/cpux.html)
+
+---
+
 ## Repository layout
 
 ```
 .
 ├── catbash.sh           # Launcher menu
 ├── hardware_info.sh     # SICK
+├── cpux.sh              # CPUX (Geekbench 5/6/7)
 ├── index.html           # Hub site
 ├── sick.html            # SICK docs
 ├── nets.html            # NETS docs
+├── cpux.html            # CPUX docs
 ├── nets/
 │   ├── nets.sh
 │   ├── endpoints.json

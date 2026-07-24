@@ -26,7 +26,10 @@
       "/nets",
       "/nets/",
       "/nets.sh",
-      "/nets/nets.sh"
+      "/nets/nets.sh",
+      "/cpux",
+      "/cpux/",
+      "/cpux.sh"
     ]
   },
   "compatibility_flags": [

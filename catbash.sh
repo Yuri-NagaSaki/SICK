@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 猫脚本 / Catbash — interactive launcher for SICK + NETS
+# 猫脚本 / Catbash — interactive launcher for SICK + NETS + CPUX
 #
 # Usage:
 #   curl -sL https://catbash.net/menu | bash
@@ -8,12 +8,14 @@
 #   ./catbash.sh              # menu
 #   ./catbash.sh sick [args]  # run SICK directly
 #   ./catbash.sh nets [args]  # run NETS directly
+#   ./catbash.sh cpux [args]  # run CPUX directly
 #   ./catbash.sh 1            # same as sick
 #   ./catbash.sh 2 -r -t 5    # NETS with args
+#   ./catbash.sh 3 all        # CPUX all versions
 #
 set -uo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 # Prefer catbash short links; ba.sh as fallbacks
 SICK_URLS=(
@@ -25,6 +27,11 @@ NETS_URLS=(
   "https://catbash.net/nets"
   "https://ba.sh/nets"
   "https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/nets/nets.sh"
+)
+CPUX_URLS=(
+  "https://catbash.net/cpux"
+  "https://ba.sh/cpux"
+  "https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh"
 )
 
 if [[ -t 1 ]]; then
@@ -45,25 +52,29 @@ info() { printf '%b\n' "${C_DIM}$*${NC}"; }
 
 usage() {
   cat <<EOF
-猫脚本 / Catbash v${VERSION} — launcher for SICK & NETS
+猫脚本 / Catbash v${VERSION} — launcher for SICK, NETS & CPUX
 
 Usage:
   $(basename "$0")                 Interactive menu
   $(basename "$0") sick [opts]     Run SICK (hardware inventory)
   $(basename "$0") nets [opts]     Run NETS (iperf3 throughput)
+  $(basename "$0") cpux [opts]     Run CPUX (Geekbench 5/6/7)
   $(basename "$0") 1 [opts]        Same as sick
   $(basename "$0") 2 [opts]        Same as nets
+  $(basename "$0") 3 [opts]        Same as cpux
   $(basename "$0") -h | --help
 
 One-liner:
   curl -sL https://ba.sh/menu | bash
   curl -sL https://catbash.net/menu | bash
   curl -sL https://ba.sh/menu | bash -s -- nets -r
+  curl -sL https://ba.sh/menu | bash -s -- cpux all
 
 Docs:
   https://catbash.net/          hub
   https://catbash.net/sick.html SICK
   https://catbash.net/nets.html NETS
+  https://catbash.net/cpux.html CPUX
 EOF
 }
 
@@ -77,6 +88,7 @@ run_remote() {
   case "$name" in
     sick) urls=("${SICK_URLS[@]}") ;;
     nets) urls=("${NETS_URLS[@]}") ;;
+    cpux) urls=("${CPUX_URLS[@]}") ;;
     *) err "Unknown tool: $name"; return 1 ;;
   esac
 
@@ -128,6 +140,9 @@ print_menu() {
   printf '  %b2)%b  %bNETS%b   Network Endpoint Throughput Sampler\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
   printf '       %bPublic iperf3 send/recv tests worldwide%b\n' "${C_DIM}" "${NC}"
   echo
+  printf '  %b3)%b  %bCPUX%b   CPU eXaminer (Geekbench 5 / 6 / 7)\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
+  printf '       %bSequential CPU benchmarks with single/multi scores%b\n' "${C_DIM}" "${NC}"
+  echo
   printf '  %b0)%b  Exit\n' "${C_ACC}" "${NC}"
   echo
   printf '  %bDocs:%b https://catbash.net/\n' "${C_DIM}" "${NC}"
@@ -146,7 +161,7 @@ read_choice() {
     printf '%s' "$prompt"
     IFS= read -r reply || true
   else
-    err "No interactive TTY. Use: bash -s -- sick|nets [options]"
+    err "No interactive TTY. Use: bash -s -- sick|nets|cpux [options]"
     err "Example: curl -sL https://catbash.net/menu | bash -s -- nets -r"
     return 1
   fi
@@ -157,7 +172,7 @@ interactive_menu() {
   local choice
   while true; do
     print_menu
-    choice="$(read_choice "  Select [1/2/0]: ")" || return 1
+    choice="$(read_choice "  Select [1/2/3/0]: ")" || return 1
     choice="$(printf '%s' "$choice" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
     case "$choice" in
       1|sick|s)
@@ -168,6 +183,11 @@ interactive_menu() {
       2|nets|n)
         echo
         run_remote nets
+        return $?
+        ;;
+      3|cpux|c|cpu)
+        echo
+        run_remote cpux
         return $?
         ;;
       0|q|quit|exit)
@@ -206,6 +226,10 @@ main() {
         ;;
       2|nets|n|NETS)
         run_remote nets "$@"
+        exit $?
+        ;;
+      3|cpux|c|cpu|CPUX)
+        run_remote cpux "$@"
         exit $?
         ;;
       *)

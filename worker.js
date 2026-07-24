@@ -5,18 +5,21 @@
  *   /           → 猫脚本 hub (index.html)  [worker maps / because html_handling=none]
  *   /sick.html  → SICK intro
  *   /nets.html  → NETS intro
+ *   /cpux.html  → CPUX intro
  *
  * Scripts (text/plain, curl|bash):
  *   /menu /catbash /catbash.sh → catbash.sh (launcher menu)
  *   /sick  /sick/  → hardware_info.sh
  *   /nets  /nets/  → nets/nets.sh
  *   /nets.sh       → nets/nets.sh
+ *   /cpux  /cpux/  → cpux.sh
+ *   /cpux.sh       → cpux.sh
  *
  * html_handling is "none" so /sick.html is NOT redirected to /sick
  * (which would collide with the install short link).
  *
  * External short links (ba.sh):
- *   https://ba.sh/sick · https://ba.sh/nets · (optional ba.sh/menu → catbash.sh)
+ *   https://ba.sh/sick · https://ba.sh/nets · https://ba.sh/cpux · ba.sh/menu
  */
 function asScript(res) {
   const headers = new Headers(res.headers);
@@ -68,6 +71,11 @@ export default {
 
     if (path === "/nets.sh" || path === "/nets/nets.sh") {
       return asScript(await asset(env, request, "/nets/nets.sh"));
+    }
+
+    // CPUX: Geekbench 5/6/7 runner (page is /cpux.html)
+    if (path === "/cpux" || path === "/cpux/" || path === "/cpux.sh") {
+      return asScript(await asset(env, request, "/cpux.sh"));
     }
 
     return env.ASSETS.fetch(request);

@@ -11,9 +11,10 @@
 
 | 工具 | 作用 | 一键运行 | 文档 |
 |------|------|----------|------|
-| **主菜单** | 交互选择 SICK 或 NETS | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
+| **主菜单** | 交互选择 SICK / NETS / CPUX | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
 | **SICK** | 一次性硬件盘点 | `curl -sL https://ba.sh/sick \| bash` | [sick.html](https://catbash.net/sick.html) |
 | **NETS** | 公网 iperf3 吞吐采样 | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
+| **CPUX** | Geekbench 5 / 6 / 7 CPU 跑分 | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
 
 **catbash.net** 上的对应短链：
 
@@ -22,12 +23,13 @@
 | https://ba.sh/menu · https://catbash.net/menu | [catbash.sh](catbash.sh) 主菜单 |
 | https://ba.sh/sick · https://catbash.net/sick | [hardware_info.sh](hardware_info.sh) |
 | https://ba.sh/nets · https://catbash.net/nets | [nets/nets.sh](nets/nets.sh) |
+| https://ba.sh/cpux · https://catbash.net/cpux | [cpux.sh](cpux.sh) |
 
 ---
 
 ## 快速开始 — 主菜单
 
-交互菜单（`1` = SICK，`2` = NETS，`0` = 退出）：
+交互菜单（`1` = SICK，`2` = NETS，`3` = CPUX，`0` = 退出）：
 
 ```bash
 curl -sL https://ba.sh/menu | bash
@@ -40,6 +42,7 @@ curl -sL https://ba.sh/menu | bash
 curl -sL https://ba.sh/menu | bash -s -- sick -cn
 curl -sL https://ba.sh/menu | bash -s -- nets -r -t 5
 curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu
+curl -sL https://ba.sh/menu | bash -s -- cpux all
 ```
 
 通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
@@ -139,15 +142,41 @@ curl -sL https://ba.sh/nets | bash -s -- -l
 
 ---
 
+## CPUX — CPU 跑分
+
+串行 **Geekbench 5 / 6 / 7** CPU 测试。终端真实输出**单核**与**多核**分数（不会空白列）。测试中有进度指示。
+
+```bash
+# 交互（1=GB5，2=GB6，3=GB7，4=全部）
+curl -sL https://ba.sh/cpux | bash
+
+# 仅 Geekbench 6
+curl -sL https://ba.sh/cpux | bash -s -- 6
+
+# 三套依次跑
+curl -sL https://ba.sh/cpux | bash -s -- all
+
+# 中文界面
+curl -sL https://ba.sh/cpux | bash -s -- all -cn
+```
+
+需要能访问 `cdn.geekbench.com` 与 `browser.geekbench.com` 的 IPv4 HTTPS。安装包较大，请在可承受满载的机器上测。
+
+更多：[https://catbash.net/cpux.html](https://catbash.net/cpux.html)
+
+---
+
 ## 仓库结构
 
 ```
 .
 ├── catbash.sh           # 主菜单
 ├── hardware_info.sh     # SICK
+├── cpux.sh              # CPUX（Geekbench 5/6/7）
 ├── index.html           # 官网首页
 ├── sick.html            # SICK 介绍
 ├── nets.html            # NETS 介绍
+├── cpux.html            # CPUX 介绍
 ├── nets/
 │   ├── nets.sh
 │   ├── endpoints.json

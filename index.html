@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>猫脚本 · Catbash — Linux server scripts (SICK · NETS)</title>
-<meta name="description" content="猫脚本 (Catbash): open-source Linux server tools. SICK for one-shot hardware inventory; NETS for public iperf3 throughput tests. curl | bash, zero footprint.">
-<meta name="keywords" content="猫脚本, catbash, SICK, NETS, Linux, server, hardware inventory, iperf3, bash">
+<meta name="description" content="猫脚本 (Catbash): open-source Linux server tools. SICK hardware inventory, NETS iperf3 throughput, CPUX Geekbench 5/6/7. curl | bash, zero footprint.">
+<meta name="keywords" content="猫脚本, catbash, SICK, NETS, CPUX, Geekbench, Linux, server, hardware inventory, iperf3, bash">
 <meta name="author" content="Yuri NagaSaki">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://catbash.net/">
@@ -18,7 +18,7 @@
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:url" content="https://catbash.net/">
 <meta property="og:title" content="猫脚本 · Catbash — Linux server scripts">
-<meta property="og:description" content="Open-source Linux tools: SICK hardware inventory + NETS iperf3 throughput. One curl each.">
+<meta property="og:description" content="Open-source Linux tools: SICK hardware, NETS iperf3, CPUX Geekbench. One curl each.">
 <meta property="og:image" content="https://catbash.net/assets/tg-cover.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
@@ -26,7 +26,7 @@
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="猫脚本 · Catbash">
-<meta name="twitter:description" content="SICK hardware inventory + NETS iperf3 throughput. curl | bash.">
+<meta name="twitter:description" content="SICK · NETS · CPUX. curl | bash.">
 <meta name="twitter:image" content="https://catbash.net/assets/tg-cover.jpg">
 
 <script type="application/ld+json">
@@ -39,7 +39,7 @@
       "url": "https://catbash.net/",
       "name": "猫脚本",
       "alternateName": ["Catbash", "catbash.net"],
-      "description": "Open-source Linux server scripts: hardware inventory and network throughput tests",
+      "description": "Open-source Linux server scripts: hardware inventory, network throughput, and CPU benchmarks",
       "inLanguage": ["en", "zh-CN"],
       "publisher": { "@id": "https://catbash.net/#author" }
     },
@@ -49,7 +49,7 @@
       "url": "https://catbash.net/",
       "name": "猫脚本 · Catbash",
       "isPartOf": { "@id": "https://catbash.net/#website" },
-      "description": "Hub for SICK and NETS — Linux server scripts you run with curl | bash.",
+      "description": "Hub for SICK, NETS and CPUX — Linux server scripts you run with curl | bash.",
       "primaryImageOfPage": {
         "@type": "ImageObject",
         "url": "https://catbash.net/assets/tg-cover.jpg"
@@ -80,6 +80,7 @@
       <a class="active" href="/" data-en="Home" data-zh="首页">Home</a>
       <a href="/sick.html" data-en="SICK" data-zh="SICK">SICK</a>
       <a href="/nets.html" data-en="NETS" data-zh="NETS">NETS</a>
+      <a href="/cpux.html" data-en="CPUX" data-zh="CPUX">CPUX</a>
       <a class="nav-hide-sm" href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
@@ -98,12 +99,13 @@
     </h1>
     <p class="lede"
        data-en="<strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done."
-       data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点与公网吞吐测试。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
+       data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点、公网吞吐与 CPU 跑分。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
       <strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done.
     </p>
     <div class="pills">
       <span class="pill"><b>SICK</b> · hardware</span>
       <span class="pill"><b>NETS</b> · iperf3</span>
+      <span class="pill"><b>CPUX</b> · Geekbench</span>
       <span class="pill" data-en="<b>MIT</b> · open source" data-zh="<b>MIT</b> · 开源"><b>MIT</b> · open source</span>
     </div>
   </div>
@@ -134,10 +136,15 @@
         <code>curl -sL https://ba.sh/menu | bash -s -- sick -cn</code>
         <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- sick -cn" data-en="copy" data-zh="复制">copy</button>
       </div>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/menu | bash -s -- cpux all</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- cpux all" data-en="copy" data-zh="复制">copy</button>
+      </div>
       <p class="cmd-hint"
-         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code> after <code>bash -s --</code>."
-         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>。">
-        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code> after <code>bash -s --</code>.
+         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code> after <code>bash -s --</code>."
+         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>/<code>cpux</code>。">
+        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code> after <code>bash -s --</code>.
       </p>
     </div>
   </div>
@@ -166,6 +173,16 @@
         </p>
         <code class="mini-cmd">curl -sL https://catbash.net/nets | bash</code>
         <span class="go" data-en="Read NETS docs →" data-zh="查看 NETS 介绍 →">Read NETS docs →</span>
+      </a>
+      <a class="product-card" href="/cpux.html">
+        <span class="tag">CPUX</span>
+        <h3>CPU e<span>Xaminer</span></h3>
+        <p data-en="Geekbench <b>5 / 6 / 7</b> sequential CPU tests. Terminal prints real <b>single-core</b> and <b>multi-core</b> scores — not blank columns."
+           data-zh="Geekbench <b>5 / 6 / 7</b> 串行 CPU 测试。终端真实输出<strong>单核</strong>与<strong>多核</strong>分数，不再空白。">
+          Geekbench <b>5 / 6 / 7</b> sequential CPU tests. Terminal prints real <b>single-core</b> and <b>multi-core</b> scores — not blank columns.
+        </p>
+        <code class="mini-cmd">curl -sL https://catbash.net/cpux | bash</code>
+        <span class="go" data-en="Read CPUX docs →" data-zh="查看 CPUX 介绍 →">Read CPUX docs →</span>
       </a>
     </div>
   </div>
@@ -219,6 +236,28 @@
           </p>
         </div>
       </div>
+      <div class="cmd-panel" id="install-cpux">
+        <div class="cmd-head">
+          <span class="label">CPUX</span>
+          <span class="label">ba.sh · catbash</span>
+        </div>
+        <div class="cmd-body">
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://ba.sh/cpux | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <div class="cmd-row">
+            <span class="prompt">$</span>
+            <code>curl -sL https://catbash.net/cpux | bash</code>
+            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/cpux | bash" data-en="copy" data-zh="复制">copy</button>
+          </div>
+          <p class="cmd-hint" data-en="Geekbench 5/6/7 · <code>all</code> runs every suite · see <a href=&quot;/cpux.html&quot;>CPUX page</a>"
+             data-zh="Geekbench 5/6/7 · <code>all</code> 全套 · 详见 <a href=&quot;/cpux.html&quot;>CPUX 页</a>">
+            Geekbench 5/6/7 · <code>all</code> runs every suite · see <a href="/cpux.html">CPUX page</a>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -255,6 +294,7 @@
     <div class="foot-links">
       <a href="/sick.html">SICK</a>
       <a href="/nets.html">NETS</a>
+      <a href="/cpux.html">CPUX</a>
       <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
       </a>

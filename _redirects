@@ -1,5 +1,5 @@
 # Cloudflare static-assets / Pages style rewrite (200 = proxy, not 302)
-# Install short links (HTML intros are /sick.html and /nets.html)
+# Install short links (HTML intros are /sick.html, /nets.html, /cpux.html)
 /menu              /catbash.sh             200
 /menu/             /catbash.sh             200
 /catbash           /catbash.sh             200
@@ -10,3 +10,6 @@
 /nets              /nets/nets.sh           200
 /nets/             /nets/nets.sh           200
 /nets.sh           /nets/nets.sh           200
+/cpux              /cpux.sh                200
+/cpux/             /cpux.sh                200
+/cpux.sh           /cpux.sh                200
