@@ -16,6 +16,12 @@
 | **NETS** | 公网 iperf3 吞吐采样 | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
 | **CPUX** | Geekbench 5 / 6 / 7 CPU 跑分 | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
 
+### 预览
+
+| SICK | NETS | CPUX |
+|:----:|:----:|:----:|
+| ![SICK 预览](https://cdn.nodeimage.com/i/nBu2RRSLC5ebMCcWDzdPMUaYQq5wg8hA.webp) | ![NETS 预览](https://cdn.nodeimage.com/i/f5eoaoJfF5hAGGbCafRStVZQrFZeS3xD.webp) | ![CPUX 预览](https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp) |
+
 **catbash.net** 上的对应短链：
 
 | 短链 | 指向 |

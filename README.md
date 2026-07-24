@@ -16,6 +16,12 @@ Open-source **Linux server scripts** you run with one `curl | bash` — no insta
 | **NETS** | Public iperf3 throughput sampler | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
 | **CPUX** | Geekbench 5 / 6 / 7 CPU tests | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
 
+### Previews
+
+| SICK | NETS | CPUX |
+|:----:|:----:|:----:|
+| ![SICK preview](https://cdn.nodeimage.com/i/nBu2RRSLC5ebMCcWDzdPMUaYQq5wg8hA.webp) | ![NETS preview](https://cdn.nodeimage.com/i/f5eoaoJfF5hAGGbCafRStVZQrFZeS3xD.webp) | ![CPUX preview](https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp) |
+
 Same scripts on **catbash.net**:
 
 | Short URL | Target |
