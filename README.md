@@ -194,14 +194,14 @@ curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v
 
 Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. Binaries are large; run on a host that can take full CPU load. Nothing is left behind: the downloaded Geekbench files are deleted when the run ends (the size is reported), and claim links are printed in the summary instead of being written to a file.
 
-**How scores are obtained:** the Geekbench tryout CLI uploads but never prints scores. CPUX tries, in order: local CLI output (licensed builds) → the result page directly (plain and browser UA, IPv4) → the raw result JSON → `catbash.net/api/gb` (server-side fetch on Cloudflare, see `worker.js`) → `r.jina.ai` with cache bypass. Each number is paired with its own "Single-Core / Multi-Core Score" label, so the two can never be swapped. The whole chain is capped at 120 s (`--fetch-timeout`); on failure CPUX prints a one-line `--fetch` retry command.
+**How scores are obtained:** the Geekbench tryout CLI uploads but never prints scores. CPUX tries, in order: local CLI output (licensed builds) → the result page directly (plain and browser UA, IPv4) → the raw result JSON → `catbash.net/api/gb` (server-side fetch on Cloudflare, see `worker.js`) → `r.jina.ai` with cache bypass. Each number is paired with its own "Single-Core / Multi-Core Score" label, so the two can never be swapped. The whole chain keeps retrying for up to 5 minutes (`--fetch-timeout`, default 300 s) — new results can take a few minutes to appear on the Geekbench Browser; on failure CPUX prints a one-line `--fetch` retry command.
 
 | Flag | Description |
 |------|-------------|
 | `5` / `6` / `7` / `all` | Pick versions (combine: `-5 -7`) |
 | `-j` / `--json` | JSON on stdout |
 | `--fetch URL…` | Only fetch scores of existing result URLs |
-| `--fetch-timeout SEC` | Score fetch budget (default 120) |
+| `--fetch-timeout SEC` | Score fetch budget (default 300) |
 | `-y` / `--yes` | Don't ask; continue past warnings |
 | `-k` / `--keep` | Keep downloaded binaries (default: removed when the run ends) |
 | `--no-clear` / `--no-color` | Keep screen / plain output |

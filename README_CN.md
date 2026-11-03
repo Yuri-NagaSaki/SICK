@@ -194,14 +194,14 @@ curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v
 
 需要能访问 `cdn.geekbench.com` 与 `browser.geekbench.com` 的 IPv4 HTTPS。安装包较大，请在可承受满载的机器上测。零残留：下载的 Geekbench 文件在测试结束时自动删除（并显示释放的空间），认领链接直接打印在汇总里，不再写入文件。
 
-**分数如何获取：** Geekbench 试用版只上传、不打印分数。CPUX 依次尝试：本机输出（授权版）→ 直连结果页（普通 / 浏览器 UA，优先 IPv4）→ 原始结果 JSON → `catbash.net/api/gb`（Cloudflare 上的服务端抓取，见 `worker.js`）→ `r.jina.ai`（绕过缓存）。每个数字都与其 "Single-Core / Multi-Core Score" 标签配对，单核与多核不会错位；整个过程默认最多 120 秒（`--fetch-timeout`），失败时给出一行 `--fetch` 重试命令。
+**分数如何获取：** Geekbench 试用版只上传、不打印分数。CPUX 依次尝试：本机输出（授权版）→ 直连结果页（普通 / 浏览器 UA，优先 IPv4）→ 原始结果 JSON → `catbash.net/api/gb`（Cloudflare 上的服务端抓取，见 `worker.js`）→ `r.jina.ai`（绕过缓存）。每个数字都与其 "Single-Core / Multi-Core Score" 标签配对，单核与多核不会错位；整个过程默认最多重试 5 分钟（`--fetch-timeout`，默认 300 秒；新结果在 Geekbench Browser 上出现可能需要几分钟），失败时给出一行 `--fetch` 重试命令。
 
 | 参数 | 说明 |
 |------|------|
 | `5` / `6` / `7` / `all` | 选择版本（可组合，如 `-5 -7`） |
 | `-j` / `--json` | stdout 输出 JSON |
 | `--fetch URL…` | 仅为已有结果链接取分 |
-| `--fetch-timeout 秒` | 取分超时（默认 120） |
+| `--fetch-timeout 秒` | 取分超时（默认 300） |
 | `-y` / `--yes` | 不询问；遇到警告继续 |
 | `-k` / `--keep` | 保留下载的二进制（默认测完删除） |
 | `--no-clear` / `--no-color` | 不清屏 / 无颜色 |

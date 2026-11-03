@@ -9,8 +9,10 @@
 <meta name="author" content="Yuri NagaSaki">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://catbash.net/cpux.html">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/favicon.svg">
+<!-- ?v= busts the browser favicon cache when the icon changes -->
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="猫脚本 · Catbash">
@@ -141,7 +143,7 @@
       <div>
         <span class="kicker" data-en="How scores are read back" data-zh="分数是怎么取回的">How scores are read back</span>
         <h2 data-en="The tryout CLI never prints scores. CPUX does." data-zh="试用版 CLI 从不打印分数，CPUX 会。">The tryout CLI never prints scores. CPUX does.</h2>
-        <p class="muted" data-en="Geekbench&#x27;s tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within &lt;code&gt;--fetch-timeout&lt;/code&gt; (120 s)." data-zh="Geekbench 试用模式会把结果上传到 Geekbench Browser，但终端里一个分数都没有。很多脚本去抓结果页，一旦遇到 Cloudflare 就会得到空白甚至错位的分数。CPUX 在 &lt;code&gt;--fetch-timeout&lt;/code&gt;（120 秒）内依次询问一条有限的来源链，谁先给出完整答案就用谁。">Geekbench's tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within <code>--fetch-timeout</code> (120 s).</p>
+        <p class="muted" data-en="Geekbench&#x27;s tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within &lt;code&gt;--fetch-timeout&lt;/code&gt; (300 s)." data-zh="Geekbench 试用模式会把结果上传到 Geekbench Browser，但终端里一个分数都没有。很多脚本去抓结果页，一旦遇到 Cloudflare 就会得到空白甚至错位的分数。CPUX 在 &lt;code&gt;--fetch-timeout&lt;/code&gt;（300 秒）内依次询问一条有限的来源链，谁先给出完整答案就用谁。">Geekbench's tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within <code>--fetch-timeout</code> (300 s).</p>
         <p class="muted" data-en="Every number is paired with its own “Single-Core / Multi-Core Score” label, so the two can never be swapped. If all sources fail, you get a one-line &lt;code&gt;--fetch&lt;/code&gt; retry command." data-zh="每个数字都与自己的 “Single-Core / Multi-Core Score” 标签配对，单核和多核绝不会对调。所有来源都失败时，会给出一行 &lt;code&gt;--fetch&lt;/code&gt; 重试命令。">Every number is paired with its own “Single-Core / Multi-Core Score” label, so the two can never be swapped. If all sources fail, you get a one-line <code>--fetch</code> retry command.</p>
       </div>
       <ol class="pipe">
@@ -171,7 +173,7 @@
           <tr><td>all / -a</td><td><span data-en="Run 5 → 6 → 7 sequentially (versions also combine: &lt;code&gt;-5 -7&lt;/code&gt;)" data-zh="依次运行 5 → 6 → 7（也可组合，如 &lt;code&gt;-5 -7&lt;/code&gt;）">Run 5 → 6 → 7 sequentially (versions also combine: <code>-5 -7</code>)</span></td></tr>
           <tr><td>-j, --json</td><td><span data-en="JSON result on stdout (progress on stderr)" data-zh="stdout 输出 JSON（进度在 stderr）">JSON result on stdout (progress on stderr)</span></td></tr>
           <tr><td>--fetch URL…</td><td><span data-en="Only (re)fetch the scores of existing result URLs — no benchmark" data-zh="只为已有结果链接重新取分，不跑分">Only (re)fetch the scores of existing result URLs — no benchmark</span></td></tr>
-          <tr><td>--fetch-timeout SEC</td><td><span data-en="Stop trying for scores after SEC seconds (default 120)" data-zh="取分最长等待秒数（默认 120）">Stop trying for scores after SEC seconds (default 120)</span></td></tr>
+          <tr><td>--fetch-timeout SEC</td><td><span data-en="Stop trying for scores after SEC seconds (default 300)" data-zh="取分最长等待秒数（默认 300）">Stop trying for scores after SEC seconds (default 300)</span></td></tr>
           <tr><td>-y, --yes</td><td><span data-en="Don&#x27;t ask; continue past warnings (e.g. no IPv4 to Geekbench)" data-zh="不询问；遇到警告继续（如无法通过 IPv4 访问 Geekbench）">Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)</span></td></tr>
           <tr><td>-k, --keep</td><td><span data-en="Keep the downloaded binaries (default: removed when done)" data-zh="保留下载的程序（默认跑完即删）">Keep the downloaded binaries (default: removed when done)</span></td></tr>
           <tr><td>--no-clear / --no-color</td><td><span data-en="Keep the screen / plain output (&lt;code&gt;NO_COLOR&lt;/code&gt; honoured)" data-zh="不清屏 / 无颜色输出（支持 &lt;code&gt;NO_COLOR&lt;/code&gt;）">Keep the screen / plain output (<code>NO_COLOR</code> honoured)</span></td></tr>
@@ -188,7 +190,7 @@
           <tr><td>CPUX_GB5_VER · CPUX_GB6_VER · CPUX_GB7_VER</td><td><span data-en="Pin other Geekbench builds" data-zh="指定其他 Geekbench 版本">Pin other Geekbench builds</span></td></tr>
           <tr><td>CPUX_MIRROR</td><td><span data-en="Extra download mirror, tried first (&lt;code&gt;…/Geekbench-X-Linux.tar.gz&lt;/code&gt;)" data-zh="额外的下载镜像，优先尝试（&lt;code&gt;…/Geekbench-X-Linux.tar.gz&lt;/code&gt;）">Extra download mirror, tried first (<code>…/Geekbench-X-Linux.tar.gz</code>)</span></td></tr>
           <tr><td>CPUX_WORKDIR</td><td><span data-en="Where builds are unpacked (default: picked automatically, disk before tmpfs)" data-zh="解压目录（默认自动选择，优先磁盘而非 tmpfs）">Where builds are unpacked (default: picked automatically, disk before tmpfs)</span></td></tr>
-          <tr><td>CPUX_FETCH_TIMEOUT</td><td><span data-en="Seconds to keep trying for scores (default 120)" data-zh="取分超时秒数（默认 120）">Seconds to keep trying for scores (default 120)</span></td></tr>
+          <tr><td>CPUX_FETCH_TIMEOUT</td><td><span data-en="Seconds to keep trying for scores (default 300)" data-zh="取分超时秒数（默认 300）">Seconds to keep trying for scores (default 300)</span></td></tr>
           <tr><td>CPUX_SCORE_API · CPUX_JINA</td><td><span data-en="Score sources; set to an empty string to disable one" data-zh="取分来源；设为空字符串即可禁用">Score sources; set to an empty string to disable one</span></td></tr>
           <tr><td>JINA_API_KEY</td><td><span data-en="Optional key for higher r.jina.ai rate limits" data-zh="可选，用于提高 r.jina.ai 限额">Optional key for higher r.jina.ai rate limits</span></td></tr>
           <tr><td>GEEKBENCH_EMAIL · GEEKBENCH_KEY</td><td><span data-en="Unlock a licensed build" data-zh="解锁授权版">Unlock a licensed build</span></td></tr>
@@ -232,7 +234,7 @@
       </details>
       <details>
         <summary data-en="The scores are missing — what now?" data-zh="分数没出来怎么办？">The scores are missing — what now?</summary>
-        <div class="ans"><p data-en="Fresh result pages can take a minute to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 120 seconds, then prints a one-line &lt;code&gt;--fetch&lt;/code&gt; command: run it later to read the scores without benchmarking again." data-zh="刚上传的结果页可能要等一会儿才出现，有些网络还会被 Cloudflare 拦截。CPUX 最多尝试 120 秒，然后给出一行 &lt;code&gt;--fetch&lt;/code&gt; 命令：稍后运行它即可读取分数，无需重新跑分。">Fresh result pages can take a minute to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 120 seconds, then prints a one-line <code>--fetch</code> command: run it later to read the scores without benchmarking again.</p></div>
+        <div class="ans"><p data-en="Fresh result pages can take a few minutes to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 5 minutes, then prints a one-line &lt;code&gt;--fetch&lt;/code&gt; command: run it later to read the scores without benchmarking again." data-zh="刚上传的结果页可能要等几分钟才出现，有些网络还会被 Cloudflare 拦截。CPUX 最多尝试 5 分钟，然后给出一行 &lt;code&gt;--fetch&lt;/code&gt; 命令：稍后运行它即可读取分数，无需重新跑分。">Fresh result pages can take a few minutes to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 5 minutes, then prints a one-line <code>--fetch</code> command: run it later to read the scores without benchmarking again.</p></div>
       </details>
       <details>
         <summary data-en="Where do the claim link and binaries go?" data-zh="认领链接和二进制去哪了？">Where do the claim link and binaries go?</summary>
