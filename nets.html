@@ -119,9 +119,9 @@
         <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash -s -- -r" data-en="copy" data-zh="复制">copy</button>
       </div>
       <p class="cmd-hint"
-         data-en="Needs <code>iperf3</code> + <code>python3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>."
-         data-zh="需要 <code>iperf3</code> + <code>python3</code>（缺失会询问 Y/N 安装）。<code>-y</code> 自动装。参数写在 <code>bash -s --</code> 后。">
-        Needs <code>iperf3</code> + <code>python3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>.
+         data-en="Only needs <code>iperf3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>."
+         data-zh="只需 <code>iperf3</code>（缺失会询问 Y/N 安装）。<code>-y</code> 自动装。参数写在 <code>bash -s --</code> 后。">
+        Only needs <code>iperf3</code> (prompts Y/N to install). Use <code>-y</code> to auto-install. Options after <code>bash -s --</code>.
       </p>
     </div>
   </div>
@@ -276,11 +276,19 @@
         </tr>
         <tr>
           <td>-y, --yes</td>
-          <td data-en="Auto-install missing <code>iperf3</code> / <code>python3</code> without prompt" data-zh="缺失 <code>iperf3</code> / <code>python3</code> 时自动安装，不询问">Auto-install missing <code>iperf3</code> / <code>python3</code> without prompt</td>
+          <td data-en="Auto-install missing <code>iperf3</code> without prompt" data-zh="缺失 <code>iperf3</code> 时自动安装，不询问">Auto-install missing <code>iperf3</code> without prompt</td>
         </tr>
         <tr>
           <td>--no-install</td>
           <td data-en="Never install; exit if deps missing" data-zh="从不安装；缺依赖则退出">Never install; exit if deps missing</td>
+        </tr>
+        <tr>
+          <td>-j, --json</td>
+          <td data-en="JSON results on stdout (progress on stderr)" data-zh="stdout 输出 JSON 结果（进度在 stderr）">JSON results on stdout (progress on stderr)</td>
+        </tr>
+        <tr>
+          <td>--no-clear / --no-color</td>
+          <td data-en="Keep the screen / plain output (NO_COLOR honoured)" data-zh="不清屏 / 无颜色输出（支持 NO_COLOR）">Keep the screen / plain output (NO_COLOR honoured)</td>
         </tr>
         <tr>
           <td>-l, --list</td>

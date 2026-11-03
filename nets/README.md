@@ -35,13 +35,15 @@ nets/
 
 ## Requirements
 
-- `bash`, `iperf3`, `python3` (to load `endpoints.json`)
-- Optional: `ping`, `timeout` (coreutils)
+- `bash` 4+, `iperf3` (endpoints and results are parsed with awk — no python/jq)
+- Optional: `timeout` (coreutils, caps stalled tests), `getent` (skips hosts without A/AAAA fast), `ip` (IPv6 route check)
 
 ```bash
 # Debian/Ubuntu
-sudo apt install iperf3 python3
+sudo apt install iperf3
 ```
+
+Custom catalog: `NETS_ENDPOINTS_JSON=/path/endpoints.json ./nets.sh`
 
 ## Quick start (local)
 
@@ -64,7 +66,12 @@ chmod +x nets.sh
 | `-t <sec>` | iperf duration per direction (default 10) |
 | `-P <n>` | parallel streams (default 4) |
 | `--send-only` / `--recv-only` | One direction only |
+| `-j` / `--json` | JSON results on stdout (progress on stderr) |
+| `-y` / `--no-install` | Auto-install iperf3 / never install |
+| `--no-clear` / `--no-color` | Keep screen / plain output (`NO_COLOR` honoured) |
 | `-l` | List endpoints |
+
+Port handling: each test starts at a random port in the endpoint's range (spreads load across users), moves on when a port is busy, and gives up early on hosts that are unreachable (2 timeouts / 4 refusals / DNS failure) instead of walking the whole range.
 
 ## Endpoint policy (v6)
 
