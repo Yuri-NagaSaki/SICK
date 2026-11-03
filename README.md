@@ -11,7 +11,7 @@ Open-source **Linux server scripts** you run with one `curl | bash` — no insta
 
 | Tool | Role | One-liner | Docs |
 |------|------|-----------|------|
-| **Menu** | Pick SICK / NETS / CPUX interactively | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
+| **Menu** | Pick SICK / NETS / CPUX, or run all | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
 | **SICK** | One-shot hardware inventory | `curl -sL https://ba.sh/sick \| bash` | [sick.html](https://catbash.net/sick.html) |
 | **NETS** | Public iperf3 throughput sampler | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
 | **CPUX** | Geekbench 5 / 6 / 7 CPU tests | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
@@ -35,7 +35,7 @@ Same scripts on **catbash.net**:
 
 ## Quick start — launcher
 
-Interactive menu (`1` = SICK, `2` = NETS, `3` = CPUX, `0` = exit):
+Interactive menu (`1` = SICK, `2` = NETS, `3` = CPUX, `4` = all, `0` = exit):
 
 ```bash
 curl -sL https://ba.sh/menu | bash
@@ -51,7 +51,14 @@ curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu
 curl -sL https://ba.sh/menu | bash -s -- cpux all
 ```
 
-Through `curl | bash`, always use `bash -s -- <args>`.
+Full check, yabs-style — SICK → NETS (reduced) → CPUX (Geekbench 6) in one scrollback:
+
+```bash
+curl -sL https://ba.sh/menu | bash -s -- all
+curl -sL https://ba.sh/menu | bash -s -- all -cn
+```
+
+Through `curl | bash`, always use `bash -s -- <args>`. Without an interactive terminal (`ssh host '…'`, cron) the menu prints usage and exits instead of hanging.
 
 ---
 
@@ -115,7 +122,7 @@ curl -sL https://ba.sh/nets | bash
 # Reduced set, 5s per direction
 curl -sL https://ba.sh/nets | bash -s -- -r -t 5
 
-# Auto-install iperf3 + python3 if missing
+# Auto-install iperf3 if missing
 curl -sL https://ba.sh/nets | bash -s -- -y -r
 
 # Asia only, IPv4
@@ -123,9 +130,12 @@ curl -sL https://ba.sh/nets | bash -s -- --region apac -4
 
 # List catalog
 curl -sL https://ba.sh/nets | bash -s -- -l
+
+# JSON results (progress goes to stderr)
+curl -sL https://ba.sh/nets | bash -s -- -r --json > nets.json
 ```
 
-**Deps:** `iperf3`, `python3`. Missing tools trigger a **Y/N install prompt** (or `-y` / `--no-install`).
+**Deps:** only `iperf3` (catalog and results are parsed with awk — python3 is no longer needed). A missing iperf3 triggers a **Y/N install prompt** (or `-y` / `--no-install`). A live status line shows the test in progress; Ctrl-C prints a summary of what finished. Unreachable endpoints (timeouts / refusals / DNS failures) are skipped quickly instead of retried port by port.
 
 ### Options
 
@@ -137,8 +147,10 @@ curl -sL https://ba.sh/nets | bash -s -- -l
 | `-t <sec>` | Duration per direction (default 10) |
 | `-P <n>` | Parallel streams (default 4) |
 | `--send-only` / `--recv-only` | One direction |
+| `-j` / `--json` | JSON results on stdout |
 | `-y` / `--yes` | Auto-install missing deps |
 | `--no-install` | Never install; exit if deps missing |
+| `--no-clear` / `--no-color` | Keep screen / plain output (`NO_COLOR` honoured) |
 | `-l` | List endpoints and exit |
 
 Endpoint catalog: [nets/endpoints.md](nets/endpoints.md) · [nets/endpoints.json](nets/endpoints.json)  
@@ -164,9 +176,30 @@ curl -sL https://ba.sh/cpux | bash -s -- all
 
 # Chinese UI
 curl -sL https://ba.sh/cpux | bash -s -- all -cn
+
+# JSON result
+curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json
+
+# Scores missing? Re-fetch them for an existing result URL (no re-run)
+curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456
 ```
 
 Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. Binaries are large; run on a host that can take full CPU load.
+
+**How scores are obtained:** the Geekbench tryout CLI uploads but never prints scores. CPUX tries, in order: local CLI output (licensed builds) → the result page directly (plain and browser UA, IPv4) → the raw result JSON → `catbash.net/api/gb` (server-side fetch on Cloudflare, see `worker.js`) → `r.jina.ai` with cache bypass. Each number is paired with its own "Single-Core / Multi-Core Score" label, so the two can never be swapped. The whole chain is capped at 120 s (`--fetch-timeout`); on failure CPUX prints a one-line `--fetch` retry command.
+
+| Flag | Description |
+|------|-------------|
+| `5` / `6` / `7` / `all` | Pick versions (combine: `-5 -7`) |
+| `-j` / `--json` | JSON on stdout |
+| `--fetch URL…` | Only fetch scores of existing result URLs |
+| `--fetch-timeout SEC` | Score fetch budget (default 120) |
+| `-y` / `--yes` | Don't ask; continue past warnings |
+| `-k` / `--keep` | Keep downloaded binaries |
+| `--no-clear` / `--no-color` | Keep screen / plain output |
+| `-cn` / `-us` | Chinese / English UI |
+
+Environment: `CPUX_GB5_VER` / `CPUX_GB6_VER` / `CPUX_GB7_VER` (pin builds), `CPUX_MIRROR` (custom download mirror), `CPUX_WORKDIR` (unpack dir), `CPUX_SCORE_API` / `CPUX_JINA` (set empty to disable a score source), `JINA_API_KEY`.
 
 More: [https://catbash.net/cpux.html](https://catbash.net/cpux.html)
 
@@ -187,7 +220,7 @@ More: [https://catbash.net/cpux.html](https://catbash.net/cpux.html)
 │   ├── nets.sh
 │   ├── endpoints.json
 │   └── endpoints.md
-├── worker.js            # Cloudflare short links
+├── worker.js            # Cloudflare short links + /api/gb (CPUX score fallback)
 └── wrangler.jsonc
 ```
 
