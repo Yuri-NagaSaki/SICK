@@ -36,9 +36,13 @@ if [[ -z "$_sick_utf8" ]]; then
     fi
     export LC_MESSAGES=C LC_NUMERIC=C
 fi
+# UTF8_OK: the active locale is UTF-8 (symbols / spinner frames below use it)
+UTF8_OK=false
+_probe="中"
+[[ ${#_probe} -eq 1 ]] && UTF8_OK=true
 unset _sick_orig_lc_all _sick_utf8 _cand _probe
 
-VERSION="3.1.0"
+VERSION="3.2.0"
 SCRIPT_NAME="Hardware Info Collector"
 
 # Temporary files tracking for cleanup
@@ -105,6 +109,8 @@ RAM_MODULE_ROWS=()
 RAM_FALLBACK_LINES=()
 RAM_HAS_DETAILED_MODULES=false
 RAM_FIELD_SEP=$'\034'
+RAM_ECC_CE=""
+RAM_ECC_UE=""
 
 # JSON report data containers
 JSON_SYSTEM_KV=()
@@ -123,9 +129,14 @@ JSON_RAID_TOOLS=()
 JSON_DISK_SMART_KV=()
 DISK_JSON_EXTRA=()
 
-# Cleanup: stop any prefetch jobs still running (e.g. on Ctrl-C) and remove
-# temporary files.
+# Cleanup: stop the spinner (restoring the cursor), stop any prefetch jobs
+# still running (e.g. on Ctrl-C) and remove temporary files.
 cleanup_temp_files() {
+    spin_stop
+    if [[ "$CURSOR_HIDDEN" == true ]]; then
+        printf '\033[?25h'
+        CURSOR_HIDDEN=false
+    fi
     if [[ -n "$PREFETCH_PID" ]]; then
         kill "$PREFETCH_PID" 2>/dev/null
         PREFETCH_PID=""
@@ -140,20 +151,32 @@ cleanup_temp_files() {
     done
 }
 
-# Set trap to cleanup on exit
+# Set trap to cleanup on exit; INT/TERM exit through it as well, so the
+# cursor is always restored and background jobs are stopped.
 trap cleanup_temp_files EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Colors are real escape bytes (not '\033' text) so every print path agrees.
 # setup_colors() blanks them unless stdout is a terminal (see --color/--no-color
 # and the NO_COLOR convention, https://no-color.org).
-RED=$'\033[0;31m'
-GREEN=$'\033[0;32m'
-YELLOW=$'\033[1;33m'
-BLUE=$'\033[0;34m'
-CYAN=$'\033[0;36m'
-WHITE=$'\033[1;37m'
+# Shared catbash 256-color palette:
+#   accent 81 (cyan) · brand bold 222 (gold) · ok 114 · warn 214 · err 203 ·
+#   rule 73 · dim. RED/GREEN/YELLOW/CYAN keep their names (err/ok/warn/accent).
+RED=$'\033[38;5;203m'
+GREEN=$'\033[38;5;114m'
+YELLOW=$'\033[38;5;214m'
+CYAN=$'\033[38;5;81m'
+WHITE=$'\033[1m'
+BRAND=$'\033[1;38;5;222m'
+RULE=$'\033[38;5;73m'
+DIM=$'\033[2m'
+CHIP=$'\033[1;48;5;81;38;5;16m'
+BAR_FILL=$'\033[48;5;81m'
+BAR_EMPTY=$'\033[48;5;238m'
 NC=$'\033[0m'
 COLOR_MODE="auto"     # auto | always | never
+COLOR_ON=true
 
 setup_colors() {
     local enable=false
@@ -167,8 +190,93 @@ setup_colors() {
             ;;
     esac
     if [[ "$enable" != true ]]; then
-        RED="" GREEN="" YELLOW="" BLUE="" CYAN="" WHITE="" NC=""
+        RED="" GREEN="" YELLOW="" CYAN="" WHITE="" NC=""
+        BRAND="" RULE="" DIM="" CHIP="" BAR_FILL="" BAR_EMPTY=""
+        COLOR_ON=false
     fi
+}
+
+# Symbols: Unicode in a UTF-8 locale, ASCII otherwise.
+if [[ "$UTF8_OK" == true ]]; then
+    SYM_OK="✓" SYM_FAIL="✗" SYM_WARN="!" SYM_DOT="·" SYM_ARROW="→"
+    SPIN_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+else
+    SYM_OK="+" SYM_FAIL="x" SYM_WARN="!" SYM_DOT="-" SYM_ARROW="->"
+    SPIN_FRAMES=('|' '/' '-' '\')
+fi
+
+# ---------------------------------------------------------------------------
+# Spinner for waits longer than ~0.3 s. Only on a terminal (never for --json,
+# files or pipes); main() sets SPIN_ENABLED. It runs as a background loop that
+# reads its state with builtins and forks nothing but `sleep`, so it does not
+# disturb what is being measured. The cursor is hidden while it spins and is
+# always restored (spin_stop, and the EXIT/INT/TERM traps).
+#   spin_start LABEL [DETAIL] [PREFETCH_DIR]   (dir => progress bar done/total)
+#   spin_stop                                   (wipes the line)
+# ---------------------------------------------------------------------------
+SPIN_ENABLED=false
+SPIN_PID=""
+CURSOR_HIDDEN=false
+
+# progress_bar_to VAR DONE TOTAL [CELLS] - background-colored cells (width-safe
+# in CJK terminals where block glyphs are ambiguous-width); [###---] uncolored.
+progress_bar_to() {
+    local __out="$1" __done="$2" __total="$3" __cells="${4:-12}" __fill=0 __a="" __b=""
+    (( __total > 0 )) && __fill=$(( __done * __cells / __total ))
+    (( __fill > __cells )) && __fill=$__cells
+    if [[ "$COLOR_ON" == true ]]; then
+        printf -v __a '%*s' "$__fill" ''
+        printf -v __b '%*s' "$(( __cells - __fill ))" ''
+        printf -v "$__out" '%s%s%s%s%s' "$BAR_FILL" "$__a" "$BAR_EMPTY" "$__b" "$NC"
+    else
+        repeat_char_to __a '#' "$__fill"
+        repeat_char_to __b '-' "$(( __cells - __fill ))"
+        printf -v "$__out" '[%s%s]' "$__a" "$__b"
+    fi
+}
+
+spinner_loop() {
+    local label="$1" detail="$2" pdir="$3"
+    local i=0 start="$SECONDS" frame="" extra="" bar="" total="" n=${#SPIN_FRAMES[@]}
+    local -a done_jobs=()
+    shopt -s nullglob
+    trap - INT TERM EXIT
+    sleep 0.3
+    while :; do
+        frame="${SPIN_FRAMES[i % n]}"
+        extra=""
+        if [[ -n "$pdir" ]]; then
+            total=""
+            read -r total 2>/dev/null < "$pdir/total"
+            done_jobs=("$pdir"/done.dev.*)
+            if [[ "$total" =~ ^[0-9]+$ && "$total" -gt 0 ]]; then
+                progress_bar_to bar "${#done_jobs[@]}" "$total" 12
+                extra="  $bar ${#done_jobs[@]}/$total"
+            fi
+        fi
+        printf '\r  %s%s%s %s%s%s%s%s %s %ss%s\033[K' "$CYAN" "$frame" "$NC" "$label" \
+            "$DIM" "${detail:+ $SYM_DOT $detail}" "$NC" "$extra" "$DIM$SYM_DOT" "$(( SECONDS - start ))" "$NC"
+        i=$((i + 1))
+        sleep 0.125
+    done
+}
+
+spin_start() {
+    [[ "$SPIN_ENABLED" == true ]] || return 0
+    spin_stop
+    printf '\033[?25l'
+    CURSOR_HIDDEN=true
+    spinner_loop "$1" "${2:-}" "${3:-}" </dev/null 2>/dev/null &
+    SPIN_PID=$!
+}
+
+spin_stop() {
+    [[ -n "$SPIN_PID" ]] || return 0
+    kill "$SPIN_PID" 2>/dev/null
+    wait "$SPIN_PID" 2>/dev/null
+    SPIN_PID=""
+    printf '\r\033[K\033[?25h'
+    CURSOR_HIDDEN=false
 }
 
 # True when /dev/tty can actually be opened. `[[ -r /dev/tty ]]` is not enough:
@@ -283,6 +391,7 @@ declare -A LABELS_EN=(
     ["mdadm_arrays"]="mdadm arrays"
     ["details_in_json"]="(details in JSON)"
     ["needs_root"]="needs root"
+    ["ecc_errors"]="ECC Errors"
 )
 
 declare -A LABELS_CN=(
@@ -381,6 +490,7 @@ declare -A LABELS_CN=(
     ["mdadm_arrays"]="mdadm 阵列"
     ["details_in_json"]="（详情见 JSON 输出）"
     ["needs_root"]="需要 root"
+    ["ecc_errors"]="ECC 错误"
 )
 
 # Labels for the active language. Code reads ${LBL[key]} directly: a
@@ -587,6 +697,219 @@ disk_json_add() {
     JSON_DISK_SMART_KV=()
 }
 
+# ---------------------------------------------------------------------------
+# Health verdict. Sections call health_add while they collect; the text report
+# ends with a summary block (render_health) and JSON gets
+#   "health":{"status":"ok|warn|fail","issues":[{severity,subject,detail}]}.
+# Severity: fail = needs action, warn = watch. The exit code stays 0.
+# ---------------------------------------------------------------------------
+HEALTH_SEV=()
+HEALTH_SUBJ=()
+HEALTH_EN=()
+HEALTH_CN=()
+declare -A HEALTH_SEEN
+
+# health_add SEVERITY SUBJECT KIND DETAIL_EN [DETAIL_CN]
+# KIND de-duplicates one problem seen by two sources (smartctl and nvme-cli);
+# a later "fail" upgrades an earlier "warn".
+health_add() {
+    local sev="$1" subj="$2" key="$2|$3" idx=""
+    idx="${HEALTH_SEEN[$key]:-}"
+    if [[ -n "$idx" ]]; then
+        if [[ "$sev" == "fail" && "${HEALTH_SEV[$idx]}" != "fail" ]]; then
+            HEALTH_SEV[$idx]="fail"
+            HEALTH_EN[$idx]="$4"
+            HEALTH_CN[$idx]="${5:-$4}"
+        fi
+        return
+    fi
+    HEALTH_SEEN[$key]="${#HEALTH_SEV[@]}"
+    HEALTH_SEV+=("$sev")
+    HEALTH_SUBJ+=("$subj")
+    HEALTH_EN+=("$4")
+    HEALTH_CN+=("${5:-$4}")
+}
+
+health_is_uint() {
+    [[ "${1:-}" =~ ^[0-9]+$ ]]
+}
+
+# Disk issues from DISK_SMART_FIELDS (+ SJ for fields the summary does not keep).
+# health_check_disk SUBJECT IS_NVME
+health_check_disk() {
+    local subj="$1" is_nvme="${2:-false}"
+    local st="${DISK_SMART_FIELDS[smart_status]:-}"
+    local re="${DISK_SMART_FIELDS[reallocated_sectors]:-}"
+    local pe="${DISK_SMART_FIELDS[pending_sectors]:-}"
+    local of="${DISK_SMART_FIELDS[offline_uncorrectable]:-}"
+    local ru="${DISK_SMART_FIELDS[reported_uncorrect]:-}"
+    local gd="${DISK_SMART_FIELDS[grown_defects]:-}"
+    local ue="${DISK_SMART_FIELDS[uncorrected_errors]:-}"
+    local pu="${DISK_SMART_FIELDS[percentage_used]:-}"
+    local cw="${DISK_SMART_FIELDS[critical_warning]:-}"
+    local temp="${DISK_SMART_FIELDS[temperature]:-}"
+    local me="${SJ[media_errors]:-}" wl="${SJ[wear_level]:-}" wname="${SJ[wear_name]:-}"
+    local -a en=() cn=()
+    local limit=60
+
+    case "${st^^}" in
+        *FAIL*) health_add fail "$subj" smart "SMART health check failed" "SMART 自检失败" ;;
+    esac
+
+    if health_is_uint "$re" && (( re > 0 )); then en+=("$re reallocated sectors"); cn+=("重映射扇区 $re"); fi
+    if health_is_uint "$pe" && (( pe > 0 )); then en+=("$pe pending"); cn+=("待处理扇区 $pe"); fi
+    if health_is_uint "$of" && (( of > 0 )); then en+=("$of offline uncorrectable"); cn+=("离线不可纠正 $of"); fi
+    if [[ ${#en[@]} -gt 0 ]]; then
+        local d_en="${en[0]}" d_cn="${cn[0]}" k=1
+        while (( k < ${#en[@]} )); do d_en+=", ${en[$k]}"; d_cn+="，${cn[$k]}"; k=$((k + 1)); done
+        health_add fail "$subj" sectors "$d_en" "$d_cn"
+    fi
+    if health_is_uint "$ue" && (( ue > 0 )); then
+        health_add fail "$subj" uncorrected "$ue uncorrected errors" "未校正错误 $ue"
+    fi
+    if health_is_uint "$ru" && (( ru > 0 )); then
+        health_add warn "$subj" reported "$ru reported uncorrectable errors" "报告不可纠正错误 $ru"
+    fi
+    if health_is_uint "$gd" && (( gd > 0 )); then
+        health_add warn "$subj" grown "$gd grown defects" "增长缺陷 $gd"
+    fi
+    if health_is_uint "$cw" && (( cw != 0 )); then
+        health_add fail "$subj" nvme_cw "NVMe critical warning $cw" "NVMe 严重告警 $cw"
+    fi
+    if health_is_uint "$me" && (( me > 0 )); then
+        health_add fail "$subj" media "$me media errors" "介质错误 $me"
+    fi
+    if health_is_uint "$pu"; then
+        if (( pu >= 100 )); then
+            health_add fail "$subj" wear "${pu}% of rated endurance used" "已用寿命 ${pu}%"
+        elif (( pu >= 80 )); then
+            health_add warn "$subj" wear "${pu}% of rated endurance used" "已用寿命 ${pu}%"
+        fi
+    elif health_is_uint "$wl" && [[ "$wname" =~ Wear|Life|wear|life ]] && (( wl <= 20 )); then
+        # ATA SSD wear attributes count down from 100 (= new)
+        health_add warn "$subj" wear "${wl}% life left" "剩余寿命 ${wl}%"
+    fi
+    temp="${temp%%°*}"
+    [[ "$is_nvme" == true ]] && limit=70
+    if health_is_uint "$temp" && (( temp >= limit )); then
+        health_add warn "$subj" temp "temperature ${temp}°C" "温度 ${temp}°C"
+    fi
+}
+
+# Why the verdict may be incomplete (empty when nothing limits it).
+health_limit_note_to() {
+    local __n=""
+    if [[ $EUID -ne 0 ]]; then
+        __n="without root: SMART / RAID / DIMM data not readable"
+        [[ "$LANG_MODE" == "cn" ]] && __n="非 root 运行：无法读取 SMART / RAID / 内存条数据"
+    elif ! command -v smartctl >/dev/null 2>&1; then
+        __n="smartctl not installed: disk health not checked"
+        [[ "$LANG_MODE" == "cn" ]] && __n="未安装 smartctl：未检查硬盘健康"
+    fi
+    printf -v "$1" '%s' "$__n"
+}
+
+# Text block at the end of the report.
+render_health() {
+    [[ "$QUIET_MODE" == true ]] && return
+    local fails=0 warns=0 i=0 title="Health" fill="" sev="" subj="" detail="" sw=0 w=0 pad=0
+    [[ "$LANG_MODE" == "cn" ]] && title="健康检查"
+    for sev in "${HEALTH_SEV[@]}"; do
+        if [[ "$sev" == "fail" ]]; then fails=$((fails + 1)); else warns=$((warns + 1)); fi
+    done
+    get_display_width "$title"
+    repeat_char_to fill '─' "$(( 47 - DISPLAY_WIDTH_RESULT ))"
+    echo
+    printf '%s── %s%s%s %s%s\n' "$RULE" "$BRAND" "$title" "$NC$RULE" "$fill" "$NC"
+
+    local limit_note=""
+    health_limit_note_to limit_note
+    if (( fails + warns == 0 )); then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            printf '%s%s%s 未发现问题\n' "$GREEN" "$SYM_OK" "$NC"
+        else
+            printf '%s%s%s No problems found\n' "$GREEN" "$SYM_OK" "$NC"
+        fi
+        [[ -n "$limit_note" ]] && printf '  %s%s %s%s\n' "$DIM" "$SYM_DOT" "$limit_note" "$NC"
+        return
+    fi
+
+    local summary="" part=""
+    if (( fails > 0 )); then
+        if [[ "$LANG_MODE" == "cn" ]]; then part="$fails 个问题"
+        elif (( fails == 1 )); then part="1 problem"; else part="$fails problems"; fi
+        summary="${RED}${SYM_FAIL} ${part}${NC}"
+    fi
+    if (( warns > 0 )); then
+        if [[ "$LANG_MODE" == "cn" ]]; then part="$warns 个警告"
+        elif (( warns == 1 )); then part="1 warning"; else part="$warns warnings"; fi
+        summary+="${summary:+ $DIM$SYM_DOT$NC }${YELLOW}${SYM_WARN} ${part}${NC}"
+    fi
+    printf '%s\n' "$summary"
+
+    # Subject column: widest subject (capped) so details line up
+    for subj in "${HEALTH_SUBJ[@]}"; do
+        get_display_width "$subj"
+        (( DISPLAY_WIDTH_RESULT > sw )) && sw=$DISPLAY_WIDTH_RESULT
+    done
+    (( sw < 8 )) && sw=8
+    (( sw > 18 )) && sw=18
+
+    # Problems first, then warnings; within each, one subject's lines together
+    local -a subjects=()
+    local -A seen_subj=()
+    for subj in "${HEALTH_SUBJ[@]}"; do
+        [[ -n "${seen_subj[$subj]:-}" ]] && continue
+        seen_subj[$subj]=1
+        subjects+=("$subj")
+    done
+    local group=""
+    for sev in fail warn; do
+      for group in "${subjects[@]}"; do
+        for i in "${!HEALTH_SEV[@]}"; do
+            [[ "${HEALTH_SEV[$i]}" == "$sev" && "${HEALTH_SUBJ[$i]}" == "$group" ]] || continue
+            subj="${HEALTH_SUBJ[$i]}"
+            detail="${HEALTH_EN[$i]}"
+            [[ "$LANG_MODE" == "cn" ]] && detail="${HEALTH_CN[$i]}"
+            get_display_width "$subj"
+            w=$DISPLAY_WIDTH_RESULT
+            pad=$(( sw - w ))
+            (( pad < 0 )) && pad=0
+            if [[ "$sev" == "fail" ]]; then
+                printf '  %s%s%s %s%*s  %s\n' "$RED" "$SYM_FAIL" "$NC" "$subj" "$pad" '' "$detail"
+            else
+                printf '  %s%s%s %s%*s  %s\n' "$YELLOW" "$SYM_WARN" "$NC" "$subj" "$pad" '' "$detail"
+            fi
+        done
+      done
+    done
+    [[ -n "$limit_note" ]] && printf '  %s%s %s%s\n' "$DIM" "$SYM_DOT" "$limit_note" "$NC"
+    return 0
+}
+
+# JSON object for build_json_report (details always in English).
+health_json() {
+    local status="ok" i="" sev="" kv1="" kv2="" kv3=""
+    local -a items=()
+    for sev in "${HEALTH_SEV[@]}"; do
+        if [[ "$sev" == "fail" ]]; then status="fail"; elif [[ "$status" == "ok" ]]; then status="warn"; fi
+    done
+    for sev in fail warn; do
+        for i in "${!HEALTH_SEV[@]}"; do
+            [[ "${HEALTH_SEV[$i]}" == "$sev" ]] || continue
+            json_kv_to kv1 severity "$sev" s
+            json_kv_to kv2 subject "${HEALTH_SUBJ[$i]}" s
+            json_kv_to kv3 detail "${HEALTH_EN[$i]}" s
+            items+=("{$kv1,$kv2,$kv3}")
+        done
+    done
+    local limited=false
+    [[ $EUID -ne 0 ]] && limited=true
+    command -v smartctl >/dev/null 2>&1 || limited=true
+    local IFS=,
+    printf '{"status":"%s","checks_limited":%s,"issues":[%s]}' "$status" "$limited" "${items[*]}"
+}
+
 # slurp_file VAR FILE - whole file into VAR without forking a subshell.
 # Trailing newlines are dropped, like $(<FILE).
 slurp_file() {
@@ -645,10 +968,22 @@ print_header() {
     printf -v line '%*s%s%*s' "$left" '' "$title" "$right" ''
 
     echo
-    print_color "$CYAN" "$rule"
-    print_color "$WHITE" "$line"
-    print_color "$CYAN" "$rule"
+    print_color "$RULE" "$rule"
+    print_color "$BRAND" "$line"
+    print_color "$RULE" "$rule"
     echo
+}
+
+# Header chip shared by the catbash tools:  " SICK " v3.2.0 · tagline
+print_brand_chip() {
+    [[ "$QUIET_MODE" == true ]] && return
+    local tagline="Server Info & Check Kit"
+    [[ "$LANG_MODE" == "cn" ]] && tagline="服务器硬件检查"
+    if [[ "$COLOR_ON" == true ]]; then
+        printf '%s SICK %s v%s%s %s %s%s\n' "$CHIP" "$NC" "$VERSION" "$DIM" "$SYM_DOT" "$tagline" "$NC"
+    else
+        printf '[SICK] v%s %s %s\n' "$VERSION" "$SYM_DOT" "$tagline"
+    fi
 }
 
 # Closing line of a section (precomputed; no subshell per section).
@@ -670,8 +1005,8 @@ print_subsection() {
     local fill_line="" rule_line=""
     repeat_char_to fill_line '─' "$fill"
     repeat_char_to rule_line '─' "$width"
-    print_color "$YELLOW" "┌─ $title $fill_line"
-    print_color "$YELLOW" "├$rule_line"
+    printf '%s┌─ %s%s%s %s%s\n' "$RULE" "$BRAND" "$title" "$NC$RULE" "$fill_line" "$NC"
+    print_color "$RULE" "├$rule_line"
 }
 
 # Function to calculate display width of string (considering CJK characters)
@@ -755,13 +1090,13 @@ print_info_colored() {
     fi
 }
 
-# Aligned warning/note line under a section: "│   ⚠ <tag padded>  <detail>".
+# Aligned warning/note line under a section: "│   ! <tag padded>  <detail>".
 print_note() {
     [[ "$QUIET_MODE" == true ]] && return
     local tag="$1"
     local detail="$2"
     local color="${3:-$YELLOW}"
-    local mark="${4:-⚠}"
+    local mark="${4:-$SYM_WARN}"
     local tagw=14
     get_display_width "$tag"
     local pad=$((tagw - DISPLAY_WIDTH_RESULT))
@@ -1154,7 +1489,11 @@ get_lshw_display_output() {
     fi
 
     if [[ -n "$LSHW_DISPLAY_PREFETCH_PID" ]]; then
+        if kill -0 "$LSHW_DISPLAY_PREFETCH_PID" 2>/dev/null; then
+            spin_start "lshw" "${LBL[gpu_info]}"
+        fi
         wait "$LSHW_DISPLAY_PREFETCH_PID" 2>/dev/null || true
+        spin_stop
         LSHW_DISPLAY_PREFETCH_PID=""
         LSHW_DISPLAY_CACHE=""
         if [[ -n "$LSHW_DISPLAY_PREFETCH_FILE" && -f "$LSHW_DISPLAY_PREFETCH_FILE" ]]; then
@@ -1166,7 +1505,9 @@ get_lshw_display_output() {
     fi
 
     if command -v lshw >/dev/null 2>&1; then
+        spin_start "lshw" "${LBL[gpu_info]}"
         LSHW_DISPLAY_CACHE=$(run_limited "$LSHW_TIMEOUT_SECONDS" lshw -c display -short 2>/dev/null)
+        spin_stop
     else
         LSHW_DISPLAY_CACHE=""
     fi
@@ -1191,6 +1532,144 @@ start_lshw_display_prefetch() {
     run_limited "$LSHW_TIMEOUT_SECONDS" lshw -c display -short > "$tmp_file" 2>/dev/null </dev/null &
     LSHW_DISPLAY_PREFETCH_PID=$!
     LSHW_DISPLAY_PREFETCH_FILE="$tmp_file"
+}
+
+# Packages this run installed (only ones that were absent before), for the
+# optional cleanup after the report. CLEANUP_MODE: ask | always (--cleanup) |
+# never (--keep-packages).
+INSTALLED_PKGS=()
+INSTALL_PKG_MANAGER=""
+CLEANUP_MODE="ask"
+
+# pkg_is_installed PM PKG - 0 installed, 1 not installed, 2 cannot tell
+pkg_is_installed() {
+    local pm="$1" pkg="$2" st=""
+    case "$pm" in
+        apt)
+            if command -v dpkg-query >/dev/null 2>&1; then
+                st=$(dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null)
+            elif command -v dpkg >/dev/null 2>&1; then
+                st=$(dpkg -s "$pkg" 2>/dev/null)
+            else
+                return 2
+            fi
+            [[ "$st" == *"install ok installed"* ]] ;;
+        dnf|yum|zypper)
+            command -v rpm >/dev/null 2>&1 || return 2
+            rpm -q "$pkg" >/dev/null 2>&1 ;;
+        pacman)
+            pacman -Q "$pkg" >/dev/null 2>&1 ;;
+        apk)
+            apk info -e "$pkg" >/dev/null 2>&1 ;;
+        *)
+            return 2 ;;
+    esac
+}
+
+# Ask a y/N question on the terminal (works under curl | bash). Returns 0 for
+# yes, 1 for no, 2 when there is no way to ask.
+ask_yes_no() {
+    local prompt="$1" reply=""
+    if have_tty; then
+        { printf '%s' "$prompt" > /dev/tty; } 2>/dev/null || printf '%s' "$prompt"
+        IFS= read -r reply < /dev/tty || true
+    elif [[ -t 0 ]]; then
+        printf '%s' "$prompt"
+        IFS= read -r reply || true
+    else
+        return 2
+    fi
+    case "$reply" in
+        [Yy]|[Yy][Ee][Ss]) return 0 ;;
+    esac
+    return 1
+}
+
+# Remove exactly the packages in INSTALLED_PKGS: non-interactive, no
+# autoremove / purge, nothing else touched.
+remove_installed_packages() {
+    local pm="$INSTALL_PKG_MANAGER"
+    local -a sudo_prefix=() cmd=()
+    [[ $EUID -ne 0 ]] && sudo_prefix=(sudo)
+    case "$pm" in
+        apt)    cmd=(env DEBIAN_FRONTEND=noninteractive apt-get remove -y) ;;
+        dnf)    cmd=(dnf remove -y --setopt=clean_requirements_on_remove=False) ;;
+        yum)    cmd=(yum remove -y --setopt=clean_requirements_on_remove=0) ;;
+        pacman) cmd=(pacman -R --noconfirm) ;;
+        zypper) cmd=(zypper --non-interactive remove) ;;
+        apk)    cmd=(apk del) ;;
+        *)      return 1 ;;
+    esac
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        echo "正在移除: ${INSTALLED_PKGS[*]}"
+    else
+        echo "Removing: ${INSTALLED_PKGS[*]}"
+    fi
+    if "${sudo_prefix[@]}" "${cmd[@]}" "${INSTALLED_PKGS[@]}" </dev/null; then
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            print_color "$GREEN" "$SYM_OK 已移除，系统已恢复原状。"
+        else
+            print_color "$GREEN" "$SYM_OK Removed; the system is back to how it was."
+        fi
+        INSTALLED_PKGS=()
+        return 0
+    fi
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        print_color "$YELLOW" "$SYM_WARN 移除失败，请手动卸载: ${INSTALLED_PKGS[*]}"
+    else
+        print_color "$YELLOW" "$SYM_WARN Removal failed; uninstall manually: ${INSTALLED_PKGS[*]}"
+    fi
+    return 1
+}
+
+# After the report: offer to remove what install_packages() added.
+cleanup_installed_packages() {
+    [[ ${#INSTALLED_PKGS[@]} -gt 0 ]] || return 0
+    [[ "$CLEANUP_MODE" == "never" ]] && return 0
+
+    local n=${#INSTALLED_PKGS[@]} list="" i=0
+    for (( i = 0; i < n && i < 4; i++ )); do list+="${list:+ }${INSTALLED_PKGS[$i]}"; done
+    (( n > 4 )) && list+=" …"
+    [[ "$UTF8_OK" == true ]] || list="${list/ …/ ...}"
+
+    echo
+    if [[ "$CLEANUP_MODE" == "always" ]]; then
+        remove_installed_packages
+        return 0
+    fi
+
+    local prompt=""
+    if [[ "$LANG_MODE" == "cn" ]]; then
+        prompt="移除本次为生成报告安装的 $n 个软件包（$list）？[y/N]: "
+    elif (( n == 1 )); then
+        prompt="Remove the package installed for this report ($list)? [y/N]: "
+    else
+        prompt="Remove the $n packages installed for this report ($list)? [y/N]: "
+    fi
+
+    local rc=2
+    if [[ -t 1 ]]; then
+        ask_yes_no "$prompt"
+        rc=$?
+    fi
+    case "$rc" in
+        0) remove_installed_packages ;;
+        1)
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                echo "保留已安装的软件包。"
+            else
+                echo "Keeping the installed packages."
+            fi
+            ;;
+        *)
+            # No terminal to ask on: one-line hint
+            if [[ "$LANG_MODE" == "cn" ]]; then
+                echo "本次安装了: ${INSTALLED_PKGS[*]} $SYM_ARROW 下次加 --cleanup 可在报告后自动移除"
+            else
+                echo "Installed for this report: ${INSTALLED_PKGS[*]} $SYM_ARROW pass --cleanup to remove them after the report"
+            fi
+            ;;
+    esac
 }
 
 # Function to install required packages
@@ -1281,17 +1760,13 @@ install_packages() {
     else
         local prompt="Install these packages now? [y/N]: "
         [[ "$LANG_MODE" == "cn" ]] && prompt="现在安装这些软件包吗？[y/N]: "
-        local reply=""
-        # Prefer /dev/tty so curl|bash (stdin = the script) can still prompt;
-        # have_tty() really opens it, so ssh-without-tty / cron / CI fall
-        # through to the no-TTY message instead of erroring.
-        if have_tty; then
-            { printf '%s' "$prompt" > /dev/tty; } 2>/dev/null || printf '%s' "$prompt"
-            IFS= read -r reply < /dev/tty || true
-        elif [[ -t 0 ]]; then
-            printf '%s' "$prompt"
-            IFS= read -r reply || true
-        else
+        # ask_yes_no prefers /dev/tty so curl|bash (stdin = the script) can
+        # still prompt; have_tty() really opens it, so ssh-without-tty / cron /
+        # CI fall through to the no-TTY message instead of erroring.
+        local rc=0
+        ask_yes_no "$prompt"
+        rc=$?
+        if [[ $rc -eq 2 ]]; then
             if [[ "$LANG_MODE" == "cn" ]]; then
                 echo "无法交互询问（无终端）。加 -y 可自动安装，或手动安装后重试。继续生成报告..."
             else
@@ -1300,10 +1775,7 @@ install_packages() {
             echo
             return 1
         fi
-        case "$reply" in
-            [Yy]|[Yy][Ee][Ss]) do_install=true ;;
-            *) do_install=false ;;
-        esac
+        [[ $rc -eq 0 ]] && do_install=true
     fi
 
     if [[ "$do_install" != true ]]; then
@@ -1337,9 +1809,27 @@ install_packages() {
             ;;
     esac
 
+    # Remember which of these are genuinely absent now, so the optional cleanup
+    # after the report removes exactly what this run added (and nothing that
+    # was already there). Unknown state (no dpkg/rpm query tool) = not tracked.
+    local -a pre_missing=()
+    for p in "${uniq_pkgs[@]}"; do
+        pkg_is_installed "$pkg_manager" "$p"
+        [[ $? -eq 1 ]] && pre_missing+=("$p")
+    done
+
     [[ "$LANG_MODE" == "cn" ]] && echo "正在安装: ${uniq_pkgs[*]}" || echo "Installing: ${uniq_pkgs[*]}"
     # Show install output so user can see progress / sudo password prompts
-    if "${install_cmd[@]}" "${uniq_pkgs[@]}"; then
+    local install_ok=true
+    "${install_cmd[@]}" "${uniq_pkgs[@]}" || install_ok=false
+
+    INSTALL_PKG_MANAGER="$pkg_manager"
+    INSTALLED_PKGS=()
+    for p in "${pre_missing[@]}"; do
+        pkg_is_installed "$pkg_manager" "$p" && INSTALLED_PKGS+=("$p")
+    done
+
+    if [[ "$install_ok" == true ]]; then
         [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "安装完成。" || print_color "$GREEN" "Installation complete."
     else
         [[ "$LANG_MODE" == "cn" ]] && print_color "$YELLOW" "部分软件包安装失败，继续生成报告。" \
@@ -1451,7 +1941,9 @@ get_cpu_temperature() {
     # Method 1: lm-sensors (C locale so the unit/labels are predictable)
     if command -v sensors >/dev/null 2>&1; then
         local sensors_output=""
+        spin_start "sensors" "${LBL[cpu_temperature]}"
         sensors_output=$(LC_ALL=C run_limited 5 sensors 2>/dev/null)
+        spin_stop
         if [[ -n "$sensors_output" ]]; then
             # Intel package temperature, then AMD k10temp Tctl/Tdie, then generic
             sensors_temp_to t '^[[:space:]]*Package id [0-9]+:' "$sensors_output"
@@ -1615,7 +2107,8 @@ get_cpu_info() {
             fi
         fi
         if [[ "$temp_warn" == true ]]; then
-            print_info_colored "${LBL[cpu_temperature]}" "$cpu_temp ⚠" "$RED"
+            health_add warn "CPU" temp "temperature ${cpu_temp%% *}" "温度 ${cpu_temp%% *}"
+            print_info_colored "${LBL[cpu_temperature]}" "$cpu_temp $SYM_WARN" "$RED"
         else
             print_info "${LBL[cpu_temperature]}" "$cpu_temp"
         fi
@@ -1706,12 +2199,31 @@ collect_ram_info() {
     RAM_FALLBACK_LINES=()
     RAM_HAS_DETAILED_MODULES=false
 
+    # ECC error counters from the kernel EDAC driver (absent on most VMs)
+    RAM_ECC_CE="" RAM_ECC_UE=""
+    local mc="" ce="" ue=""
+    for mc in /sys/devices/system/edac/mc/mc[0-9]*; do
+        [[ -r "$mc/ce_count" ]] || continue
+        read_line ce "$mc/ce_count"
+        read_line ue "$mc/ue_count"
+        [[ "$ce" =~ ^[0-9]+$ ]] && RAM_ECC_CE=$(( ${RAM_ECC_CE:-0} + ce ))
+        [[ "$ue" =~ ^[0-9]+$ ]] && RAM_ECC_UE=$(( ${RAM_ECC_UE:-0} + ue ))
+    done
+    if [[ "${RAM_ECC_UE:-0}" -gt 0 ]]; then
+        health_add fail "RAM" ecc_ue "$RAM_ECC_UE uncorrectable ECC errors" "不可纠正 ECC 错误 $RAM_ECC_UE"
+    fi
+    if [[ "${RAM_ECC_CE:-0}" -gt 0 ]]; then
+        health_add warn "RAM" ecc_ce "$RAM_ECC_CE corrected ECC errors" "已纠正 ECC 错误 $RAM_ECC_CE"
+    fi
+
     if [[ "$COLLECT_JSON" == true ]]; then
         JSON_RAM_KV=(
             "$(json_kv_s "total" "$RAM_TOTAL")"
             "$(json_kv_s "used" "$RAM_USED")"
             "$(json_kv_s "available" "$RAM_AVAILABLE")"
         )
+        [[ -n "$RAM_ECC_CE" ]] && JSON_RAM_KV+=("$(json_kv "ecc_corrected" "$RAM_ECC_CE")")
+        [[ -n "$RAM_ECC_UE" ]] && JSON_RAM_KV+=("$(json_kv "ecc_uncorrected" "$RAM_ECC_UE")")
     fi
     JSON_RAM_MODULES=()
 
@@ -1720,7 +2232,9 @@ collect_ram_info() {
         temp_file=$(mktemp 2>/dev/null) || return
         RAM_HAS_DETAILED_MODULES=true
         TEMP_FILES+=("$temp_file")
+        spin_start "dmidecode" "${LBL[ram_info]}"
         run_limited 15 dmidecode -t memory 2>/dev/null > "$temp_file"
+        spin_stop
 
         local size="" type="" speed="" manufacturer="" part_number="" serial_number=""
         local in_memory_device=0
@@ -1764,6 +2278,7 @@ collect_ram_info() {
     local line=""
     if command -v lshw >/dev/null 2>&1; then
         local lshw_output=""
+        spin_start "lshw" "${LBL[ram_info]}"
         if [[ $EUID -eq 0 ]]; then
             lshw_output=$(run_limited "$LSHW_TIMEOUT_SECONDS" lshw -c memory 2>/dev/null)
         elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
@@ -1771,6 +2286,7 @@ collect_ram_info() {
         else
             lshw_output=$(run_limited "$LSHW_TIMEOUT_SECONDS" lshw -c memory 2>/dev/null)
         fi
+        spin_stop
 
         local -a lshw_lines=()
         while IFS= read -r line; do
@@ -1800,9 +2316,20 @@ render_ram_info() {
     print_info_colored "${LBL[total]}" "$RAM_TOTAL" "$CYAN"
     print_info_colored "${LBL[used]}" "$RAM_USED" "$YELLOW"
     print_info_colored "${LBL[available]}" "$RAM_AVAILABLE" "$GREEN"
+    if [[ -n "$RAM_ECC_CE$RAM_ECC_UE" ]]; then
+        local ecc_color="$GREEN" ecc_txt=""
+        [[ "${RAM_ECC_CE:-0}" -gt 0 ]] && ecc_color="$YELLOW"
+        [[ "${RAM_ECC_UE:-0}" -gt 0 ]] && ecc_color="$RED"
+        if [[ "$LANG_MODE" == "cn" ]]; then
+            ecc_txt="已纠正 ${RAM_ECC_CE:-0} $SYM_DOT 不可纠正 ${RAM_ECC_UE:-0}"
+        else
+            ecc_txt="corrected ${RAM_ECC_CE:-0} $SYM_DOT uncorrected ${RAM_ECC_UE:-0}"
+        fi
+        print_info_colored "${LBL[ecc_errors]}" "$ecc_txt" "$ecc_color"
+    fi
 
     echo "│"
-    [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 内存模组:" || print_color "$GREEN" "│ Memory Modules:"
+    [[ "$LANG_MODE" == "cn" ]] && print_color "$CYAN" "│ 内存模组:" || print_color "$CYAN" "│ Memory Modules:"
 
     if [[ "$RAM_HAS_DETAILED_MODULES" == true && ${#RAM_MODULE_ROWS[@]} -eq 0 ]]; then
         # dmidecode ran but SMBIOS lists no DIMMs (typical for cloud VMs)
@@ -2234,6 +2761,28 @@ get_nvme_deep_info() {
         [[ "$percentage_used" =~ ^[0-9]+$ && "$percentage_used" -ge 90 ]] && nvme_warn+=("used=${percentage_used}%")
         [[ ${#nvme_warn[@]} -gt 0 ]] && nvme_status="WARN"
 
+        # Health verdict (shares kinds with the smartctl disk check: no duplicates)
+        if [[ "$critical_warning" =~ ^[0-9]+$ && "$critical_warning" -ne 0 ]]; then
+            health_add fail "$disk" nvme_cw "NVMe critical warning $critical_warning" "NVMe 严重告警 $critical_warning"
+        fi
+        if [[ "$media_errors" =~ ^[0-9]+$ && "$media_errors" -gt 0 ]]; then
+            health_add fail "$disk" media "$media_errors media errors" "介质错误 $media_errors"
+        fi
+        if [[ "$available_spare" =~ ^[0-9]+$ && "$spare_threshold" =~ ^[0-9]+$ && "$available_spare" -lt "$spare_threshold" ]]; then
+            health_add fail "$disk" spare "available spare ${available_spare}% below threshold ${spare_threshold}%" \
+                "可用备用空间 ${available_spare}% 低于阈值 ${spare_threshold}%"
+        fi
+        if [[ "$percentage_used" =~ ^[0-9]+$ ]]; then
+            if (( percentage_used >= 100 )); then
+                health_add fail "$disk" wear "${percentage_used}% of rated endurance used" "已用寿命 ${percentage_used}%"
+            elif (( percentage_used >= 80 )); then
+                health_add warn "$disk" wear "${percentage_used}% of rated endurance used" "已用寿命 ${percentage_used}%"
+            fi
+        fi
+        if [[ "$temperature_c" =~ ^[0-9]+$ ]] && (( temperature_c >= 70 )); then
+            health_add warn "$disk" temp "temperature ${temperature_c}°C" "温度 ${temperature_c}°C"
+        fi
+
         # Row for the table
         local temp_disp="-" used_disp="-" spare_disp="-"
         [[ -n "$temperature_c" ]] && temp_disp="${temperature_c}°C"
@@ -2313,7 +2862,7 @@ get_nvme_deep_info() {
     if [[ ${#unsafe_summary[@]} -gt 0 ]]; then
         local us_label="Unsafe shutdowns (lifetime)"
         [[ "$LANG_MODE" == "cn" ]] && us_label="异常掉电(累计)"
-        printf "│   %sℹ %s: %s%s\n" "$CYAN" "$us_label" "${unsafe_summary[*]}" "$NC"
+        printf "│   %s%s %s: %s%s\n" "$DIM" "$SYM_DOT" "$us_label" "${unsafe_summary[*]}" "$NC"
     fi
 
     section_end
@@ -2379,11 +2928,13 @@ smart_json_fields_tsv() {
             ["percentage_used", s($n.percentage_used)],
             ["available_spare", s($n.available_spare)],
             ["critical_warning", s($n.critical_warning)],
+            ["media_errors", s($n.media_errors)],
             ["lba_written", s($w.raw.value)],
             ["write_multiplier", (if $w then (unit($w.name // "") | tostring) else "" end)],
             ["lba_read", s($r.raw.value)],
             ["read_multiplier", (if $r then (unit($r.name // "") | tostring) else "" end)],
             ["wear_level", s($wear.value)],
+            ["wear_name", s($wear.name)],
             ["grown_defects", s(.scsi_grown_defect_list)],
             ["read_uncorrected", s($e.read.total_uncorrected_errors)],
             ["write_uncorrected", s($e.write.total_uncorrected_errors)],
@@ -2421,7 +2972,7 @@ smart_json_load_regex() {
     sj_re capacity_bytes "$j" '"user_capacity":\{[^}]*"bytes":([0-9]+)'
     sj_re device_type "$j" '"device":\{[^}]*"type":"([^"]*)"'
     sj_re protocol "$j" '"device":\{[^}]*"protocol":"([^"]*)"'
-    for k in data_units_read data_units_written percentage_used available_spare critical_warning; do
+    for k in data_units_read data_units_written percentage_used available_spare critical_warning media_errors; do
         sj_re "$k" "$j" "\"nvme_smart_health_information_log\":\\{[^}]*\"$k\":([0-9]+)"
     done
     sj_re grown_defects "$j" '"scsi_grown_defect_list":([0-9]+)'
@@ -2458,7 +3009,10 @@ smart_json_load_regex() {
             *MiB*) SJ[read_multiplier]=1048576 ;;
         esac
     fi
-    sj_re wear_level "$j" '"id":(177|231|233),"name":"[^"]*","value":([0-9]+)' 2
+    if [[ "$j" =~ \"id\":(177|231|233),\"name\":\"([^\"]*)\",\"value\":([0-9]+) ]]; then
+        SJ[wear_name]="${BASH_REMATCH[2]}"
+        SJ[wear_level]="${BASH_REMATCH[3]}"
+    fi
 }
 
 # smart_json_load JSON - fill SJ[] from one smartctl JSON document.
@@ -2656,14 +3210,20 @@ smartctl_supports_json() {
 # bash 4.2-safe: no `wait -n`; the oldest job is waited for when the pool is full.
 # ---------------------------------------------------------------------------
 PF_PIDS=()
+PF_DIR=""
+PF_JOBNO=0
+# pf_spawn KIND OUTFILE CMD... - KIND "dev" jobs count towards the spinner's
+# progress bar (one per disk); each job drops PF_DIR/done.KIND.N when finished.
 pf_spawn() {
-    local out="$1"
-    shift
+    local kind="$1" out="$2"
+    shift 2
     while (( ${#PF_PIDS[@]} >= SMARTCTL_PARALLEL )); do
         wait "${PF_PIDS[0]}" 2>/dev/null
         PF_PIDS=("${PF_PIDS[@]:1}")
     done
-    "$@" > "$out" 2>/dev/null &
+    PF_JOBNO=$((PF_JOBNO + 1))
+    local marker="$PF_DIR/done.$kind.$PF_JOBNO"
+    { "$@" > "$out" 2>/dev/null; : > "$marker"; } &
     PF_PIDS+=("$!")
 }
 
@@ -2689,10 +3249,23 @@ nvme_query_one() {
 prefetch_dispatch() {
     local dir="$1" have_smart="$2" use_json="$3" have_nvme="$4"
     local disk="" scan_pid="" member="" device="" raid_type="" raid_id=""
+    local total=0 nvme_kind="aux"
     PF_PIDS=()
+    PF_DIR="$dir"
+    PF_JOBNO=0
+
+    # Progress total = disks queried (smartctl), or NVMe namespaces without it
+    [[ "$have_smart" == true ]] || nvme_kind="dev"
+    for disk in "${DISK_NAMES[@]}"; do
+        [[ "$disk" =~ $DISK_NAME_REGEX ]] || continue
+        if [[ "$have_smart" == true || "$disk" =~ ^nvme[0-9]+n[0-9]+$ ]]; then
+            total=$((total + 1))
+        fi
+    done
+    printf '%s\n' "$total" > "$dir/total"
 
     if [[ "$have_smart" == true ]]; then
-        pf_spawn "$dir/scan" run_smartctl --scan
+        pf_spawn aux "$dir/scan" run_smartctl --scan
         scan_pid="${PF_PIDS[${#PF_PIDS[@]}-1]}"
     fi
 
@@ -2700,13 +3273,13 @@ prefetch_dispatch() {
         [[ "$disk" =~ $DISK_NAME_REGEX ]] || continue
         if [[ "$have_smart" == true ]]; then
             if [[ "$use_json" == true ]]; then
-                pf_spawn "$dir/smart_${disk}.json" run_smartctl -a --json=c "/dev/$disk"
+                pf_spawn dev "$dir/smart_${disk}.json" run_smartctl -a --json=c "/dev/$disk"
             else
-                pf_spawn "$dir/smart_${disk}.txt" run_smartctl -a "/dev/$disk"
+                pf_spawn dev "$dir/smart_${disk}.txt" run_smartctl -a "/dev/$disk"
             fi
         fi
         if [[ "$have_nvme" == true && "$disk" =~ ^nvme[0-9]+n[0-9]+$ ]]; then
-            pf_spawn /dev/null nvme_query_one "$disk" "$dir"
+            pf_spawn "$nvme_kind" /dev/null nvme_query_one "$disk" "$dir"
         fi
     done
 
@@ -2717,9 +3290,13 @@ prefetch_dispatch() {
         SMARTCTL_SCAN_DONE=true
         get_raid_member_devices
         while IFS= read -r member; do
+            [[ -n "$member" ]] && total=$((total + 1))
+        done <<< "$RAID_MEMBER_RESULT"
+        printf '%s\n' "$total" > "$dir/total"
+        while IFS= read -r member; do
             [[ -z "$member" ]] && continue
             IFS=: read -r device raid_type raid_id <<< "$member"
-            pf_spawn "$dir/raid_$(raid_member_file_key "$device" "$raid_type" "$raid_id").json" \
+            pf_spawn dev "$dir/raid_$(raid_member_file_key "$device" "$raid_type" "$raid_id").json" \
                 run_smartctl -a --json=c -d "$raid_type,$raid_id" "$device"
         done <<< "$RAID_MEMBER_RESULT"
     fi
@@ -2748,8 +3325,18 @@ prefetch_wait() {
     [[ "$PREFETCH_DONE" == true ]] && return
     PREFETCH_DONE=true
     if [[ -n "$PREFETCH_PID" ]]; then
+        if kill -0 "$PREFETCH_PID" 2>/dev/null; then
+            local label="Reading SMART data"
+            [[ "$LANG_MODE" == "cn" ]] && label="读取 SMART 数据"
+            if ! command -v smartctl >/dev/null 2>&1; then
+                label="Reading NVMe health"
+                [[ "$LANG_MODE" == "cn" ]] && label="读取 NVMe 健康数据"
+            fi
+            spin_start "$label" "" "$PREFETCH_DIR"
+        fi
         wait "$PREFETCH_PID" 2>/dev/null
         PREFETCH_PID=""
+        spin_stop
     fi
 }
 
@@ -3830,13 +4417,27 @@ get_disk_info() {
     local -a fs_rows=()
     local fsep=$'\034'
     local fs sz used avail usep mnt rest
+    # Read-only mounts (ISO, squashfs, snaps) are always 100% used: not a problem
+    local -A ro_mounts=()
+    local m_dir="" m_opts=""
+    while read -r _ m_dir _ m_opts _; do
+        [[ ",$m_opts," == *,ro,* ]] && ro_mounts[$m_dir]=1
+    done < /proc/mounts
     while read -r fs sz used avail usep mnt rest; do
         [[ "$fs" == /dev/* ]] || continue
         fs_rows+=("${fs}${fsep}${sz}${fsep}${used}${fsep}${avail}${fsep}${usep}${fsep}${mnt}")
+        # Health: nearly full (writable) filesystems
+        local hp="${usep%\%}"
+        [[ "$hp" =~ ^[0-9]+$ && -z "${ro_mounts[$mnt]:-}" ]] || continue
+        if (( hp >= 98 )); then
+            health_add fail "$mnt" fs "${hp}% used" "已用 ${hp}%"
+        elif (( hp >= 90 )); then
+            health_add warn "$mnt" fs "${hp}% used" "已用 ${hp}%"
+        fi
     done < <(run_limited 10 df -hP 2>/dev/null)
 
     if [[ ${#fs_rows[@]} -gt 0 ]]; then
-        [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 已挂载文件系统:" || print_color "$GREEN" "│ Mounted Filesystems:"
+        [[ "$LANG_MODE" == "cn" ]] && print_color "$CYAN" "│ 已挂载文件系统:" || print_color "$CYAN" "│ Mounted Filesystems:"
         TABLE_COL_W=(34 7 7 7 6 20)
         if [[ "$LANG_MODE" == "cn" ]]; then
             table_header "文件系统" "容量" "已用" "可用" "使用率" "挂载点"
@@ -3913,6 +4514,12 @@ get_disk_info() {
             [[ "$LANG_MODE" == "cn" ]] && DISK_SUMMARY_NOTE="smartctl未安装" || DISK_SUMMARY_NOTE="smartctl missing"
         fi
 
+        if [[ "$disk" =~ ^nvme ]]; then
+            health_check_disk "$disk" true
+        else
+            health_check_disk "$disk" false
+        fi
+
         local dserial="${SJ[serial_number]:-}"
         [[ -n "$dserial" ]] && seen_serials["$dserial"]=1
         if [[ "$COLLECT_JSON" == true && -n "$json_data" ]]; then
@@ -3959,6 +4566,7 @@ get_disk_info() {
                 # (brace group keeps DISK_SMART_FIELDS in the current shell).
                 { parse_smart_json_sas "$json_data" --loaded; } >/dev/null
                 disk_summary_from_fields "member"
+                health_check_disk "${raid_type},${raid_id}" false
                 local mmodel="${SJ[model_name]:-}"
                 if [[ -z "$mmodel" ]]; then
                     mmodel="${SJ[scsi_vendor]:-} ${SJ[scsi_product]:-}"
@@ -4071,9 +4679,21 @@ get_raid_info() {
                     sw_warns+=("${md_name}${sep}degraded/failed: ${active:-?}/${total:-?} members active, ${md_failed_of[$md_name]} failed")
                 fi
             fi
+            if [[ "$raid_state" == "FAIL" ]]; then
+                if [[ "$md_status" == "inactive" ]]; then
+                    health_add fail "$md_name" raid "array inactive" "阵列未激活"
+                else
+                    local hfail="${md_failed_of[$md_name]}" h_en="" h_cn=""
+                    h_en="degraded: ${active:-?}/${total:-?} members active"
+                    h_cn="降级：在线成员 ${active:-?}/${total:-?}"
+                    if [[ "$hfail" -gt 0 ]]; then h_en+=", $hfail failed"; h_cn+="，故障 $hfail"; fi
+                    health_add fail "$md_name" raid "$h_en" "$h_cn"
+                fi
+            fi
             if [[ -n "${md_sync_of[$md_name]:-}" ]]; then
                 [[ "$raid_state" == "OK" ]] && { raid_state="SYNC"; raid_color="$YELLOW"; }
                 md_status+=" (${md_sync_of[$md_name]})"
+                health_add warn "$md_name" raid_sync "${md_sync_of[$md_name]}" "同步中 ${md_sync_of[$md_name]}"
             fi
             sw_rows+=("${md_name}${sep}${md_level}${sep}${md_status}${sep}${member_disp}${sep}${raid_state}${sep}${raid_color}")
             if [[ "$md_level" == "raid0" ]]; then
@@ -4086,7 +4706,7 @@ get_raid_info() {
         done
 
         if [[ ${#sw_rows[@]} -gt 0 ]]; then
-            [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 软件 RAID (mdraid):" || print_color "$GREEN" "│ Software RAID (mdraid):"
+            [[ "$LANG_MODE" == "cn" ]] && print_color "$CYAN" "│ 软件 RAID (mdraid):" || print_color "$CYAN" "│ Software RAID (mdraid):"
             TABLE_COL_W=(8 10 26 9 6)   # State fits "active (recovery 100.0%)"
             if [[ "$LANG_MODE" == "cn" ]]; then
                 table_header "阵列" "级别" "状态" "成员数" "健康"
@@ -4156,7 +4776,7 @@ get_raid_info() {
             done <<< "$raid_controllers"
 
             if [[ ${#hw_rows[@]} -gt 0 ]]; then
-                [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ RAID/HBA 控制器:" || print_color "$GREEN" "│ RAID/HBA Controllers:"
+                [[ "$LANG_MODE" == "cn" ]] && print_color "$CYAN" "│ RAID/HBA 控制器:" || print_color "$CYAN" "│ RAID/HBA Controllers:"
                 TABLE_COL_W=(10 9 48)
                 if [[ "$LANG_MODE" == "cn" ]]; then
                     table_header "插槽" "类型" "控制器"
@@ -4184,7 +4804,7 @@ get_raid_info() {
         [[ "$COLLECT_JSON" == true ]] && JSON_RAID_TOOLS+=("$(json_obj "$(json_kv "tool" "$tool")" "$(json_kv_s "path" "$tool_path")")")
     done
     if [[ ${#tool_rows[@]} -gt 0 ]]; then
-        [[ "$LANG_MODE" == "cn" ]] && print_color "$GREEN" "│ 已安装的 RAID 工具:" || print_color "$GREEN" "│ Installed RAID Tools:"
+        [[ "$LANG_MODE" == "cn" ]] && print_color "$CYAN" "│ 已安装的 RAID 工具:" || print_color "$CYAN" "│ Installed RAID Tools:"
         TABLE_COL_W=(12 52)
         if [[ "$LANG_MODE" == "cn" ]]; then
             table_header "工具" "路径"
@@ -4897,12 +5517,25 @@ OPTIONS:
          --no-color    Plain text, no ANSI colors (also: NO_COLOR=1)
          --color       Force colors even when stdout is not a terminal
          --no-clear    Do not clear the screen before the report
+         --cleanup     After the report, remove packages this run installed
+         --keep-packages  Keep packages this run installed (do not ask)
     -h,  --help        Show this help message
     -v,  --version     Show version information
 
 SECTIONS:
     System, CPU (+platform), Memory, Disks/SMART, NVMe deep health,
     RAID/HBA, Network, GPU, Motherboard — all rendered as aligned tables.
+
+HEALTH:
+    The report ends with a health verdict: problems (✗, e.g. SMART failure,
+    reallocated/pending sectors, degraded RAID, ECC errors) and warnings (!,
+    e.g. high wear or temperature, filesystem >= 90% full). Also in JSON as
+    "health". The exit code is always 0 (inventory tool).
+
+PACKAGES:
+    Missing tools can be installed for the report (asks first; -y installs
+    without asking). Afterwards SICK offers to remove exactly the packages it
+    installed in this run (--cleanup: remove without asking).
 
 PRIVACY:
     IP and MAC addresses are masked. Serial numbers are shown in full.
@@ -4963,6 +5596,7 @@ build_json_report() {
         "$(json_kv_raw "network" "$(json_array "${JSON_NETWORK[@]}")")"
         "$(json_kv_raw "gpu" "$(json_array "${JSON_GPU[@]}")")"
         "$(json_kv_raw "motherboard" "$(json_obj "${JSON_MOTHERBOARD_KV[@]}")")"
+        "$(json_kv_raw "health" "$(health_json)")"
     )
 
     printf '%s' "$(json_obj "${root_kv[@]}")"
@@ -5005,6 +5639,14 @@ main() {
                 NO_CLEAR=true
                 shift
                 ;;
+            --cleanup)
+                CLEANUP_MODE="always"
+                shift
+                ;;
+            --keep-packages)
+                CLEANUP_MODE="never"
+                shift
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -5024,6 +5666,10 @@ main() {
     init_labels
     [[ "$OUTPUT_MODE" == "json" ]] && COLOR_MODE="never"
     setup_colors
+    # Spinner only on a real terminal: never for --json, files or pipes
+    if [[ "$OUTPUT_MODE" != "json" && -t 1 && "${TERM:-}" != "dumb" ]]; then
+        SPIN_ENABLED=true
+    fi
 
     # Clear the terminal only when stdout is one (under `curl | bash` only
     # stdin is the pipe) and never for JSON or redirected output. Writing to
@@ -5043,6 +5689,7 @@ main() {
         start_lshw_display_prefetch
 
         # Print title
+        print_brand_chip
         print_header "${LBL[title]}"
         print_report_overview
 
@@ -5058,12 +5705,14 @@ main() {
         get_gpu_info
         get_motherboard_info
 
+        render_health
+
         # Footer
         local now=""
         printf -v now '%(%Y-%m-%d %H:%M:%S %Z)T' -1
         echo
         print_color "$GREEN" "${LBL[completed]}"
-        print_color "$CYAN" "${LBL[generated_on]}: $now"
+        print_color "$DIM" "${LBL[generated_on]}: $now"
         echo
     }
 
@@ -5106,12 +5755,15 @@ main() {
 
     # Install required packages (text output only). install_packages handles
     # the Y/N confirmation itself and always lets us continue afterwards.
-    print_color "$BLUE" "${LBL[generating]}"
+    print_color "$DIM" "${LBL[generating]}"
     echo
 
     install_packages || true
 
     generate_report_text
+
+    # Optional removal of what install_packages() added in this run
+    cleanup_installed_packages
 }
 
 # Run main function
