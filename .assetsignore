@@ -1,0 +1,8 @@
+# Not part of catbash.net: dev tooling, tests, CI. (Wrangler serves the repo
+# root as static assets; everything else here is public on purpose — the
+# scripts are fetched by curl | bash.)
+tools/
+tests/
+.github/
+.wrangler/
+node_modules/

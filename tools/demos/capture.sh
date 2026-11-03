@@ -24,6 +24,8 @@
 #         mock/server.py via CPUX_MIRROR; scores from a local CPUX_SCORE_API;
 #         mock/bin/curl rewrites *.geekbench.com to that server; CPUX_JINA=""
 #
+# Sandbox noise that a real host never prints (e.g. "/proc/1/environ:
+# Permission denied" inside a locked-down container) is dropped by --drop.
 # Every replay is labelled "Sample output · demo data" on the site.
 set -euo pipefail
 
@@ -86,15 +88,15 @@ start_http() {
 }
 
 # ---------- iperf3 endpoints (NETS) ----------
-# id|provider|city|region|link|per-stream rate ("busy" = kept busy)
+# id|provider|city|region|link|per-stream send/recv cap ("busy" = kept busy)
 NETS_EPS=(
-  "purevoltage-nyc|PureVoltage|New York, US|na|40G|420M"
-  "clouvider-la|Clouvider|Los Angeles, US|na|10G|240M"
-  "leaseweb-mtl|Leaseweb|Montreal, CA|na|10G|360M"
-  "onlyservers-uk|OnlyServers|United Kingdom|eu|10G|1050M"
-  "eranium-ams|Eranium|Amsterdam, NL|eu|100G|1580M"
-  "wobcom-fra|Wobcom|Frankfurt, DE|eu|25G|2240M"
-  "leaseweb-tyo|Leaseweb|Tokyo, JP|apac|10G|150M"
+  "purevoltage-nyc|PureVoltage|New York, US|na|40G|420M/385M"
+  "clouvider-la|Clouvider|Los Angeles, US|na|10G|240M/262M"
+  "leaseweb-mtl|Leaseweb|Montreal, CA|na|10G|360M/318M"
+  "onlyservers-uk|OnlyServers|United Kingdom|eu|10G|1050M/960M"
+  "eranium-ams|Eranium|Amsterdam, NL|eu|100G|1580M/1490M"
+  "wobcom-fra|Wobcom|Frankfurt, DE|eu|25G|2240M/2050M"
+  "leaseweb-tyo|Leaseweb|Tokyo, JP|apac|10G|150M/172M"
   "leaseweb-hkg|Leaseweb|Hong Kong, HK|apac|10G|busy"
 )
 start_iperf() {
@@ -154,7 +156,8 @@ record() {
     --sub "$ROOT/hardware_info.sh=https://catbash.net/sick" \
     --sub "$ROOT/nets/nets.sh=https://catbash.net/nets" \
     --sub "$ROOT/cpux.sh=https://catbash.net/cpux" \
-    --sub "$TMP=/tmp" >&2
+    --sub "$TMP=/tmp" \
+    --drop "/proc/1/environ: Permission denied" >&2
 }
 
 echo "capture.sh → $OUT" >&2

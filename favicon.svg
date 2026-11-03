@@ -1,13 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="猫脚本">
-  <rect width="64" height="64" rx="14" fill="#141210"/>
-  <rect x="2.5" y="2.5" width="59" height="59" rx="12" fill="none" stroke="#3a342c" stroke-width="1.25"/>
-  <!-- stylized cat ears -->
-  <path d="M18 28 L22 14 L28 26 Z" fill="#e09a3e" opacity="0.9"/>
-  <path d="M36 26 L42 14 L46 28 Z" fill="#e09a3e" opacity="0.9"/>
-  <!-- face -->
-  <circle cx="32" cy="36" r="14" fill="#ece7df"/>
-  <circle cx="26.5" cy="34" r="2.2" fill="#141210"/>
-  <circle cx="37.5" cy="34" r="2.2" fill="#141210"/>
-  <ellipse cx="32" cy="39.5" rx="2.2" ry="1.5" fill="#e09a3e"/>
-  <path d="M28 43 Q32 46 36 43" fill="none" stroke="#141210" stroke-width="1.4" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="猫脚本 Catbash">
+  <rect width="64" height="64" rx="14" fill="#0b0d10"/>
+  <g transform="translate(6 5.6) scale(1.625)">
+    <path d="M5 13.5 6 3.5l7 5.5h6l7-5.5 1 10V23a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z" fill="#5fd7ff" stroke="#5fd7ff" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M10.5 15.5 14 18.5l-3.5 3M16.5 22h5" fill="none" stroke="#0b0d10" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>

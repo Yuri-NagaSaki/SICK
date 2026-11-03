@@ -20,7 +20,9 @@ Open-source **Linux server scripts** you run with one `curl | bash` — no insta
 
 | SICK | NETS | CPUX |
 |:----:|:----:|:----:|
-| ![SICK preview](https://cdn.nodeimage.com/i/nBu2RRSLC5ebMCcWDzdPMUaYQq5wg8hA.webp) | ![NETS preview](https://cdn.nodeimage.com/i/f5eoaoJfF5hAGGbCafRStVZQrFZeS3xD.webp) | ![CPUX preview](https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp) |
+| ![SICK preview](assets/preview/sick.webp) | ![NETS preview](assets/preview/nets.webp) | ![CPUX preview](assets/preview/cpux.webp) |
+
+_Sample output · demo data (recorded from the real scripts with mocked hardware, iperf3 servers and Geekbench). Live replays: [catbash.net](https://catbash.net/)._
 
 Same scripts on **catbash.net**:
 
@@ -114,7 +116,7 @@ Public **iperf3** send/recv against curated endpoints. IPv4 & IPv6. Summary incl
 
 | Flag | Region | Coverage |
 |------|--------|----------|
-| `--region na` | North America | New York, Los Angeles, Kansas City, Montreal (5) |
+| `--region na` | North America | New York, Los Angeles, Kansas City, Montreal (4) |
 | `--region eu` | Europe | UK, NL, DE, FR, AT, SE, DK, NO, LU, UA (13) |
 | `--region apac` | Asia-Pacific | Tokyo, Singapore, Hong Kong, Sydney, Mumbai, Tashkent (6) |
 | `global` (default) | All | 23 nodes · NA + EU + APAC |
@@ -226,6 +228,13 @@ More: [https://catbash.net/cpux.html](https://catbash.net/cpux.html)
 │   ├── nets.sh
 │   ├── endpoints.json
 │   └── endpoints.md
+├── assets/
+│   ├── site.css · site.js  # site styles / language + theme toggles
+│   ├── term.js          # terminal replay player for the demos
+│   ├── demos/*.ansi     # recorded sample runs (regenerate: tools/demos/capture.sh)
+│   └── preview/*.webp   # README previews
+├── tests/run.sh         # offline parser tests (CI runs them under gawk + mawk)
+├── tools/demos/         # demo recorder with mocked hardware / iperf3 / Geekbench
 ├── worker.js            # Cloudflare short links + /api/gb (CPUX score fallback)
 └── wrangler.jsonc
 ```

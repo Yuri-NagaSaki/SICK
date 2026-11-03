@@ -4,7 +4,8 @@
 # Every other URL is passed through untouched.
 self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self" | paste -sd: -)"
-mock="${DEMO_MOCK_URL:?DEMO_MOCK_URL not set}"
+mock="${DEMO_MOCK_URL:-}"
+[[ -n "$mock" ]] || exec curl "$@"
 args=()
 for a in "$@"; do
   case "$a" in

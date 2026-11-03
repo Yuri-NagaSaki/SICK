@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 # Demo wrapper for iperf3 (client runs only):
-#   DEMO_IPERF_RATES="port:rate …"  per-stream bitrate cap per port (e.g. 18301:420M)
-#                                    so loopback numbers vary like a real run
+#   DEMO_IPERF_RATES="port:send[/recv] …"  per-stream bitrate caps per port
+#                                    (e.g. 18301:420M/395M) so loopback numbers
+#                                    vary like a real run
 #   DEMO_IPERF_TIME=N                replace -t (keeps `catbash.sh all` short)
 self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self" | paste -sd: -)"
-port="" client=0 prev=""
+port="" client=0 reverse=0 prev=""
 args=()
 for a in "$@"; do
   [[ "$prev" == "-p" ]] && port="$a"
   [[ "$a" == "-c" ]] && client=1
+  [[ "$a" == "-R" ]] && reverse=1
   if [[ "$prev" == "-t" && -n "${DEMO_IPERF_TIME:-}" ]]; then a="$DEMO_IPERF_TIME"; fi
   args+=("$a")
   prev="$a"
 done
 ((client)) || exec iperf3 "$@"
 for pr in ${DEMO_IPERF_RATES:-}; do
-  [[ "${pr%%:*}" == "$port" ]] && args+=(-b "${pr#*:}")
+  [[ "${pr%%:*}" == "$port" ]] || continue
+  rate="${pr#*:}"
+  if [[ "$rate" == */* ]]; then ((reverse)) && rate="${rate#*/}" || rate="${rate%/*}"; fi
+  args+=(-b "$rate")
 done
 exec iperf3 "${args[@]}"

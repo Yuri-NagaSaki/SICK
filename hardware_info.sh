@@ -2485,7 +2485,7 @@ detect_hypervisor() {
         elif [[ -d /proc/vz && ! -d /proc/bc ]]; then
             HYPERVISOR_CT="openvz"
         elif [[ -r /proc/1/environ ]]; then
-            env1=$(tr '\0' '\n' < /proc/1/environ 2>/dev/null)
+            env1=$( { tr '\0' '\n' < /proc/1/environ; } 2>/dev/null )   # braces: the redirect itself may fail (EPERM)
             if [[ "$env1" =~ (^|$'\n')container=([^$'\n']+) ]]; then
                 HYPERVISOR_CT="${BASH_REMATCH[2]}"
             fi

@@ -26,6 +26,7 @@ ap.add_argument("--max-frames", type=int, default=14, help="max redraws kept per
 ap.add_argument("--speed", type=float, default=0.5, help="pause scale factor")
 ap.add_argument("--max-pause", type=int, default=900, help="longest pause kept (ms)")
 ap.add_argument("--sub", action="append", default=[], help="OLD=NEW byte substitution (paths)")
+ap.add_argument("--drop", action="append", default=[], help="drop output lines containing this text")
 a = ap.parse_args()
 
 MERGE_S = 0.008      # writes closer than this belong to the same burst
@@ -58,9 +59,12 @@ subs = []
 for s in a.sub:
     old, new = s.split("=", 1)
     subs.append((old.encode(), new.encode()))
+drops = [re.compile(rb"[^\n]*" + re.escape(d.encode()) + rb"[^\n]*\n") for d in a.drop]
 for c in merged:
     for old, new in subs:
         c[1] = c[1].replace(old, new)
+    for rx in drops:
+        c[1] = rx.sub(b"", c[1])
 
 FRAME_RE = re.compile(rb"^(?:\x1b\[[0-9;?]*[A-Za-z])*\r(?!\n)")
 

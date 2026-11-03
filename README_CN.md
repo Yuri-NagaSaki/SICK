@@ -20,7 +20,9 @@
 
 | SICK | NETS | CPUX |
 |:----:|:----:|:----:|
-| ![SICK 预览](https://cdn.nodeimage.com/i/nBu2RRSLC5ebMCcWDzdPMUaYQq5wg8hA.webp) | ![NETS 预览](https://cdn.nodeimage.com/i/f5eoaoJfF5hAGGbCafRStVZQrFZeS3xD.webp) | ![CPUX 预览](https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp) |
+| ![SICK 预览](assets/preview/sick.webp) | ![NETS 预览](assets/preview/nets.webp) | ![CPUX 预览](assets/preview/cpux.webp) |
+
+_示例输出 · 演示数据（真实脚本在模拟硬件、iperf3 服务端与 Geekbench 下录制）。在线回放见 [catbash.net](https://catbash.net/)。_
 
 **catbash.net** 上的对应短链：
 
@@ -226,6 +228,13 @@ curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v
 │   ├── nets.sh
 │   ├── endpoints.json
 │   └── endpoints.md
+├── assets/
+│   ├── site.css · site.js  # 网站样式 / 语言与主题切换
+│   ├── term.js          # 演示用的终端回放播放器
+│   ├── demos/*.ansi     # 录制的示例运行（重新生成：tools/demos/capture.sh）
+│   └── preview/*.webp   # README 预览图
+├── tests/run.sh         # 离线解析测试（CI 用 gawk + mawk 运行）
+├── tools/demos/         # 演示录制工具（模拟硬件 / iperf3 / Geekbench）
 ├── worker.js            # Cloudflare 短链 + /api/gb（CPUX 取分回退）
 └── wrangler.jsonc
 ```

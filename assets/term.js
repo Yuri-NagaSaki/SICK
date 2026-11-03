@@ -331,7 +331,8 @@
   Player.prototype.setSource = function (src, srcZh) {
     this.fig.setAttribute("data-src", src);
     if (srcZh) this.fig.setAttribute("data-src-zh", srcZh); else this.fig.removeAttribute("data-src-zh");
-    this.refresh();
+    // A new demo was picked: play it (or jump to its last frame without motion).
+    if (reduce) this.showFinal(); else this.start(true);
   };
 
   // Language or source changed: replay if motion is fine, else jump to the end.
@@ -392,6 +393,8 @@
     this.seen = true;
     if (reduce && !force) { this.showFinal(); return; }
     this.fig.classList.add("is-busy");
+    this.state = "loading";
+    this.syncButtons();
     load(this.src()).then(function (text) {
       if (gen !== self.gen) return;
       self.fig.classList.remove("is-busy");
@@ -441,6 +444,7 @@
   };
 
   Player.prototype.toggle = function () {
+    if (this.state === "loading") return;
     if (this.state === "playing") {
       this.state = "paused"; clearTimeout(this.timer);
     } else if (this.state === "paused") {
@@ -472,12 +476,17 @@
         var p = e.target._player;
         if (p && p.state === "idle") p.start(false);
       });
-    }, { threshold: 0.35 }) : null;
+    }, { threshold: 0.12 }) : null;
     for (var i = 0; i < figs.length; i++) {
       var p = new Player(figs[i]);
       figs[i]._player = p;
       players.push(p);
-      if (reduce) { p.state = "done"; p.syncButtons(); continue; }
+      if (reduce) {
+        // No motion: keep the static last frame (swap in the 中文 capture if needed).
+        p.state = "done"; p.seen = true; p.syncButtons();
+        if (p.src() !== p.staticSrc) p.showFinal();
+        continue;
+      }
       // Below the fold: clear the static frame now so the replay starts fresh.
       p.out.innerHTML = "";
       p.out.classList.add("live");

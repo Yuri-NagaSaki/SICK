@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-title-zh="猫脚本 · Catbash — 一条命令，看清你的服务器">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>猫脚本 · Catbash — Linux server scripts (SICK · NETS)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>猫脚本 · Catbash — Linux server scripts (SICK · NETS · CPUX)</title>
 <meta name="description" content="猫脚本 (Catbash): open-source Linux server tools. SICK hardware inventory, NETS iperf3 throughput, CPUX Geekbench 5/6/7. curl | bash, zero footprint.">
 <meta name="keywords" content="猫脚本, catbash, SICK, NETS, CPUX, Geekbench, Linux, server, hardware inventory, iperf3, bash">
 <meta name="author" content="Yuri NagaSaki">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://catbash.net/">
-<link rel="icon" href="https://catbash.net/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="https://catbash.net/favicon.svg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="猫脚本 · Catbash">
@@ -65,251 +65,215 @@
   ]
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
 <link rel="stylesheet" href="/assets/site.css">
+<script>(function(d){try{var t=localStorage.getItem("catbash-theme");if(t==="dark"||t==="light")d.setAttribute("data-theme",t)}catch(e){}d.className="js"+(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches?"":" anim")})(document.documentElement)</script>
 </head>
 <body>
-
-<nav class="nav">
+<a class="skip" href="#main"><span data-en="Skip to content" data-zh="跳到正文">Skip to content</span></a>
+<header class="nav">
   <div class="wrap nav-in">
-    <a class="brand" href="/"><span data-en="Catbash" data-zh="猫脚本">Catbash</span>
-    </a>
-    <div class="nav-links">
-      <a class="active" href="/" data-en="Home" data-zh="首页">Home</a>
-      <a href="/sick.html" data-en="SICK" data-zh="SICK">SICK</a>
-      <a href="/nets.html" data-en="NETS" data-zh="NETS">NETS</a>
-      <a href="/cpux.html" data-en="CPUX" data-zh="CPUX">CPUX</a>
-      <a class="nav-hide-sm" href="#donate" data-en="Donate" data-zh="赞助">Donate</a>
-      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
-      </a>
-      <button class="lang" id="langBtn" type="button" onclick="toggleLang()">中文</button>
-    </div>
-  </div>
-</nav>
-
-<header class="wrap hero grid">
-  <div>
-    <p class="kicker" data-en="catbash.net" data-zh="catbash.net · 猫脚本">catbash.net</p>
-    <h1 data-en="Server scripts that <span class=&quot;mark&quot;>just run</span>."
-        data-zh="一条命令就能跑的<span class=&quot;mark&quot;>服务器脚本</span>。">
-      Server scripts that <span class="mark">just run</span>.
-    </h1>
-    <p class="lede"
-       data-en="<strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done."
-       data-zh="<strong>猫脚本</strong> 是一组开源 Linux 运维脚本：硬件盘点、公网吞吐与 CPU 跑分。无需安装、无常驻进程，一条 <code>curl | bash</code> 即可。">
-      <strong>猫脚本 (Catbash)</strong> is a small suite of open-source Linux tools for ops and lab machines. No installers, no daemons — <code>curl | bash</code> and you're done.
-    </p>
-    <div class="pills">
-      <span class="pill"><b>SICK</b> · hardware</span>
-      <span class="pill"><b>NETS</b> · iperf3</span>
-      <span class="pill"><b>CPUX</b> · Geekbench</span>
-      <span class="pill" data-en="<b>MIT</b> · open source" data-zh="<b>MIT</b> · 开源"><b>MIT</b> · open source</span>
-    </div>
-  </div>
-
-  <div class="cmd-panel" id="install-menu">
-    <div class="cmd-head">
-      <span class="label" data-en="Menu · catbash.sh" data-zh="主菜单 · catbash.sh">Menu · catbash.sh</span>
-      <span class="label">ba.sh · catbash</span>
-    </div>
-    <div class="cmd-body">
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/menu | bash</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://catbash.net/menu | bash</code>
-        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/menu | bash" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/menu | bash -s -- nets -r</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- nets -r" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/menu | bash -s -- sick -cn</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- sick -cn" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/menu | bash -s -- cpux all</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- cpux all" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/menu | bash -s -- all</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- all" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <p class="cmd-hint"
-         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> after <code>bash -s --</code> — <code>all</code> runs SICK → NETS (reduced) → CPUX (GB6) in one go."
-         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> 全部 · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> —— <code>all</code> 一次跑完 SICK → NETS（精简）→ CPUX（GB6）。">
-        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> after <code>bash -s --</code> — <code>all</code> runs SICK → NETS (reduced) → CPUX (GB6) in one go.
-      </p>
+    <a class="brand" href="/" aria-label="Catbash · 猫脚本"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path class="logo-head" d="M5 13.5 6 3.5l7 5.5h6l7-5.5 1 10V23a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/><path class="logo-ps" d="M10.5 15.5 14 18.5l-3.5 3M16.5 22h5"/></svg><span class="name">Catbash</span><span class="alt">猫脚本</span></a>
+    <nav class="nav-links" aria-label="Tools">
+      <a href="/sick.html">SICK</a><a href="/nets.html">NETS</a><a href="/cpux.html">CPUX</a>
+    </nav>
+    <div class="nav-tools">
+      <a class="icon-btn gh" href="https://github.com/Yuri-NagaSaki/SICK" rel="noopener" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg></a>
+      <button class="icon-btn theme-btn" id="themeBtn" type="button" aria-label="Switch theme"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg></button>
+      <button class="icon-btn lang-btn" id="langBtn" type="button" lang="zh-CN" aria-label="切换到中文">中文</button>
     </div>
   </div>
 </header>
-
-<section class="rule">
+<main id="main">
+<section class="hero">
   <div class="wrap">
-    <h2 data-en="Projects" data-zh="子项目">Projects</h2>
-    <div class="product-grid">
-      <a class="product-card" href="/sick.html">
-        <span class="tag">SICK</span>
-        <h3>Server Info &amp; <span>Check</span> Kit</h3>
-        <p data-en="One-shot hardware inventory: CPU, RAM, SMART, NVMe, RAID, NICs, GPU — colorized tables or JSON. Zero footprint."
-           data-zh="一次性硬件盘点：CPU、内存、SMART、NVMe、RAID、网卡、GPU。彩色表格或 JSON，零残留。">
-          One-shot hardware inventory: CPU, RAM, SMART, NVMe, RAID, NICs, GPU — colorized tables or JSON. Zero footprint.
-        </p>
-        <code class="mini-cmd">curl -sL https://catbash.net/sick | bash</code>
-        <span class="go" data-en="Read SICK docs →" data-zh="查看 SICK 介绍 →">Read SICK docs →</span>
-      </a>
-      <a class="product-card" href="/nets.html">
-        <span class="tag">NETS</span>
-        <h3>Network Endpoint <span>Throughput</span></h3>
-        <p data-en="Public iperf3 send/recv. Regions: <b>NA</b> (US/CA) · <b>EU</b> (UK/NL/DE/FR/…) · <b>APAC</b> (JP/SG/HK/AU/IN/UZ). Filter with <code>--region</code>."
-           data-zh="公网 iperf3 上下行。地区：<b>北美</b>（美/加）· <b>欧洲</b>（英/荷/德/法…）· <b>亚太</b>（日/新/港/澳/印/乌兹）。用 <code>--region</code> 筛选。">
-          Public iperf3 send/recv. Regions: <b>NA</b> (US/CA) · <b>EU</b> (UK/NL/DE/FR/…) · <b>APAC</b> (JP/SG/HK/AU/IN/UZ). Filter with <code>--region</code>.
-        </p>
-        <code class="mini-cmd">curl -sL https://catbash.net/nets | bash</code>
-        <span class="go" data-en="Read NETS docs →" data-zh="查看 NETS 介绍 →">Read NETS docs →</span>
-      </a>
-      <a class="product-card" href="/cpux.html">
-        <span class="tag">CPUX</span>
-        <h3>CPU e<span>Xaminer</span></h3>
-        <p data-en="Geekbench <b>5 / 6 / 7</b> sequential CPU tests. Terminal prints real <b>single-core</b> and <b>multi-core</b> scores — not blank columns."
-           data-zh="Geekbench <b>5 / 6 / 7</b> 串行 CPU 测试。终端真实输出<strong>单核</strong>与<strong>多核</strong>分数，不再空白。">
-          Geekbench <b>5 / 6 / 7</b> sequential CPU tests. Terminal prints real <b>single-core</b> and <b>multi-core</b> scores — not blank columns.
-        </p>
-        <code class="mini-cmd">curl -sL https://catbash.net/cpux | bash</code>
-        <span class="go" data-en="Read CPUX docs →" data-zh="查看 CPUX 介绍 →">Read CPUX docs →</span>
-      </a>
+    <div class="hero-text">
+      <p class="eyebrow"><span class="chip">CATBASH</span><span class="zh">猫脚本</span><span data-en="Open-source Linux server scripts · MIT" data-zh="开源 Linux 服务器脚本 · MIT">Open-source Linux server scripts · MIT</span></p>
+      <h1 data-en="Know your server&lt;br&gt;&lt;span class=&quot;hl&quot;&gt;in one command.&lt;/span&gt;" data-zh="一条命令，&lt;br&gt;&lt;span class=&quot;hl&quot;&gt;看清你的服务器。&lt;/span&gt;">Know your server<br><span class="hl">in one command.</span></h1>
+      <p class="lede" data-en="Hardware inventory, network throughput and CPU benchmarks for Linux servers. Paste one line, read the report — no installer, no daemon, nothing left running." data-zh="面向 Linux 服务器的硬件盘点、公网吞吐测试与 CPU 跑分。粘贴一行命令就能看到报告——无需安装，没有常驻进程，跑完不留后台。">Hardware inventory, network throughput and CPU benchmarks for Linux servers. Paste one line, read the report — no installer, no daemon, nothing left running.</p>
+      <div class="cmdbox" data-tabs data-term="heroTerm">
+        <div class="cmdbox-head">
+          <div class="tabs" role="tablist" aria-label="Choose a tool" data-label-en="Choose a tool" data-label-zh="选择工具">
+            <button class="tab" role="tab" type="button" id="hero-t0" aria-selected="true" aria-controls="hero-p" tabindex="0" data-cmd="curl -sL https://ba.sh/menu | bash" data-demo="menu" data-hint-en="Interactive launcher: &lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; all · &lt;code&gt;0&lt;/code&gt; exit." data-hint-zh="交互式启动菜单：&lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; 全部 · &lt;code&gt;0&lt;/code&gt; 退出。"><span data-en="Menu" data-zh="菜单">Menu</span></button>
+            <button class="tab" role="tab" type="button" id="hero-t1" aria-selected="false" aria-controls="hero-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/sick | bash" data-demo="sick" data-demo-zh data-hint-en="Hardware report. Add &lt;code&gt;-cn&lt;/code&gt; for Chinese, &lt;code&gt;--json&lt;/code&gt; for JSON; run as root for full data." data-hint-zh="硬件报告。加 &lt;code&gt;-cn&lt;/code&gt; 中文输出、&lt;code&gt;--json&lt;/code&gt; 输出 JSON；以 root 运行数据最全。">SICK</button>
+            <button class="tab" role="tab" type="button" id="hero-t2" aria-selected="false" aria-controls="hero-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/nets | bash" data-demo="nets" data-hint-en="iperf3 throughput against 23 public endpoints. Add &lt;code&gt;-r&lt;/code&gt; for the quick 8-node set." data-hint-zh="对 23 个公网节点测 iperf3 吞吐。加 &lt;code&gt;-r&lt;/code&gt; 只跑 8 个节点的精简集。">NETS</button>
+            <button class="tab" role="tab" type="button" id="hero-t3" aria-selected="false" aria-controls="hero-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/cpux | bash" data-demo="cpux" data-demo-zh data-hint-en="Geekbench 5 / 6 / 7. Pass &lt;code&gt;6&lt;/code&gt; or &lt;code&gt;all&lt;/code&gt; after &lt;code&gt;bash -s --&lt;/code&gt; to skip the menu." data-hint-zh="Geekbench 5 / 6 / 7。在 &lt;code&gt;bash -s --&lt;/code&gt; 后写 &lt;code&gt;6&lt;/code&gt; 或 &lt;code&gt;all&lt;/code&gt; 可跳过菜单。">CPUX</button>
+            <button class="tab" role="tab" type="button" id="hero-t4" aria-selected="false" aria-controls="hero-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/menu | bash -s -- all" data-demo="all" data-demo-zh data-hint-en="Full check, yabs-style: SICK → NETS (reduced) → CPUX (Geekbench 6) in one scrollback." data-hint-zh="一次完整体检（类似 yabs）：SICK → NETS（精简）→ CPUX（Geekbench 6），结果都在同一屏滚动输出里。"><span data-en="All" data-zh="全部">All</span></button>
+          </div>
+          <div class="hostsw" role="group" aria-label="Short-link host" data-label-en="Short-link host" data-label-zh="短链域名">
+            <button type="button" data-host="ba.sh" aria-pressed="true">ba.sh</button><button type="button" data-host="catbash.net" aria-pressed="false">catbash.net</button>
+          </div>
+        </div>
+        <div class="cmdline" role="tabpanel" id="hero-p" aria-labelledby="hero-t0"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash">curl -sL https://ba.sh/menu | bash</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div>
+        <p class="cmdbox-hint" data-en="Interactive launcher: &lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; all · &lt;code&gt;0&lt;/code&gt; exit." data-zh="交互式启动菜单：&lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; 全部 · &lt;code&gt;0&lt;/code&gt; 退出。">Interactive launcher: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit.</p>
+      </div>
+      <p class="hero-note" data-en="Read before you run: &lt;code class=&quot;brk&quot;&gt;curl -sL https://ba.sh/sick | less&lt;/code&gt;" data-zh="运行前先读源码：&lt;code class=&quot;brk&quot;&gt;curl -sL https://ba.sh/sick | less&lt;/code&gt;">Read before you run: <code class="brk">curl -sL https://ba.sh/sick | less</code></p>
+    </div>
+    <div class="hero-term">
+      <figure class="term term-hero" id="heroTerm" data-src="/assets/demos/menu.ansi">
+  <div class="term-bar">
+    <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="term-title">root@catlab-01: ~</span>
+    <span class="term-tag" data-en="Sample output · demo data" data-zh="示例输出 · 演示数据">Sample output · demo data</span>
+    <span class="term-ctl">
+      <button class="term-btn" type="button" data-act="play" aria-label="Play"><svg class="i-play" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg><svg class="i-pause" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg></button>
+      <button class="term-btn" type="button" data-act="replay" aria-label="Replay" title="Replay" data-label-en="Replay" data-label-zh="重播"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M2.5 2.2v3h3"/></svg></button>
+    </span>
+  </div>
+  <pre class="term-screen" tabindex="0" role="region" aria-label="Sample terminal output (demo data)" data-label-en="Sample terminal output (demo data)" data-label-zh="终端示例输出（演示数据）"><!--demo:menu--><span class="ln"><span class="f114 b">root@catlab-01</span>:<span class="f81 b">~</span># curl -sL https://ba.sh/menu | bash</span><span class="ln"></span><span class="ln"><span class="f16 k81 b"> <i class="w">猫</i><i class="w">脚</i><i class="w">本</i> Catbash </span> <span class="b">v1.3.0</span> <span class="d">· Linux server toolkit</span></span><span class="ln"></span><span class="ln">  <span class="f81 b">1</span>  <span class="b">SICK </span> Server Info &amp; Check Kit        <span class="d">hardware · disks/SMART · RAID · NICs</span></span><span class="ln">  <span class="f81 b">2</span>  <span class="b">NETS </span> Network Throughput Sampler     <span class="d">iperf3 send/recv · NA / EU / APAC</span></span><span class="ln">  <span class="f81 b">3</span>  <span class="b">CPUX </span> CPU eXaminer                   <span class="d">Geekbench 5 / 6 / 7 · single + multi</span></span><span class="ln">  <span class="f81 b">4</span>  <span class="b">ALL  </span> Full check                     <span class="d">SICK → NETS (reduced) → CPUX (GB6)</span></span><span class="ln">  <span class="f81 b">0</span>  Exit</span><span class="ln"></span><span class="ln">  <span class="d">No daemons, nothing kept: downloads are removed after each run.</span></span><span class="ln">  <span class="d">Docs</span>  https://catbash.net/</span><span class="ln"></span><span class="ln">  Select [1-4, 0 = exit]: 1</span><span class="ln">  <span class="d">→ sick: https://catbash.net/sick</span></span><span class="ln"><span class="d">Generating hardware report...</span></span><span class="ln"></span><span class="ln"><span class="f16 k81 b"> SICK </span> v3.2.0<span class="d"> · Server Info &amp; Check Kit</span></span><span class="ln"></span><span class="ln"><span class="f73">════════════════════════════════════════════════════════════════════════════════</span></span><span class="ln"><span class="f222 b">                       System Hardware Information Report</span></span><span class="ln"><span class="f73">════════════════════════════════════════════════════════════════════════════════</span></span><span class="ln"></span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Report Overview</span><span class="f73"> ───────────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Version             : 3.2.0</span><span class="ln">│ Mode                : Text</span><span class="ln">│ Privacy             : IP/MAC masked</span><span class="ln">│ Serials             : shown in full</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">System Information</span><span class="f73"> ────────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Hostname            : catlab-01</span><span class="ln">│ Operating System    : Ubuntu 24.04.5 LTS</span><span class="ln">│ Kernel Version      : 6.18.44-fc-v230</span><span class="ln">│ System Uptime       : up 40 minutes</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">CPU Information</span><span class="f73"> ───────────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Model               : Intel(R) Xeon(R) Processor @ 2.80GHz</span><span class="ln">│ Cores               : 4</span><span class="ln">│ Threads             : 4</span><span class="ln">│ Frequency           : 2799.998 MHz</span><span class="ln">│ Cache               : 33792 KB</span><span class="ln">│ Usage               : 28.3%</span><span class="ln">│ CPU Temperature     : 45.0°C</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">CPU / Platform Status</span><span class="f73"> ─────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Platform            : 1 socket(s), 1 NUMA node(s)</span><span class="ln">│ Virtualization      : No (VT-x/AMD-V)</span><span class="ln">│ Hypervisor          : kvm</span><span class="ln">│ Microcode           : 0x1</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Memory (RAM) Information</span><span class="f73"> ──────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Total               : <span class="f81">15.71 GB</span></span><span class="ln">│ Used                : <span class="f214">561.87 MB</span></span><span class="ln">│ Available           : <span class="f114">15.16 GB</span></span><span class="ln">│</span><span class="ln"><span class="f81">│ Memory Modules:</span></span><span class="ln">├─────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Size</span>     │ <span class="b">Type</span>   │ <span class="b">Frequency</span>    │ <span class="b">Manufacturer</span> │ <span class="b">Serial</span>           │ <span class="b">Model</span>                  │</span><span class="ln">├─────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">8 GB</span>     │ <span class="f81">DDR4</span>   │ 2666 MT/s    │ Samsung      │ 4A1F02C0         │ M391A1K43BB2-CTD       │</span><span class="ln">│ <span class="f81">8 GB</span>     │ <span class="f81">DDR4</span>   │ 2666 MT/s    │ Samsung      │ 4A1F02C1         │ M391A1K43BB2-CTD       │</span><span class="ln">└─────────────────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Disk Drive Information</span><span class="f73"> ────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln"><span class="f81">│ Mounted Filesystems:</span></span><span class="ln">├──────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Filesystem</span>                         │ <span class="b">Size</span>    │ <span class="b">Used</span>    │ <span class="b">Avail</span>   │ <span class="b">Use%</span>   │ <span class="b">Mounted</span>              │</span><span class="ln">├──────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">/dev/md0</span>                           │ 1.8T    │ 412G    │ 1.3T    │ <span class="f114">25%</span>    │ /                    │</span><span class="ln">│ <span class="f81">/dev/nvme0n1p1</span>                     │ 511M    │ 6.1M    │ 505M    │ <span class="f114">2%</span>     │ /boot/efi            │</span><span class="ln">│ <span class="f81">/dev/md1</span>                           │ 12T     │ 7.9T    │ 4.1T    │ <span class="f114">66%</span>    │ /data                │</span><span class="ln">└──────────────────────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">│</span><span class="ln"><span class="b">│ Disk Summary (defects=reallocated/pending/offline)</span></span><span class="ln">├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ Device       │ Basic Info                         │ SMART  │ Hours    │ Temp   │ I/O                  │ Defects   │ Notes                │</span><span class="ln">├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">/dev/sda</span>     │ 931.5G Samsung SSD 870 EVO 1TB     │ <span class="f114">PASS</span>   │ 12034h   │ <span class="f114">34°C</span>   │ <span class="f81">R? W22.7T</span>            │ <span class="f114">0/0/0</span>     │ -                    │</span><span class="ln">│ <span class="f81">/dev/sdb</span>     │ 12.7T TOSHIBA MG07ACA14TE          │ <span class="f114">PASS</span>   │ 40210h   │ <span class="f114">41°C</span>   │ <span class="f214">no stats</span>             │ <span class="f203">8/2/0</span>     │ <span class="f203">bad sectors=10</span>       │</span><span class="ln">│ <span class="f81">/dev/nvme0n1</span> │ 3.5T SAMSUNG MZQL23T8HCLS-00A07    │ <span class="f114">PASS</span>   │ 15000h   │ <span class="f114">38°C</span>   │ <span class="f81">R57.4T W45.9T</span>        │ -         │ <span class="f81">used 3%, spare 100%</span>  │</span><span class="ln">│ <span class="f81">/dev/nvme1n1</span> │ 3.5T SAMSUNG MZQL23T8HCLS-00A07    │ <span class="f114">PASS</span>   │ 15000h   │ <span class="f114">38°C</span>   │ <span class="f81">R57.4T W45.9T</span>        │ -         │ <span class="f81">used 3%, spare 100%</span>  │</span><span class="ln">│ <span class="f81">megaraid,8</span>   │ SEAGATE ST4000NM0025               │ <span class="f114">PASS</span>   │ 51234h   │ <span class="f114">36°C</span>   │ <span class="f214">no stats</span>             │ <span class="f114">GD:0/UE:0</span> │ -                    │</span><span class="ln">│ <span class="f81">megaraid,9</span>   │ SEAGATE ST4000NM0025               │ <span class="f114">PASS</span>   │ 51234h   │ <span class="f114">36°C</span>   │ <span class="f214">no stats</span>             │ <span class="f114">GD:0/UE:0</span> │ -                    │</span><span class="ln">│ <span class="f81">megaraid,10</span>  │ SEAGATE ST4000NM0025               │ <span class="f114">PASS</span>   │ 51234h   │ <span class="f114">36°C</span>   │ <span class="f214">no stats</span>             │ <span class="f114">GD:0/UE:0</span> │ -                    │</span><span class="ln">│ <span class="f81">megaraid,11</span>  │ SEAGATE ST4000NM0025               │ <span class="f114">PASS</span>   │ 51234h   │ <span class="f114">36°C</span>   │ <span class="f214">no stats</span>             │ <span class="f114">GD:0/UE:0</span> │ -                    │</span><span class="ln">└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">NVMe Deep Health</span><span class="f73"> ──────────────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">├─────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Device</span>         │ <span class="b">Model</span>                      │ <span class="b">Temp</span>    │ <span class="b">Used</span>    │ <span class="b">Spare</span>   │ <span class="b">Status</span>  │</span><span class="ln">├─────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">/dev/nvme0n1</span>   │ SAMSUNG MZQL23T8HCLS-00A07 │ <span class="f114">38°C</span>    │ 3%      │ 100%    │ <span class="f114">OK</span>      │</span><span class="ln">│ <span class="f81">/dev/nvme1n1</span>   │ SAMSUNG MZQL23T8HCLS-00A07 │ <span class="f114">38°C</span>    │ 3%      │ 100%    │ <span class="f114">OK</span>      │</span><span class="ln">└─────────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">│   <span class="d">· Unsafe shutdowns (lifetime): nvme0n1=12 nvme1n1=12</span></span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">RAID Controller Information</span><span class="f73"> ───────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln"><span class="f81">│ RAID/HBA Controllers:</span></span><span class="ln">├───────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Slot</span>       │ <span class="b">Type</span>      │ <span class="b">Controller</span>                                       │</span><span class="ln">├───────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">18:00.0</span>    │ <span class="f214">RAID</span>      │ Broadcom / LSI MegaRAID SAS-3 3108 [Invader]     │</span><span class="ln">└───────────────────────────────────────────────────────────────────────────┘</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Network Interface Information</span><span class="f73"> ─────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Iface</span>        │ <span class="b">Status</span>   │ <span class="b">Link</span>         │ <span class="b">MAC</span>                │ <span class="b">IPv4</span>                 │ <span class="b">Model</span>                    │</span><span class="ln">├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">eth0</span>         │ <span class="f114">UP</span>       │ 10000M/full  │ 3c:ec:ef:XX:XX:XX  │ 203.0.XX.XX/24       │ virtio_net               │</span><span class="ln">└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">│</span><span class="ln"><span class="f214">│ RX/TX error &amp; drop counters (cumulative):</span></span><span class="ln">│   <span class="f214">! eth0            rx_dropped=6</span></span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Graphics Card Information</span><span class="f73"> ─────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">├────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="b">Vendor</span>   │ <span class="b">Class</span>      │ <span class="b">Model</span>                                                  │</span><span class="ln">├────────────────────────────────────────────────────────────────────────────────┤</span><span class="ln">│ <span class="f81">ASPEED</span>   │ <span class="f214">BMC</span>        │ ASPEED Technology, Inc. ASPEED Graphics Family         │</span><span class="ln">└────────────────────────────────────────────────────────────────────────────────┘</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"><span class="f73">┌─ </span><span class="f222 b">Motherboard Information</span><span class="f73"> ───────────────────────</span></span><span class="ln"><span class="f73">├──────────────────────────────────────────────────</span></span><span class="ln">│ Vendor              : Supermicro</span><span class="ln">│ Model               : X11SCM-F</span><span class="ln">│ Version             : 1.02</span><span class="ln">│ BIOS Vendor         : American Megatrends Inc.</span><span class="ln">│ BIOS Version        : 2.6</span><span class="ln">└──────────────────────────────────────────────────</span><span class="ln"></span><span class="ln"><span class="f73">── </span><span class="f222 b">Health</span><span class="f73"> ─────────────────────────────────────────</span></span><span class="ln"><span class="f203"><i class="g">✗</i> 1 problem</span></span><span class="ln">  <span class="f203"><i class="g">✗</i></span> sdb       8 reallocated sectors, 2 pending</span><span class="ln"></span><span class="ln"><span class="f114">Report generation completed!</span></span><span class="ln"><span class="d">Generated on: 2026-11-03 10:43:28 UTC</span></span><span class="ln"></span><span class="ln"></span><span class="ln">  <span class="d">[Enter] back to menu · [q] quit:</span> q</span><span class="ln"></span><span class="ln"><span class="f114 b">root@catlab-01</span>:<span class="f81 b">~</span># <span class="cur"> </span></span><!--/demo--></pre>
+  <figcaption class="term-cap"><span data-en="A real recording of the scripts, replayed in your browser. Hardware, network and Geekbench were mocked — every number is demo data." data-zh="脚本的真实录制，在浏览器里回放。硬件、网络和 Geekbench 均为模拟——所有数字都是演示数据。">A real recording of the scripts, replayed in your browser. Hardware, network and Geekbench were mocked — every number is demo data.</span></figcaption>
+</figure>
     </div>
   </div>
 </section>
 
-<section>
+<section class="section" id="tools">
   <div class="wrap">
-    <h2 data-en="Direct install" data-zh="直接安装">Direct install</h2>
-    <div class="product-grid">
-      <div class="cmd-panel" id="install-sick">
-        <div class="cmd-head">
-          <span class="label">SICK</span>
-          <span class="label">ba.sh · catbash</span>
-        </div>
-        <div class="cmd-body">
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://ba.sh/sick | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/sick | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://catbash.net/sick | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/sick | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <p class="cmd-hint" data-en="Same script · <code>-cn</code> Chinese · see <a href=&quot;/sick.html&quot;>SICK page</a>"
-             data-zh="同一脚本 · <code>-cn</code> 中文 · 详见 <a href=&quot;/sick.html&quot;>SICK 页</a>">
-            Same script · <code>-cn</code> Chinese · see <a href="/sick.html">SICK page</a>
-          </p>
-        </div>
+    <div class="section-head">
+      <span class="kicker" data-en="Tools" data-zh="工具">Tools</span>
+      <h2 data-en="Three scripts, one habit." data-zh="三个脚本，一个习惯。">Three scripts, one habit.</h2>
+      <p data-en="Each one runs straight from &lt;code&gt;curl&lt;/code&gt;, prints a report you can read at a glance, and doesn&#x27;t stick around." data-zh="每个脚本都直接从 &lt;code&gt;curl&lt;/code&gt; 运行，输出一眼能看懂的报告，跑完就走。">Each one runs straight from <code>curl</code>, prints a report you can read at a glance, and doesn't stick around.</p>
+    </div>
+    <div class="grid grid-3">
+      <article class="card tool">
+        <div class="tool-top"><span class="chip">SICK</span><span class="full">Server Info &amp; Check Kit</span></div>
+        <h3 data-en="Hardware, inventoried." data-zh="硬件，一次盘清。">Hardware, inventoried.</h3>
+        <p data-en="A one-shot report of everything in the box — colorized tables or JSON." data-zh="一次输出整台机器的硬件清单——彩色表格或 JSON。">A one-shot report of everything in the box — colorized tables or JSON.</p>
+        <ul class="ticks"><li><span data-en="CPU, NUMA, virtualization, temperatures" data-zh="CPU、NUMA、虚拟化、温度">CPU, NUMA, virtualization, temperatures</span></li><li><span data-en="Memory per DIMM: size, speed, vendor, part" data-zh="逐条内存：容量、频率、厂商、型号">Memory per DIMM: size, speed, vendor, part</span></li><li><span data-en="Disks &amp;amp; SMART, NVMe wear, RAID / HBA" data-zh="硬盘与 SMART、NVMe 磨损、RAID / HBA">Disks &amp; SMART, NVMe wear, RAID / HBA</span></li><li><span data-en="NICs, GPU, motherboard &amp;amp; BIOS" data-zh="网卡、显卡、主板与 BIOS">NICs, GPU, motherboard &amp; BIOS</span></li></ul>
+        <div class="cmdline sm"><code class="cmd" data-cmd="curl -sL https://ba.sh/sick | bash">curl -sL https://ba.sh/sick | bash</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div>
+        <a class="more" href="/sick.html"><span data-en="SICK docs" data-zh="SICK 文档">SICK docs</span></a>
+      </article>
+      <article class="card tool">
+        <div class="tool-top"><span class="chip">NETS</span><span class="full">Network Endpoint Throughput Sampler</span></div>
+        <h3 data-en="Throughput, measured." data-zh="吞吐，实测为准。">Throughput, measured.</h3>
+        <p data-en="Public iperf3 send and receive tests against curated endpoints worldwide." data-zh="对全球精选公网节点跑 iperf3 上传与下载测试。">Public iperf3 send and receive tests against curated endpoints worldwide.</p>
+        <ul class="ticks"><li><span data-en="23 endpoints across NA · EU · APAC" data-zh="北美 · 欧洲 · 亚太共 23 个节点">23 endpoints across NA · EU · APAC</span></li><li><span data-en="IPv4 and IPv6, Mbps / Gbps" data-zh="IPv4 与 IPv6，Mbps / Gbps 显示">IPv4 and IPv6, Mbps / Gbps</span></li><li><span data-en="Quick 8-node pass with &lt;code&gt;-r&lt;/code&gt;" data-zh="&lt;code&gt;-r&lt;/code&gt; 精简 8 节点快速摸底">Quick 8-node pass with <code>-r</code></span></li><li><span data-en="Traffic used is totalled at the end" data-zh="结尾汇总本次消耗的流量">Traffic used is totalled at the end</span></li></ul>
+        <div class="cmdline sm"><code class="cmd" data-cmd="curl -sL https://ba.sh/nets | bash">curl -sL https://ba.sh/nets | bash</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div>
+        <a class="more" href="/nets.html"><span data-en="NETS docs" data-zh="NETS 文档">NETS docs</span></a>
+      </article>
+      <article class="card tool">
+        <div class="tool-top"><span class="chip">CPUX</span><span class="full">CPU eXaminer</span></div>
+        <h3 data-en="Scores that actually print." data-zh="跑分，真的出分。">Scores that actually print.</h3>
+        <p data-en="Geekbench 5, 6 and 7 — run one after another, scores read back into your terminal." data-zh="Geekbench 5、6、7 依次运行，分数直接回到你的终端。">Geekbench 5, 6 and 7 — run one after another, scores read back into your terminal.</p>
+        <ul class="ticks"><li><span data-en="Single- and multi-core, never swapped" data-zh="单核与多核分数，绝不错位">Single- and multi-core, never swapped</span></li><li><span data-en="x86_64, ARM64 and RISC-V builds" data-zh="支持 x86_64、ARM64、RISC-V">x86_64, ARM64 and RISC-V builds</span></li><li><span data-en="Binaries removed afterwards" data-zh="跑完自动删除二进制">Binaries removed afterwards</span></li><li><span data-en="Re-fetch later with &lt;code&gt;--fetch URL&lt;/code&gt;" data-zh="可用 &lt;code&gt;--fetch URL&lt;/code&gt; 稍后补取分数">Re-fetch later with <code>--fetch URL</code></span></li></ul>
+        <div class="cmdline sm"><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash">curl -sL https://ba.sh/cpux | bash</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div>
+        <a class="more" href="/cpux.html"><span data-en="CPUX docs" data-zh="CPUX 文档">CPUX docs</span></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="launcher">
+  <div class="wrap split">
+    <div>
+      <span class="kicker" data-en="Launcher" data-zh="启动菜单">Launcher</span>
+      <h2 data-en="Or run all of it at once." data-zh="或者，一次全部跑完。">Or run all of it at once.</h2>
+      <p class="muted" data-en="&lt;code class=&quot;brk&quot;&gt;curl -sL https://ba.sh/menu | bash&lt;/code&gt; opens a small menu: &lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; all · &lt;code&gt;0&lt;/code&gt; exit. &lt;b&gt;all&lt;/b&gt; is the full check, yabs-style — SICK → NETS (reduced) → CPUX (Geekbench 6) in one scrollback." data-zh="&lt;code class=&quot;brk&quot;&gt;curl -sL https://ba.sh/menu | bash&lt;/code&gt; 会打开一个小菜单：&lt;code&gt;1&lt;/code&gt; SICK · &lt;code&gt;2&lt;/code&gt; NETS · &lt;code&gt;3&lt;/code&gt; CPUX · &lt;code&gt;4&lt;/code&gt; 全部 · &lt;code&gt;0&lt;/code&gt; 退出。&lt;b&gt;all&lt;/b&gt; 就是完整体检（类似 yabs）——SICK → NETS（精简）→ CPUX（Geekbench 6），全部输出在同一屏里。"><code class="brk">curl -sL https://ba.sh/menu | bash</code> opens a small menu: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit. <b>all</b> is the full check, yabs-style — SICK → NETS (reduced) → CPUX (Geekbench 6) in one scrollback.</p>
+      <p class="muted" data-en="Through &lt;code&gt;curl | bash&lt;/code&gt;, put arguments after &lt;code&gt;bash -s --&lt;/code&gt;. Without an interactive terminal the menu prints its usage and exits instead of hanging." data-zh="通过 &lt;code&gt;curl | bash&lt;/code&gt; 运行时，参数写在 &lt;code&gt;bash -s --&lt;/code&gt; 之后。没有交互终端时，菜单会打印用法并退出，而不是一直等待。">Through <code>curl | bash</code>, put arguments after <code>bash -s --</code>. Without an interactive terminal the menu prints its usage and exits instead of hanging.</p>
+    </div>
+    <div class="stack">
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- all">curl -sL https://ba.sh/menu | bash -s -- all</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Full check: SICK → NETS (reduced) → CPUX (Geekbench 6)." data-zh="完整体检：SICK → NETS（精简）→ CPUX（Geekbench 6）。">Full check: SICK → NETS (reduced) → CPUX (Geekbench 6).</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- all -cn">curl -sL https://ba.sh/menu | bash -s -- all -cn</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="The same, with Chinese output." data-zh="同上，中文输出。">The same, with Chinese output.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- sick -cn">curl -sL https://ba.sh/menu | bash -s -- sick -cn</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Jump straight to one tool and pass its options." data-zh="直接运行某个工具并传入它的参数。">Jump straight to one tool and pass its options.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- nets -r -t 5">curl -sL https://ba.sh/menu | bash -s -- nets -r -t 5</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="NETS, reduced set, 5 s per direction." data-zh="NETS 精简节点，每个方向 5 秒。">NETS, reduced set, 5 s per direction.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu">curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="NETS in Europe; install iperf3 without asking." data-zh="只测欧洲节点；缺 iperf3 时自动安装。">NETS in Europe; install iperf3 without asking.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- cpux all">curl -sL https://ba.sh/menu | bash -s -- cpux all</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Geekbench 5 → 6 → 7." data-zh="依次运行 Geekbench 5 → 6 → 7。">Geekbench 5 → 6 → 7.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="why">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Why Catbash" data-zh="为什么用猫脚本">Why Catbash</span>
+      <h2 data-en="Made for the box you just logged into." data-zh="为刚登录的那台机器而做。">Made for the box you just logged into.</h2>
+    </div>
+    <div class="why">
+      <div class="card"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 13h11l1-13M9 7V4h6v3"/></svg></span><h3 data-en="Zero footprint" data-zh="零残留">Zero footprint</h3><p data-en="No installer, no daemon. Missing tools are installed only if you say yes — and removed again with &lt;code&gt;--cleanup&lt;/code&gt;. Temp files and Geekbench binaries are deleted afterwards." data-zh="无需安装，没有常驻进程。缺失的工具只有在你同意后才会安装，加 &lt;code&gt;--cleanup&lt;/code&gt; 还会再卸载掉。临时文件和 Geekbench 程序跑完即删。">No installer, no daemon. Missing tools are installed only if you say yes — and removed again with <code>--cleanup</code>. Temp files and Geekbench binaries are deleted afterwards.</p></div>
+      <div class="card"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7.5 9.5l3 2.5-3 2.5M13 15h3.5"/></svg></span><h3 data-en="Pipe-safe" data-zh="管道友好">Pipe-safe</h3><p data-en="Built for &lt;code&gt;curl | bash&lt;/code&gt;. Without a TTY — &lt;code&gt;ssh host &#x27;…&#x27;&lt;/code&gt;, cron, CI — nothing waits on a prompt that can&#x27;t be answered." data-zh="为 &lt;code&gt;curl | bash&lt;/code&gt; 而写。没有 TTY 时（&lt;code&gt;ssh host &#x27;…&#x27;&lt;/code&gt;、cron、CI）不会卡在无法回答的提示上。">Built for <code>curl | bash</code>. Without a TTY — <code>ssh host '…'</code>, cron, CI — nothing waits on a prompt that can't be answered.</p></div>
+      <div class="card"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4C6 4 5.5 5 5.5 7v2c0 1.5-.8 2.6-2 3 1.2.4 2 1.5 2 3v2c0 2 .5 3 2.5 3M16 4c2 0 2.5 1 2.5 3v2c0 1.5.8 2.6 2 3-1.2.4-2 1.5-2 3v2c0 2-.5 3-2.5 3"/></svg></span><h3 data-en="JSON when you need it" data-zh="需要时输出 JSON">JSON when you need it</h3><p data-en="&lt;code&gt;--json&lt;/code&gt; puts a machine-readable result on stdout; progress goes to stderr." data-zh="&lt;code&gt;--json&lt;/code&gt; 把机器可读的结果写到 stdout，进度信息走 stderr。"><code>--json</code> puts a machine-readable result on stdout; progress goes to stderr.</p></div>
+      <div class="card"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3.6 3.2 14.4 0 18M12 3c-3.2 3.6-3.2 14.4 0 18"/></svg></span><h3 data-en="English &amp;amp; 中文" data-zh="中英双语">English &amp; 中文</h3><p data-en="SICK, CPUX and the &lt;code&gt;all&lt;/code&gt; run speak Chinese with &lt;code&gt;-cn&lt;/code&gt;, with columns that stay aligned." data-zh="SICK、CPUX 和 &lt;code&gt;all&lt;/code&gt; 加 &lt;code&gt;-cn&lt;/code&gt; 即输出中文，表格列依然对齐。">SICK, CPUX and the <code>all</code> run speak Chinese with <code>-cn</code>, with columns that stay aligned.</p></div>
+      <div class="card wide"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><h3 data-en="Read before you run" data-zh="先读再跑">Read before you run</h3><p data-en="Every tool is a single plain bash file with no binaries and no obfuscation — the same file the short link serves. Page through it before you pipe it into a root shell:" data-zh="每个工具都只是一个纯 bash 文件，没有二进制、没有混淆——就是短链返回的那个文件。在把它交给 root shell 之前，可以先翻一遍：">Every tool is a single plain bash file with no binaries and no obfuscation — the same file the short link serves. Page through it before you pipe it into a root shell:</p><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/sick | less">curl -sL https://ba.sh/sick | less</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section soft donate" id="donate">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Support" data-zh="赞助">Support</span>
+      <h2 data-en="Keep the cat fed." data-zh="给猫添点粮。">Keep the cat fed.</h2>
+      <p data-en="Catbash is free and MIT-licensed. If it saved you an afternoon, you can chip in." data-zh="猫脚本免费开源（MIT）。如果它帮你省下了一个下午，欢迎支持一下。">Catbash is free and MIT-licensed. If it saved you an afternoon, you can chip in.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>USDT · TRC20</h3>
+        <p data-en="Send on the Tron network (TRC20)." data-zh="请通过 Tron 网络（TRC20）转账。">Send on the Tron network (TRC20).</p>
+        <div class="addr"><div class="cmdline sm"><code class="cmd" data-cmd="TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5">TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div></div>
+        <p class="warnline" data-en="Double-check the network before sending — other chains will lose the funds." data-zh="转账前请再次确认网络——发到其他链会丢失资金。">Double-check the network before sending — other chains will lose the funds.</p>
       </div>
-      <div class="cmd-panel" id="install-nets">
-        <div class="cmd-head">
-          <span class="label">NETS</span>
-          <span class="label">ba.sh · catbash</span>
-        </div>
-        <div class="cmd-body">
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://ba.sh/nets | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/nets | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://catbash.net/nets | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <p class="cmd-hint" data-en="Needs only <code>iperf3</code> · see <a href=&quot;/nets.html&quot;>NETS page</a>"
-             data-zh="只需 <code>iperf3</code> · 详见 <a href=&quot;/nets.html&quot;>NETS 页</a>">
-            Needs only <code>iperf3</code> · see <a href="/nets.html">NETS page</a>
-          </p>
-        </div>
+      <div class="card">
+        <h3 data-en="Afdian · 爱发电" data-zh="爱发电">Afdian · 爱发电</h3>
+        <p data-en="One-time or monthly support, in CNY." data-zh="一次性或按月支持，人民币结算。">One-time or monthly support, in CNY.</p>
+        <a class="btn" href="https://afdian.com/a/ellye" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.6 4.5c2.1 0 3.6 1.1 5.4 3 1.8-1.9 3.3-3 5.4-3 3.6 0 5.7 3.8 4.2 7.2C19.5 16.4 12 21 12 21z"/></svg><span data-en="Support on Afdian" data-zh="在爱发电支持">Support on Afdian</span></a>
       </div>
-      <div class="cmd-panel" id="install-cpux">
-        <div class="cmd-head">
-          <span class="label">CPUX</span>
-          <span class="label">ba.sh · catbash</span>
-        </div>
-        <div class="cmd-body">
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://ba.sh/cpux | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <div class="cmd-row">
-            <span class="prompt">$</span>
-            <code>curl -sL https://catbash.net/cpux | bash</code>
-            <button class="copy" type="button" data-copy="curl -sL https://catbash.net/cpux | bash" data-en="copy" data-zh="复制">copy</button>
-          </div>
-          <p class="cmd-hint" data-en="Geekbench 5/6/7 · <code>all</code> runs every suite · see <a href=&quot;/cpux.html&quot;>CPUX page</a>"
-             data-zh="Geekbench 5/6/7 · <code>all</code> 全套 · 详见 <a href=&quot;/cpux.html&quot;>CPUX 页</a>">
-            Geekbench 5/6/7 · <code>all</code> runs every suite · see <a href="/cpux.html">CPUX page</a>
-          </p>
+      <div class="card">
+        <h3 data-en="Star, report, read" data-zh="点星、反馈、阅读">Star, report, read</h3>
+        <p data-en="Issues and pull requests are welcome on GitHub. The author writes at catcat.blog." data-zh="欢迎在 GitHub 提 Issue 与 PR。作者的博客在 catcat.blog。">Issues and pull requests are welcome on GitHub. The author writes at catcat.blog.</p>
+        <div class="btn-row">
+          <a class="btn ghost" href="https://github.com/Yuri-NagaSaki/SICK" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>GitHub</a>
+          <a class="btn ghost" href="https://catcat.blog" rel="noopener"><span data-en="Blog" data-zh="博客">Blog</span></a>
         </div>
       </div>
     </div>
   </div>
 </section>
-
-<section id="donate">
+</main>
+<footer class="foot">
   <div class="wrap">
-    <h2 data-en="Support the project" data-zh="赞助此项目">Support the project</h2>
-    <div class="donate-grid">
-      <div class="donate-card">
-        <h3>USDT — TRC20</h3>
-        <p class="lead" data-en="Tron network (TRC20). Double-check the network before sending."
-           data-zh="Tron 网络 (TRC20)。转账前请再次确认网络。">Tron network (TRC20). Double-check the network before sending.</p>
-        <div class="addr">
-          <code>TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5</code>
-          <button class="copy" type="button" onclick="copyText('TT6Ly1NpWSeYubufPVRUp4dz8SMUCZzcE5', this)" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <span class="net-tag">TRC20 · Tron</span>
+    <div class="foot-in">
+      <div>
+        <a class="brand" href="/"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path class="logo-head" d="M5 13.5 6 3.5l7 5.5h6l7-5.5 1 10V23a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/><path class="logo-ps" d="M10.5 15.5 14 18.5l-3.5 3M16.5 22h5"/></svg><span>猫脚本 · Catbash</span></a>
+        <p data-en="Open-source Linux server scripts you run with one &lt;code&gt;curl | bash&lt;/code&gt;." data-zh="一条 &lt;code&gt;curl | bash&lt;/code&gt; 就能跑的开源 Linux 服务器脚本。">Open-source Linux server scripts you run with one <code>curl | bash</code>.</p>
       </div>
-      <div class="donate-card" style="display:flex;flex-direction:column;justify-content:center">
-        <h3 data-en="Afdian / 爱发电" data-zh="爱发电">Afdian / 爱发电</h3>
-        <p class="lead" data-en="Recurring or one-time support." data-zh="支持一次或持续赞助。">Recurring or one-time support.</p>
-        <a class="afd-btn" href="https://afdian.com/a/ellye" target="_blank" rel="noopener">
-          <span class="heart">♥</span>
-          <span data-en="Support on Afdian" data-zh="在爱发电支持">Support on Afdian</span>
-        </a>
+      <div class="foot-cols">
+        <div>
+          <h2 data-en="Tools" data-zh="工具">Tools</h2>
+          <ul>
+            <li><a href="/sick.html">SICK</a></li>
+            <li><a href="/nets.html">NETS</a></li>
+            <li><a href="/cpux.html">CPUX</a></li>
+            <li><a href="/#launcher"><span data-en="Launcher menu" data-zh="启动菜单">Launcher menu</span></a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 data-en="Short links" data-zh="短链">Short links</h2>
+          <ul class="mono">
+            <li>ba.sh/menu · /sick</li>
+            <li>ba.sh/nets · /cpux</li>
+            <li>catbash.net/menu · …</li>
+          </ul>
+        </div>
+        <div>
+          <h2 data-en="Project" data-zh="项目">Project</h2>
+          <ul>
+            <li><a href="https://github.com/Yuri-NagaSaki/SICK" rel="noopener">GitHub</a></li>
+            <li><a href="https://catcat.blog" rel="noopener"><span data-en="Blog · catcat.blog" data-zh="博客 · catcat.blog">Blog · catcat.blog</span></a></li>
+            <li><a href="/#donate"><span data-en="Support" data-zh="赞助">Support</span></a></li>
+            <li><a href="https://github.com/Yuri-NagaSaki/SICK/blob/main/LICENSE" rel="noopener"><span data-en="MIT license" data-zh="MIT 许可证">MIT license</span></a></li>
+          </ul>
+        </div>
       </div>
     </div>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap foot-in">
-    <div class="foot-brand" data-en="猫脚本 · Catbash" data-zh="猫脚本 · Catbash">猫脚本 · Catbash</div>
-    <div class="foot-links">
-      <a href="/sick.html">SICK</a>
-      <a href="/nets.html">NETS</a>
-      <a href="/cpux.html">CPUX</a>
-      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
-      </a>
-      <a href="https://catcat.blog" target="_blank" rel="noopener"
-         data-en="猫猫博客" data-zh="猫猫博客">猫猫博客</a>
-      <span>MIT</span>
+    <div class="foot-base">
+      <span>© Yuri NagaSaki · MIT</span>
+      <span data-en="No trackers, no external requests." data-zh="无追踪、无外部请求。">No trackers, no external requests.</span>
     </div>
   </div>
 </footer>
-
 <script src="/assets/site.js"></script>
+<script src="/assets/term.js"></script>
 </body>
 </html>

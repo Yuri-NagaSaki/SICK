@@ -81,8 +81,16 @@
   var host = store("catbash-host");
   if (HOSTS.indexOf(host) < 0) host = "ba.sh";
   function withHost(cmd) { return host === "ba.sh" ? cmd : cmd.replace(/https:\/\/ba\.sh\//g, "https://" + host + "/"); }
+  // Commands wrap at spaces only: each flag (-s, --region …) stays in one piece.
+  function setCmd(code, cmd) {
+    code.setAttribute("data-cmd", cmd);
+    code.innerHTML = withHost(cmd).split(" ").map(function (t) {
+      var e = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return t.charAt(0) === "-" ? '<span class="tk">' + e + "</span>" : e;
+    }).join(" ");
+  }
   function applyHost() {
-    $$("code.cmd[data-cmd]").forEach(function (c) { c.textContent = withHost(c.getAttribute("data-cmd")); });
+    $$("code.cmd[data-cmd]").forEach(function (c) { setCmd(c, c.getAttribute("data-cmd")); });
     $$(".hostsw button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-host") === host)); });
   }
   $$(".hostsw button").forEach(function (b) {
@@ -153,8 +161,7 @@
         t.tabIndex = on ? 0 : -1;
       });
       if (focus) tab.focus();
-      code.setAttribute("data-cmd", tab.getAttribute("data-cmd"));
-      code.textContent = withHost(tab.getAttribute("data-cmd"));
+      setCmd(code, tab.getAttribute("data-cmd"));
       if (hint) {
         hint.setAttribute("data-en", tab.getAttribute("data-hint-en") || "");
         hint.setAttribute("data-zh", tab.getAttribute("data-hint-zh") || "");
