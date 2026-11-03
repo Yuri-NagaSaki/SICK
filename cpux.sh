@@ -26,7 +26,7 @@
 #   CPUX_GB5_VER / CPUX_GB6_VER / CPUX_GB7_VER   pin other Geekbench builds
 #   CPUX_MIRROR         extra download mirror, tried first (…/Geekbench-X-Linux.tar.gz)
 #   CPUX_WORKDIR        where binaries are unpacked (default: auto-pick)
-#   CPUX_FETCH_TIMEOUT  seconds to keep trying for scores (default 120)
+#   CPUX_FETCH_TIMEOUT  seconds to keep trying for scores (default 300)
 #   CPUX_SCORE_API      score API URL ("" disables; default catbash.net)
 #   CPUX_JINA           reader prefix ("" disables; default https://r.jina.ai/)
 #   JINA_API_KEY        optional key for higher r.jina.ai rate limits
@@ -47,8 +47,10 @@ CDN_MIRROR="https://asset.bash.icu/https://cdn.geekbench.com"
 
 SCORE_API="${CPUX_SCORE_API-https://catbash.net/api/gb}"
 JINA_PREFIX="${CPUX_JINA-https://r.jina.ai/}"
-FETCH_BUDGET="${CPUX_FETCH_TIMEOUT:-120}"
-[[ "$FETCH_BUDGET" =~ ^[0-9]+$ ]] || FETCH_BUDGET=120
+# New results can take a few minutes to appear on the Geekbench Browser
+# (seen with GB7: not ready for > 2 min, fine a few minutes later).
+FETCH_BUDGET="${CPUX_FETCH_TIMEOUT:-300}"
+[[ "$FETCH_BUDGET" =~ ^[0-9]+$ ]] || FETCH_BUDGET=300
 
 UA_BROWSER="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 UA_CPUX="cpux/${VERSION} (+https://catbash.net/cpux.html)"
@@ -751,7 +753,7 @@ fetch_scores() {
     nap=$((attempt * 3)); ((nap > 15)) && nap=15
     left=$((deadline - SECONDS)); ((left <= 3)) && break
     ((nap > left - 3)) && nap=$((left - 3))
-    status_set -1 "$(T "result page not ready, retry in" "结果页未就绪，重试于") ${nap}s"
+    status_set -1 "$(T "waiting for Geekbench to publish the result" "等待 Geekbench 发布结果") ${SYM_DOT} $(T "retry in" "重试于") ${nap}s"
     sleep "$nap"
   done
   unset -f try_src
