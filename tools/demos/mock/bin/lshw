@@ -1,0 +1,6 @@
+#!/bin/bash
+sleep 1
+case "$*" in
+  *display*) printf 'H/W path          Device     Class          Description\n=========================================================\n/0/100/3.0                   display        ASPEED Graphics Family\n' ;;
+  *memory*) printf '  *-bank:0\n       description: DIMM DDR4 Synchronous 3200 MHz\n       size: 32GiB\n       clock: 3200MHz\n' ;;
+esac

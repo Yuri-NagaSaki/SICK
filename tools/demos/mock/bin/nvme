@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Demo stub for nvme-cli.
+D="$(cd "$(dirname "${BASH_SOURCE[0]}")/../data" && pwd)"
+sleep "${FAKE_DELAY:-0.12}"
+case "${1:-}" in
+  smart-log) cat "$D/nvme_smartlog.json" ;;
+  error-log) cat "$D/nvme_errlog.json" ;;
+  id-ctrl)   cat "$D/nvme_idctrl.json" ;;
+  *) exit 1 ;;
+esac

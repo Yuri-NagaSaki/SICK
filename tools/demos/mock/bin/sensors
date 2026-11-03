@@ -1,0 +1,7 @@
+#!/bin/bash
+cat <<'L'
+coretemp-isa-0000
+Adapter: ISA adapter
+Package id 0:  +45.0°C  (high = +80.0°C, crit = +100.0°C)
+Core 0:        +42.0°C  (high = +80.0°C, crit = +100.0°C)
+L

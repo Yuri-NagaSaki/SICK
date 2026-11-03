@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Demo stub for ping: IPv4 "reachable", IPv6 not (NETS connectivity probe).
+for a in "$@"; do [[ "$a" == -6 ]] && exit 1; done
+exit 0

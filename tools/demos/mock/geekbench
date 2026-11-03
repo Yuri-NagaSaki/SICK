@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Demo stand-in for a Geekbench tryout CLI (geekbench5/6/7). capture.sh
+# fills in @MAJOR@ / @BUILD@ when it packs the fake tarballs. Prints the
+# real tryout layout so CPUX's progress parser and URL grep work unchanged.
+# DEMO_GB_STEP = seconds per workload (default 0.3 → ~11 s per suite).
+MAJOR=@MAJOR@
+BUILD=@BUILD@
+STEP="${DEMO_GB_STEP:-0.3}"
+case "$*" in *--unlock*) exit 0 ;; esac
+if [[ "$MAJOR" == 5 ]]; then
+  W=("AES-XTS" "Text Compression" "Image Compression" "Navigation" "HTML5" "SQLite"
+     "PDF Rendering" "Text Rendering" "Clang" "Camera" "N-Body Physics"
+     "Rigid Body Physics" "Gaussian Blur" "Face Detection" "Horizon Detection"
+     "Image Inpainting" "HDR" "Ray Tracing" "Structure from Motion"
+     "Speech Recognition" "Machine Learning")
+else
+  W=("File Compression" "Navigation" "HTML5 Browser" "PDF Renderer" "Photo Library"
+     "Clang" "Text Processing" "Asset Compression" "Object Detection"
+     "Background Blur" "Horizon Detection" "Object Remover" "HDR" "Photo Filter"
+     "Ray Tracer" "Structure from Motion")
+fi
+cat <<HDR
+Geekbench ${BUILD} Tryout : https://www.geekbench.com/
+
+Geekbench ${MAJOR} requires an active internet connection when in tryout mode and
+automatically uploads test results to the Geekbench Browser.
+
+Buy a Geekbench ${MAJOR} license from the Primate Labs Store to enable offline use
+and unlock other features:
+
+  https://store.primatelabs.com/v${MAJOR}
+
+Enter your Geekbench ${MAJOR} license using the following command line:
+
+  ./geekbench${MAJOR} --unlock <email> <key>
+
+  Running Gathering system information
+System Information
+  Operating System              $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-Linux}")
+  Kernel                        Linux $(uname -r) $(uname -m)
+  Model                         KVM
+  Motherboard                   Supermicro X11SCM-F
+  BIOS                          American Megatrends Inc. 2.6
+
+CPU Information
+  Name                          $(awk -F': ' '/^model name/ {print $2; exit}' /proc/cpuinfo)
+  Topology                      1 Processor, $(nproc) Cores
+
+Memory Information
+  Size                          $(awk '/^MemTotal/ {printf "%.1f GB", $2/1048576}' /proc/meminfo)
+
+HDR
+for phase in Single-Core Multi-Core; do
+  echo "${phase}"
+  for w in "${W[@]}"; do echo "  Running ${w}"; sleep "$STEP"; done
+  echo
+done
+id="${DEMO_GB_ID:-1234567}"
+cat <<END
+Uploading results to the Geekbench Browser. This could take a minute or two
+depending on the speed of your internet connection.
+
+Upload succeeded. Visit the following link and view your results online:
+
+  https://browser.geekbench.com/v${MAJOR}/cpu/${id}
+
+Visit the following link and add this result to your profile:
+
+  https://browser.geekbench.com/v${MAJOR}/cpu/${id}/claim?key=000000
+
+END

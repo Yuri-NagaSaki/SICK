@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Demo stub for df: canned mounts for `df -hP` (SICK), the real df for
+# anything else (CPUX runs `df -Pk DIR` to pick its work dir).
+if [[ "$*" == "-hP" ]]; then cat <<'L'
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md0        1.8T  412G  1.3T  25% /
+/dev/nvme0n1p1  511M  6.1M  505M   2% /boot/efi
+/dev/md1         12T  7.9T  4.1T  66% /data
+tmpfs           7.9G     0  7.9G   0% /dev/shm
+L
+  exit 0
+fi
+self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self" | paste -sd: -)" exec df "$@"

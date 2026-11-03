@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Demo stub for dmidecode: two RDIMMs + one empty slot, Supermicro board.
+sleep 0.05
+if [[ "${1:-}" == "-s" ]]; then
+  case "${2:-}" in
+    system-manufacturer|baseboard-manufacturer|chassis-manufacturer) echo "Supermicro" ;;
+    system-product-name) echo "SYS-5019C-MR" ;;
+    baseboard-product-name) echo "X11SCM-F" ;;
+    baseboard-version) echo "1.02" ;;
+    baseboard-serial-number|system-serial-number) echo "ZM21AS000123" ;;
+    bios-vendor) echo "American Megatrends Inc." ;;
+    bios-version) echo "2.6" ;;
+    bios-release-date) echo "05/21/2024" ;;
+    system-uuid) echo "00000000-0000-0000-0000-3cecef123456" ;;
+    *) echo "Not Specified" ;;
+  esac
+  exit 0
+fi
+for i in 0 1; do cat <<L
+Handle 0x110$i, DMI type 17, 84 bytes
+Memory Device
+	Array Handle: 0x1000
+	Total Width: 72 bits
+	Size: 8 GB
+	Form Factor: DIMM
+	Locator: DIMMA$((i + 1))
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2666 MT/s
+	Manufacturer: Samsung
+	Serial Number: 4A1F02C$i
+	Part Number: M391A1K43BB2-CTD    
+	Configured Memory Speed: 2666 MT/s
+
+L
+done
+cat <<L
+Handle 0x1102, DMI type 17, 84 bytes
+Memory Device
+	Size: No Module Installed
+	Type: Unknown
+	Speed: Unknown
+
+L
