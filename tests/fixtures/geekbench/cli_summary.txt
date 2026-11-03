@@ -1,0 +1,5 @@
+Benchmark Summary
+  Single-Core Score             1047
+    Crypto Score                1500
+  Multi-Core Score              3912
+    Integer Score               3500

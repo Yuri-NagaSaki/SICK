@@ -11,7 +11,7 @@
 
 | 工具 | 作用 | 一键运行 | 文档 |
 |------|------|----------|------|
-| **主菜单** | 交互选择 SICK / NETS / CPUX | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
+| **主菜单** | 交互选择 SICK / NETS / CPUX，或一键全测 | `curl -sL https://ba.sh/menu \| bash` | [catbash.sh](catbash.sh) |
 | **SICK** | 一次性硬件盘点 | `curl -sL https://ba.sh/sick \| bash` | [sick.html](https://catbash.net/sick.html) |
 | **NETS** | 公网 iperf3 吞吐采样 | `curl -sL https://ba.sh/nets \| bash` | [nets.html](https://catbash.net/nets.html) |
 | **CPUX** | Geekbench 5 / 6 / 7 CPU 跑分 | `curl -sL https://ba.sh/cpux \| bash` | [cpux.html](https://catbash.net/cpux.html) |
@@ -35,7 +35,7 @@
 
 ## 快速开始 — 主菜单
 
-交互菜单（`1` = SICK，`2` = NETS，`3` = CPUX，`0` = 退出）：
+交互菜单（`1` = SICK，`2` = NETS，`3` = CPUX，`4` = 全部，`0` = 退出）：
 
 ```bash
 curl -sL https://ba.sh/menu | bash
@@ -51,7 +51,14 @@ curl -sL https://ba.sh/menu | bash -s -- nets -y --region eu
 curl -sL https://ba.sh/menu | bash -s -- cpux all
 ```
 
-通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。
+一键全测（类似 yabs）：SICK → NETS（精简）→ CPUX（Geekbench 6），结果在同一屏滚动输出：
+
+```bash
+curl -sL https://ba.sh/menu | bash -s -- all
+curl -sL https://ba.sh/menu | bash -s -- all -cn
+```
+
+通过 `curl | bash` 传参时，请使用 `bash -s -- <参数>`。没有交互终端时（如 `ssh host '…'`、cron）菜单会直接提示用法并退出，不会卡住。
 
 ---
 
@@ -115,7 +122,7 @@ curl -sL https://ba.sh/nets | bash
 # 精简节点，每方向 5 秒
 curl -sL https://ba.sh/nets | bash -s -- -r -t 5
 
-# 缺依赖时自动安装 iperf3 + python3
+# 缺依赖时自动安装 iperf3
 curl -sL https://ba.sh/nets | bash -s -- -y -r
 
 # 仅亚太 + IPv4
@@ -123,9 +130,12 @@ curl -sL https://ba.sh/nets | bash -s -- --region apac -4
 
 # 只列节点
 curl -sL https://ba.sh/nets | bash -s -- -l
+
+# JSON 结果（进度输出到 stderr）
+curl -sL https://ba.sh/nets | bash -s -- -r --json > nets.json
 ```
 
-**依赖：** `iperf3`、`python3`。缺失时会 **Y/N 询问安装**（也可用 `-y` / `--no-install`）。
+**依赖：** 只需 `iperf3`（节点与结果用 awk 解析，不再需要 python3）。缺失时会 **Y/N 询问安装**（也可用 `-y` / `--no-install`）。测试时有实时状态行；按 Ctrl-C 会输出已完成部分的汇总。不可达节点（超时 / 拒绝 / DNS 失败）会快速跳过，不再逐个端口重试。
 
 ### 参数
 
@@ -137,8 +147,10 @@ curl -sL https://ba.sh/nets | bash -s -- -l
 | `-t <秒>` | 每方向测试时长（默认 10） |
 | `-P <n>` | 并行流数（默认 4） |
 | `--send-only` / `--recv-only` | 只测上传 / 只测下载 |
+| `-j` / `--json` | stdout 输出 JSON 结果 |
 | `-y` / `--yes` | 自动安装缺失依赖 |
 | `--no-install` | 不安装；缺依赖则退出 |
+| `--no-clear` / `--no-color` | 不清屏 / 无颜色（支持 `NO_COLOR`） |
 | `-l` | 列出节点后退出 |
 
 节点目录：[nets/endpoints.md](nets/endpoints.md) · [nets/endpoints.json](nets/endpoints.json)  
@@ -164,9 +176,30 @@ curl -sL https://ba.sh/cpux | bash -s -- all
 
 # 中文界面
 curl -sL https://ba.sh/cpux | bash -s -- all -cn
+
+# JSON 结果
+curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json
+
+# 分数没取到？对已有结果链接重新取分（无需重跑）
+curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456
 ```
 
 需要能访问 `cdn.geekbench.com` 与 `browser.geekbench.com` 的 IPv4 HTTPS。安装包较大，请在可承受满载的机器上测。
+
+**分数如何获取：** Geekbench 试用版只上传、不打印分数。CPUX 依次尝试：本机输出（授权版）→ 直连结果页（普通 / 浏览器 UA，优先 IPv4）→ 原始结果 JSON → `catbash.net/api/gb`（Cloudflare 上的服务端抓取，见 `worker.js`）→ `r.jina.ai`（绕过缓存）。每个数字都与其 "Single-Core / Multi-Core Score" 标签配对，单核与多核不会错位；整个过程默认最多 120 秒（`--fetch-timeout`），失败时给出一行 `--fetch` 重试命令。
+
+| 参数 | 说明 |
+|------|------|
+| `5` / `6` / `7` / `all` | 选择版本（可组合，如 `-5 -7`） |
+| `-j` / `--json` | stdout 输出 JSON |
+| `--fetch URL…` | 仅为已有结果链接取分 |
+| `--fetch-timeout 秒` | 取分超时（默认 120） |
+| `-y` / `--yes` | 不询问；遇到警告继续 |
+| `-k` / `--keep` | 保留下载的二进制 |
+| `--no-clear` / `--no-color` | 不清屏 / 无颜色 |
+| `-cn` / `-us` | 中文 / 英文界面 |
+
+环境变量：`CPUX_GB5_VER` / `CPUX_GB6_VER` / `CPUX_GB7_VER`（指定版本）、`CPUX_MIRROR`（自定义下载镜像）、`CPUX_WORKDIR`（解压目录）、`CPUX_SCORE_API` / `CPUX_JINA`（设为空可禁用对应取分源）、`JINA_API_KEY`。
 
 更多：[https://catbash.net/cpux.html](https://catbash.net/cpux.html)
 
@@ -187,7 +220,7 @@ curl -sL https://ba.sh/cpux | bash -s -- all -cn
 │   ├── nets.sh
 │   ├── endpoints.json
 │   └── endpoints.md
-├── worker.js            # Cloudflare 短链
+├── worker.js            # Cloudflare 短链 + /api/gb（CPUX 取分回退）
 └── wrangler.jsonc
 ```
 
