@@ -152,6 +152,7 @@ curl -sL https://ba.sh/nets | bash -s -- -r --json > nets.json
 | `-j` / `--json` | stdout 输出 JSON 结果 |
 | `-y` / `--yes` | 自动安装缺失依赖 |
 | `--no-install` | 不安装；缺依赖则退出 |
+| `--cleanup` / `--keep-packages` | 本次安装的 iperf3 测完自动卸载 / 保留且不询问 |
 | `--no-clear` / `--no-color` | 不清屏 / 无颜色（支持 `NO_COLOR`） |
 | `-l` | 列出节点后退出 |
 
@@ -186,7 +187,7 @@ curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json
 curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456
 ```
 
-需要能访问 `cdn.geekbench.com` 与 `browser.geekbench.com` 的 IPv4 HTTPS。安装包较大，请在可承受满载的机器上测。
+需要能访问 `cdn.geekbench.com` 与 `browser.geekbench.com` 的 IPv4 HTTPS。安装包较大，请在可承受满载的机器上测。零残留：下载的 Geekbench 文件在测试结束时自动删除（并显示释放的空间），认领链接直接打印在汇总里，不再写入文件。
 
 **分数如何获取：** Geekbench 试用版只上传、不打印分数。CPUX 依次尝试：本机输出（授权版）→ 直连结果页（普通 / 浏览器 UA，优先 IPv4）→ 原始结果 JSON → `catbash.net/api/gb`（Cloudflare 上的服务端抓取，见 `worker.js`）→ `r.jina.ai`（绕过缓存）。每个数字都与其 "Single-Core / Multi-Core Score" 标签配对，单核与多核不会错位；整个过程默认最多 120 秒（`--fetch-timeout`），失败时给出一行 `--fetch` 重试命令。
 
@@ -197,7 +198,7 @@ curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v
 | `--fetch URL…` | 仅为已有结果链接取分 |
 | `--fetch-timeout 秒` | 取分超时（默认 120） |
 | `-y` / `--yes` | 不询问；遇到警告继续 |
-| `-k` / `--keep` | 保留下载的二进制 |
+| `-k` / `--keep` | 保留下载的二进制（默认测完删除） |
 | `--no-clear` / `--no-color` | 不清屏 / 无颜色 |
 | `-cn` / `-us` | 中文 / 英文界面 |
 

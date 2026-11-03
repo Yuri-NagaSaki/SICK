@@ -152,6 +152,7 @@ curl -sL https://ba.sh/nets | bash -s -- -r --json > nets.json
 | `-j` / `--json` | JSON results on stdout |
 | `-y` / `--yes` | Auto-install missing deps |
 | `--no-install` | Never install; exit if deps missing |
+| `--cleanup` / `--keep-packages` | Remove iperf3 afterwards if this run installed it / keep it without asking |
 | `--no-clear` / `--no-color` | Keep screen / plain output (`NO_COLOR` honoured) |
 | `-l` | List endpoints and exit |
 
@@ -186,7 +187,7 @@ curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json
 curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456
 ```
 
-Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. Binaries are large; run on a host that can take full CPU load.
+Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. Binaries are large; run on a host that can take full CPU load. Nothing is left behind: the downloaded Geekbench files are deleted when the run ends (the size is reported), and claim links are printed in the summary instead of being written to a file.
 
 **How scores are obtained:** the Geekbench tryout CLI uploads but never prints scores. CPUX tries, in order: local CLI output (licensed builds) → the result page directly (plain and browser UA, IPv4) → the raw result JSON → `catbash.net/api/gb` (server-side fetch on Cloudflare, see `worker.js`) → `r.jina.ai` with cache bypass. Each number is paired with its own "Single-Core / Multi-Core Score" label, so the two can never be swapped. The whole chain is capped at 120 s (`--fetch-timeout`); on failure CPUX prints a one-line `--fetch` retry command.
 
@@ -197,7 +198,7 @@ Needs outbound HTTPS (IPv4) to `cdn.geekbench.com` and `browser.geekbench.com`. 
 | `--fetch URL…` | Only fetch scores of existing result URLs |
 | `--fetch-timeout SEC` | Score fetch budget (default 120) |
 | `-y` / `--yes` | Don't ask; continue past warnings |
-| `-k` / `--keep` | Keep downloaded binaries |
+| `-k` / `--keep` | Keep downloaded binaries (default: removed when the run ends) |
 | `--no-clear` / `--no-color` | Keep screen / plain output |
 | `-cn` / `-us` | Chinese / English UI |
 
