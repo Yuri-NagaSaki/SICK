@@ -26,7 +26,9 @@
     });
     $$("[data-label-en]").forEach(function (el) {
       var v = el.getAttribute("data-label-" + l);
-      if (v !== null) { el.setAttribute("aria-label", v); el.setAttribute("title", v); }
+      if (v === null) return;
+      el.setAttribute("aria-label", v);
+      if (el.hasAttribute("title")) el.setAttribute("title", v);
     });
     var zt = root.getAttribute("data-title-zh");
     doc.title = l === "zh" && zt ? zt : enTitle;
