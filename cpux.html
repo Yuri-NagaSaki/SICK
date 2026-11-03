@@ -163,9 +163,9 @@
   <div class="wrap">
     <h2 data-en="Why CPUX?" data-zh="为什么需要 CPUX？">Why CPUX?</h2>
     <p class="lede" style="max-width:none;margin-bottom:1rem"
-       data-en="Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank multi-core columns when Cloudflare blocks them. CPUX re-fetches scores with multiple strategies so both numbers show up."
-       data-zh="Geekbench 试用版会上传到 Browser，但<strong>不会</strong>在终端打印分数。很多脚本去抓结果页，却在 Cloudflare 拦截时输出空白多核。CPUX 用多策略取回分数，保证单核与多核都能显示。">
-      Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank multi-core columns when Cloudflare blocks them. CPUX re-fetches scores with multiple strategies so both numbers show up.
+       data-en="Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank or swapped columns when Cloudflare blocks them. CPUX reads the scores back through a bounded fallback chain — direct page (plain and browser UA, IPv4), raw result JSON, a server-side fetch on <code>catbash.net/api/gb</code>, then <code>r.jina.ai</code> with cache bypass — and pairs each number with its own label, so single and multi can never be swapped. If every source fails it prints a one-line <code>--fetch</code> retry command."
+       data-zh="Geekbench 试用版会上传到 Browser，但<strong>不会</strong>在终端打印分数。很多脚本去抓结果页，在 Cloudflare 拦截时会输出空白甚至错位的分数。CPUX 按有时限的回退链取分——直连结果页（普通 / 浏览器 UA，优先 IPv4）、原始结果 JSON、<code>catbash.net/api/gb</code> 服务端抓取、最后 <code>r.jina.ai</code>（绕过缓存）——并把每个数字与其标签配对，单核/多核绝不会错位。全部失败时会给出一行 <code>--fetch</code> 重试命令。">
+      Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank or swapped columns when Cloudflare blocks them. CPUX reads the scores back through a bounded fallback chain — direct page (plain and browser UA, IPv4), raw result JSON, a server-side fetch on <code>catbash.net/api/gb</code>, then <code>r.jina.ai</code> with cache bypass — and pairs each number with its own label, so single and multi can never be swapped. If every source fails it prints a one-line <code>--fetch</code> retry command.
     </p>
     <div class="report-map">
       <div class="rm-item">
@@ -225,7 +225,23 @@
         </tr>
         <tr>
           <td><code>-y</code> / <code>--yes</code></td>
-          <td data-en="Non-interactive defaults" data-zh="非交互默认">Non-interactive defaults</td>
+          <td data-en="Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)" data-zh="不询问；遇到警告继续（如无法 IPv4 访问 Geekbench）">Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)</td>
+        </tr>
+        <tr>
+          <td><code>-j</code> / <code>--json</code></td>
+          <td data-en="JSON result on stdout (progress on stderr)" data-zh="stdout 输出 JSON（进度在 stderr）">JSON result on stdout (progress on stderr)</td>
+        </tr>
+        <tr>
+          <td><code>--fetch URL…</code></td>
+          <td data-en="Only (re)fetch scores of existing result URLs — no benchmark" data-zh="仅为已有结果链接重新取分，不跑分">Only (re)fetch scores of existing result URLs — no benchmark</td>
+        </tr>
+        <tr>
+          <td><code>--fetch-timeout SEC</code></td>
+          <td data-en="Stop trying for scores after SEC seconds (default 120)" data-zh="取分最长等待秒数（默认 120）">Stop trying for scores after SEC seconds (default 120)</td>
+        </tr>
+        <tr>
+          <td><code>--no-clear</code> / <code>--no-color</code></td>
+          <td data-en="Keep the screen / plain output (NO_COLOR honoured)" data-zh="不清屏 / 无颜色输出（支持 NO_COLOR）">Keep the screen / plain output (NO_COLOR honoured)</td>
         </tr>
         <tr>
           <td><code>-h</code> / <code>-v</code></td>
@@ -252,6 +268,18 @@
           <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- all -cn" data-en="copy" data-zh="复制">copy</button>
         </div>
         <p class="cmd-hint" data-en="All three suites, Chinese UI. Long run — do this on a spare host." data-zh="三套全跑 + 中文。耗时长，请在空闲机器上测。">All three suites, Chinese UI. Long run — do this on a spare host.</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Scores missing? Re-fetch them later for an existing result URL — no re-run." data-zh="分数没取到？稍后对已有结果链接重新取分，无需重跑。">Scores missing? Re-fetch them later for an existing result URL — no re-run.</p>
+        <div class="cmd-row">
+          <span class="prompt">$</span>
+          <code>curl -sL https://ba.sh/cpux | bash -s -- 6 --json &gt; gb6.json</code>
+          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json" data-en="copy" data-zh="复制">copy</button>
+        </div>
+        <p class="cmd-hint" data-en="Machine-readable result (scores, URLs, timings) for scripts and dashboards." data-zh="机器可读结果（分数、链接、耗时），便于脚本与面板使用。">Machine-readable result (scores, URLs, timings) for scripts and dashboards.</p>
         <div class="cmd-row">
           <span class="prompt">$</span>
           <code>curl -sL https://ba.sh/cpux | bash -s -- -5 -7</code>

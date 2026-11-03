@@ -29,7 +29,9 @@
       "/nets/nets.sh",
       "/cpux",
       "/cpux/",
-      "/cpux.sh"
+      "/cpux.sh",
+      // CPUX score fallback API (worker.js geekbenchScores)
+      "/api/gb"
     ]
   },
   "compatibility_flags": [
