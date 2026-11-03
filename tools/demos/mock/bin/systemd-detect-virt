@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Demo stub: a KVM guest, no container.
+case "${1:-}" in
+  -c|--container) echo none; exit 1 ;;
+  *) echo kvm; exit 0 ;;
+esac

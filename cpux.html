@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-title-zh="CPUX — Geekbench 5 / 6 / 7 跑分 | 猫脚本">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CPUX — CPU eXaminer (Geekbench 5 / 6 / 7) | 猫脚本</title>
 <meta name="description" content="CPUX: sequential Geekbench 5/6/7 CPU benchmarks with reliable single-core and multi-core scores. One curl. Part of 猫脚本 / catbash.net.">
 <meta name="keywords" content="CPUX, Geekbench, Geekbench 5, Geekbench 6, Geekbench 7, 猫脚本, CPU benchmark, Linux, bash">
 <meta name="author" content="Yuri NagaSaki">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://catbash.net/cpux.html">
-<link rel="icon" href="https://catbash.net/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="https://catbash.net/favicon.svg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="猫脚本 · Catbash">
@@ -50,303 +50,271 @@
   ]
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
 <link rel="stylesheet" href="/assets/site.css">
+<script>(function(d){try{var t=localStorage.getItem("catbash-theme");if(t==="dark"||t==="light")d.setAttribute("data-theme",t)}catch(e){}d.className="js"+(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches?"":" anim")})(document.documentElement)</script>
 </head>
 <body>
-
-<nav class="nav">
+<a class="skip" href="#main"><span data-en="Skip to content" data-zh="跳到正文">Skip to content</span></a>
+<header class="nav">
   <div class="wrap nav-in">
-    <a class="brand" href="/"><span data-en="Catbash" data-zh="猫脚本">Catbash</span>
-    </a>
-    <div class="nav-links">
-      <a class="nav-hide-sm" href="/" data-en="Home" data-zh="首页">Home</a>
-      <a href="/sick.html">SICK</a>
-      <a href="/nets.html">NETS</a>
-      <a class="active" href="/cpux.html">CPUX</a>
-      <a class="nav-hide-sm" href="#install" data-en="Install" data-zh="安装">Install</a>
-      <a class="nav-hide-sm" href="#preview" data-en="Preview" data-zh="预览">Preview</a>
-      <a class="nav-hide-sm" href="#usage" data-en="Usage" data-zh="用法">Usage</a>
-      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
-      </a>
-      <button class="lang" id="langBtn" type="button" onclick="toggleLang()">中文</button>
-    </div>
-  </div>
-</nav>
-
-<header class="wrap hero grid">
-  <div>
-    <p class="kicker">CPUX · 猫脚本</p>
-    <h1 data-en="CPU scores that actually <span class=&quot;mark&quot;>print</span>."
-        data-zh="单核 · 多核，终端<span class=&quot;mark&quot;>真的出分</span>。">
-      CPU scores that actually <span class="mark">print</span>.
-    </h1>
-    <p class="lede"
-       data-en="<strong>CPUX</strong> runs <strong>Geekbench 5 / 6 / 7</strong> on Linux (x86_64, ARM64, RISC-V). Pick one version or all — always sequential, with a live progress spinner and reliable <b>single-core</b> + <b>multi-core</b> scores in the terminal (not blank columns)."
-       data-zh="<strong>CPUX</strong> 在 Linux（x86_64 / ARM64 / RISC-V）上跑 <strong>Geekbench 5 / 6 / 7</strong>。可选单版本或全部依次测试，带进度指示，并可靠输出<strong>单核</strong>与<strong>多核</strong>分数（不会空白）。">
-      <strong>CPUX</strong> runs <strong>Geekbench 5 / 6 / 7</strong> on Linux (x86_64, ARM64, RISC-V). Pick one version or all — always sequential, with a live progress spinner and reliable <b>single-core</b> + <b>multi-core</b> scores in the terminal (not blank columns).
-    </p>
-    <div class="pills">
-      <span class="pill"><b>GB5</b> · <b>GB6</b> · <b>GB7</b></span>
-      <span class="pill" data-en="<b>single</b> + <b>multi</b>" data-zh="<b>单核</b> + <b>多核</b>"><b>single</b> + <b>multi</b></span>
-      <span class="pill" data-en="<b>progress</b> spinner" data-zh="<b>进度</b> 指示"><b>progress</b> spinner</span>
-      <span class="pill">MIT</span>
-    </div>
-  </div>
-
-  <div class="cmd-panel" id="install">
-    <div class="cmd-head">
-      <span class="label" data-en="Quick start" data-zh="快速开始">Quick start</span>
-      <span class="label">ba.sh · catbash.net</span>
-    </div>
-    <div class="cmd-body">
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/cpux | bash</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://catbash.net/cpux | bash</code>
-        <button class="copy" type="button" data-copy="curl -sL https://catbash.net/cpux | bash" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <div class="cmd-row">
-        <span class="prompt">$</span>
-        <code>curl -sL https://ba.sh/cpux | bash -s -- all</code>
-        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- all" data-en="copy" data-zh="复制">copy</button>
-      </div>
-      <p class="cmd-hint"
-         data-en="Interactive: <code>1</code> GB5 · <code>2</code> GB6 · <code>3</code> GB7 · <code>4</code> all. Options after <code>bash -s --</code>. Raw: <code>raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh</code>"
-         data-zh="交互：<code>1</code> GB5 · <code>2</code> GB6 · <code>3</code> GB7 · <code>4</code> 全部。参数写在 <code>bash -s --</code> 后。源码：GitHub raw <code>cpux.sh</code>。">
-        Interactive: <code>1</code> GB5 · <code>2</code> GB6 · <code>3</code> GB7 · <code>4</code> all. Options after <code>bash -s --</code>.
-      </p>
+    <a class="brand" href="/" aria-label="Catbash · 猫脚本"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path class="logo-head" d="M5 13.5 6 3.5l7 5.5h6l7-5.5 1 10V23a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/><path class="logo-ps" d="M10.5 15.5 14 18.5l-3.5 3M16.5 22h5"/></svg><span class="name">Catbash</span><span class="alt">猫脚本</span></a>
+    <nav class="nav-links" aria-label="Tools">
+      <a href="/sick.html">SICK</a><a href="/nets.html">NETS</a><a href="/cpux.html" aria-current="page">CPUX</a>
+    </nav>
+    <div class="nav-tools">
+      <a class="icon-btn gh" href="https://github.com/Yuri-NagaSaki/SICK" rel="noopener" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg></a>
+      <button class="icon-btn theme-btn" id="themeBtn" type="button" aria-label="Switch theme"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg></button>
+      <button class="icon-btn lang-btn" id="langBtn" type="button" lang="zh-CN" aria-label="切换到中文">中文</button>
     </div>
   </div>
 </header>
-
-<section class="rule" id="preview">
+<main id="main">
+<section class="page-hero">
   <div class="wrap">
-    <h2 data-en="Script preview" data-zh="脚本预览">Script preview</h2>
-    <p class="lede" style="max-width:none;margin-bottom:1rem"
-       data-en="Terminal output with real <b>single-core</b> and <b>multi-core</b> scores — not blank columns."
-       data-zh="终端真实输出<strong>单核</strong>与<strong>多核</strong>分数，不会空白列。">
-      Terminal output with real <b>single-core</b> and <b>multi-core</b> scores — not blank columns.
-    </p>
-    <figure class="shot">
-      <div class="term-bar">
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="term-title">curl -sL https://catbash.net/cpux | bash -s -- 6</span>
+    <div class="hero-text">
+      <div class="title-row"><span class="chip">CPUX</span><span class="full">CPU eXaminer</span></div>
+      <h1 data-en="CPU scores that actually print." data-zh="单核 · 多核，终端真的出分。">CPU scores that actually print.</h1>
+      <p class="lede" data-en="CPUX runs Geekbench 5, 6 and 7 on Linux — x86_64, ARM64 or RISC-V — one version or all of them, strictly one after another, and reads the single-core and multi-core scores back into your terminal. Downloaded binaries are removed afterwards." data-zh="CPUX 在 Linux（x86_64、ARM64 或 RISC-V）上运行 Geekbench 5、6、7——单个版本或全部，严格依次进行——并把单核与多核分数取回到终端里。下载的程序跑完即删。">CPUX runs Geekbench 5, 6 and 7 on Linux — x86_64, ARM64 or RISC-V — one version or all of them, strictly one after another, and reads the single-core and multi-core scores back into your terminal. Downloaded binaries are removed afterwards.</p>
+      <div class="cmdbox" data-tabs>
+        <div class="cmdbox-head">
+          <div class="tabs" role="tablist" aria-label="Install command" data-label-en="Install command" data-label-zh="安装命令">
+            <button class="tab" role="tab" type="button" id="cpux-t0" aria-selected="true" aria-controls="cpux-p" tabindex="0" data-cmd="curl -sL https://ba.sh/cpux | bash" data-hint-en="Interactive: &lt;code&gt;1&lt;/code&gt; GB5 · &lt;code&gt;2&lt;/code&gt; GB6 · &lt;code&gt;3&lt;/code&gt; GB7 · &lt;code&gt;4&lt;/code&gt; all. Without a terminal it runs Geekbench 6." data-hint-zh="交互：&lt;code&gt;1&lt;/code&gt; GB5 · &lt;code&gt;2&lt;/code&gt; GB6 · &lt;code&gt;3&lt;/code&gt; GB7 · &lt;code&gt;4&lt;/code&gt; 全部。没有终端时默认运行 Geekbench 6。"><span data-en="Menu" data-zh="菜单">Menu</span></button>
+            <button class="tab" role="tab" type="button" id="cpux-t1" aria-selected="false" aria-controls="cpux-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- 6" data-hint-en="Geekbench 6 only — the usual VPS comparison." data-hint-zh="只跑 Geekbench 6——最常见的 VPS 对比。">GB6</button>
+            <button class="tab" role="tab" type="button" id="cpux-t2" aria-selected="false" aria-controls="cpux-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- all" data-hint-en="5 → 6 → 7, sequential. A long run — use a host you can load fully." data-hint-zh="依次运行 5 → 6 → 7。耗时较长，请用能满载的机器。"><span data-en="All" data-zh="全部">All</span></button>
+            <button class="tab" role="tab" type="button" id="cpux-t3" aria-selected="false" aria-controls="cpux-p" tabindex="-1" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456" data-hint-en="Read the scores of an existing result URL — no benchmark." data-hint-zh="读取已有结果链接的分数——不跑分。"><span data-en="Re-fetch" data-zh="补取分数">Re-fetch</span></button>
+          </div>
+          <div class="hostsw" role="group" aria-label="Short-link host" data-label-en="Short-link host" data-label-zh="短链域名">
+            <button type="button" data-host="ba.sh" aria-pressed="true">ba.sh</button><button type="button" data-host="catbash.net" aria-pressed="false">catbash.net</button>
+          </div>
+        </div>
+        <div class="cmdline" role="tabpanel" id="cpux-p" aria-labelledby="cpux-t0"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash">curl -sL https://ba.sh/cpux | bash</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div>
+        <p class="cmdbox-hint" data-en="Interactive: &lt;code&gt;1&lt;/code&gt; GB5 · &lt;code&gt;2&lt;/code&gt; GB6 · &lt;code&gt;3&lt;/code&gt; GB7 · &lt;code&gt;4&lt;/code&gt; all. Without a terminal it runs Geekbench 6." data-zh="交互：&lt;code&gt;1&lt;/code&gt; GB5 · &lt;code&gt;2&lt;/code&gt; GB6 · &lt;code&gt;3&lt;/code&gt; GB7 · &lt;code&gt;4&lt;/code&gt; 全部。没有终端时默认运行 Geekbench 6。">Interactive: <code>1</code> GB5 · <code>2</code> GB6 · <code>3</code> GB7 · <code>4</code> all. Without a terminal it runs Geekbench 6.</p>
       </div>
-      <a class="shot-frame" href="https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp" data-lightbox
-         data-alt="CPUX script terminal preview — Geekbench single and multi-core scores">
-        <img
-          src="https://cdn.nodeimage.com/i/cXXg1mmSfDkxBvseInICpQmrUy5w8M3I.webp"
-          alt="CPUX script terminal preview — Geekbench single and multi-core scores"
-          width="1400"
-          height="900"
-          loading="lazy"
-          decoding="async">
-      </a>
-    </figure>
-    <p class="shot-caption"
-       data-en="Click to preview full size · Geekbench scores printed in-terminal"
-       data-zh="点击预览大图 · 终端内打印 Geekbench 分数">
-      Click to preview full size · Geekbench scores printed in-terminal
-    </p>
-  </div>
-</section>
-
-<section class="rule" id="why">
-  <div class="wrap">
-    <h2 data-en="Why CPUX?" data-zh="为什么需要 CPUX？">Why CPUX?</h2>
-    <p class="lede" style="max-width:none;margin-bottom:1rem"
-       data-en="Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank or swapped columns when Cloudflare blocks them. CPUX reads the scores back through a bounded fallback chain — direct page (plain and browser UA, IPv4), raw result JSON, a server-side fetch on <code>catbash.net/api/gb</code>, then <code>r.jina.ai</code> with cache bypass — and pairs each number with its own label, so single and multi can never be swapped. If every source fails it prints a one-line <code>--fetch</code> retry command."
-       data-zh="Geekbench 试用版会上传到 Browser，但<strong>不会</strong>在终端打印分数。很多脚本去抓结果页，在 Cloudflare 拦截时会输出空白甚至错位的分数。CPUX 按有时限的回退链取分——直连结果页（普通 / 浏览器 UA，优先 IPv4）、原始结果 JSON、<code>catbash.net/api/gb</code> 服务端抓取、最后 <code>r.jina.ai</code>（绕过缓存）——并把每个数字与其标签配对，单核/多核绝不会错位。全部失败时会给出一行 <code>--fetch</code> 重试命令。">
-      Geekbench tryout mode uploads to the Browser but does <b>not</b> print scores in the terminal. Many scripts scrape the result page — and get blank or swapped columns when Cloudflare blocks them. CPUX reads the scores back through a bounded fallback chain — direct page (plain and browser UA, IPv4), raw result JSON, a server-side fetch on <code>catbash.net/api/gb</code>, then <code>r.jina.ai</code> with cache bypass — and pairs each number with its own label, so single and multi can never be swapped. If every source fails it prints a one-line <code>--fetch</code> retry command.
-    </p>
-    <div class="report-map">
-      <div class="rm-item">
-        <strong>GB5</strong>
-        <span data-en="5.5.1 · legacy workloads · good for older hosts" data-zh="5.5.1 · 经典负载 · 适合较旧机器">5.5.1 · legacy workloads · good for older hosts</span>
-      </div>
-      <div class="rm-item">
-        <strong>GB6</strong>
-        <span data-en="6.7.1 · current mainstream server compare" data-zh="6.7.1 · 当前主流服务器对比">6.7.1 · current mainstream server compare</span>
-      </div>
-      <div class="rm-item">
-        <strong>GB7</strong>
-        <span data-en="7.0.0 · latest suite (needs newer glibc / more RAM)" data-zh="7.0.0 · 最新套件（需较新 glibc / 更多内存）">7.0.0 · latest suite (needs newer glibc / more RAM)</span>
-      </div>
-      <div class="rm-item">
-        <strong data-en="Sequential" data-zh="串行">Sequential</strong>
-        <span data-en="Never parallel — one suite at a time so scores stay honest" data-zh="从不并行 — 一个接一个，避免互相抢核干扰分数">Never parallel — one suite at a time so scores stay honest</span>
-      </div>
+      <ul class="facts"><li><span data-en="&lt;b&gt;GB5&lt;/b&gt; · &lt;b&gt;GB6&lt;/b&gt; · &lt;b&gt;GB7&lt;/b&gt;" data-zh="&lt;b&gt;GB5&lt;/b&gt; · &lt;b&gt;GB6&lt;/b&gt; · &lt;b&gt;GB7&lt;/b&gt;"><b>GB5</b> · <b>GB6</b> · <b>GB7</b></span></li><li><span data-en="&lt;b&gt;single&lt;/b&gt; + &lt;b&gt;multi&lt;/b&gt; core" data-zh="&lt;b&gt;单核&lt;/b&gt; + &lt;b&gt;多核&lt;/b&gt;"><b>single</b> + <b>multi</b> core</span></li><li><span data-en="&lt;b&gt;x86_64&lt;/b&gt; · ARM64 · RISC-V" data-zh="&lt;b&gt;x86_64&lt;/b&gt; · ARM64 · RISC-V"><b>x86_64</b> · ARM64 · RISC-V</span></li><li><span data-en="&lt;b&gt;MIT&lt;/b&gt; license" data-zh="&lt;b&gt;MIT&lt;/b&gt; 开源"><b>MIT</b> license</span></li></ul>
     </div>
   </div>
 </section>
 
-<section class="rule" id="usage">
+<section class="section" id="demo" aria-labelledby="demo-h">
   <div class="wrap">
-    <h2 data-en="Options" data-zh="参数">Options</h2>
-    <table class="opts" style="margin-bottom:1.75rem">
-      <thead>
-        <tr>
-          <th data-en="Flag" data-zh="参数">Flag</th>
-          <th data-en="Description" data-zh="说明">Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>5</code> / <code>-5</code> / <code>--gb5</code></td>
-          <td data-en="Run Geekbench 5 only" data-zh="仅跑 Geekbench 5">Run Geekbench 5 only</td>
-        </tr>
-        <tr>
-          <td><code>6</code> / <code>-6</code> / <code>--gb6</code></td>
-          <td data-en="Run Geekbench 6 only" data-zh="仅跑 Geekbench 6">Run Geekbench 6 only</td>
-        </tr>
-        <tr>
-          <td><code>7</code> / <code>-7</code> / <code>--gb7</code></td>
-          <td data-en="Run Geekbench 7 only" data-zh="仅跑 Geekbench 7">Run Geekbench 7 only</td>
-        </tr>
-        <tr>
-          <td><code>all</code> / <code>-a</code></td>
-          <td data-en="Run 5 → 6 → 7 sequentially" data-zh="依次跑 5 → 6 → 7">Run 5 → 6 → 7 sequentially</td>
-        </tr>
-        <tr>
-          <td><code>-cn</code> / <code>--chinese</code></td>
-          <td data-en="Chinese UI messages" data-zh="中文界面">Chinese UI messages</td>
-        </tr>
-        <tr>
-          <td><code>-k</code> / <code>--keep</code></td>
-          <td data-en="Keep downloaded binaries under the work dir" data-zh="保留下载的二进制（工作目录）">Keep downloaded binaries under the work dir</td>
-        </tr>
-        <tr>
-          <td><code>-y</code> / <code>--yes</code></td>
-          <td data-en="Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)" data-zh="不询问；遇到警告继续（如无法 IPv4 访问 Geekbench）">Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)</td>
-        </tr>
-        <tr>
-          <td><code>-j</code> / <code>--json</code></td>
-          <td data-en="JSON result on stdout (progress on stderr)" data-zh="stdout 输出 JSON（进度在 stderr）">JSON result on stdout (progress on stderr)</td>
-        </tr>
-        <tr>
-          <td><code>--fetch URL…</code></td>
-          <td data-en="Only (re)fetch scores of existing result URLs — no benchmark" data-zh="仅为已有结果链接重新取分，不跑分">Only (re)fetch scores of existing result URLs — no benchmark</td>
-        </tr>
-        <tr>
-          <td><code>--fetch-timeout SEC</code></td>
-          <td data-en="Stop trying for scores after SEC seconds (default 120)" data-zh="取分最长等待秒数（默认 120）">Stop trying for scores after SEC seconds (default 120)</td>
-        </tr>
-        <tr>
-          <td><code>--no-clear</code> / <code>--no-color</code></td>
-          <td data-en="Keep the screen / plain output (NO_COLOR honoured)" data-zh="不清屏 / 无颜色输出（支持 NO_COLOR）">Keep the screen / plain output (NO_COLOR honoured)</td>
-        </tr>
-        <tr>
-          <td><code>-h</code> / <code>-v</code></td>
-          <td data-en="Help / version" data-zh="帮助 / 版本">Help / version</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2 data-en="Examples" data-zh="示例">Examples</h2>
-    <div class="cmd-panel" style="margin-bottom:1.75rem">
-      <div class="cmd-head">
-        <span class="label" data-en="Common recipes" data-zh="常用命令">Common recipes</span>
-      </div>
-      <div class="cmd-body">
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/cpux | bash -s -- 6</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- 6" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="Geekbench 6 only — typical VPS compare." data-zh="只跑 Geekbench 6，适合常规 VPS 对比。">Geekbench 6 only — typical VPS compare.</p>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/cpux | bash -s -- all -cn</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- all -cn" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="All three suites, Chinese UI. Long run — do this on a spare host." data-zh="三套全跑 + 中文。耗时长，请在空闲机器上测。">All three suites, Chinese UI. Long run — do this on a spare host.</p>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="Scores missing? Re-fetch them later for an existing result URL — no re-run." data-zh="分数没取到？稍后对已有结果链接重新取分，无需重跑。">Scores missing? Re-fetch them later for an existing result URL — no re-run.</p>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/cpux | bash -s -- 6 --json &gt; gb6.json</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- 6 --json > gb6.json" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="Machine-readable result (scores, URLs, timings) for scripts and dashboards." data-zh="机器可读结果（分数、链接、耗时），便于脚本与面板使用。">Machine-readable result (scores, URLs, timings) for scripts and dashboards.</p>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/cpux | bash -s -- -5 -7</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/cpux | bash -s -- -5 -7" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="GB5 then GB7 only." data-zh="只跑 GB5 与 GB7。">GB5 then GB7 only.</p>
-        <div class="cmd-row">
-          <span class="prompt">$</span>
-          <code>curl -sL https://ba.sh/menu | bash -s -- cpux 6</code>
-          <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- cpux 6" data-en="copy" data-zh="复制">copy</button>
-        </div>
-        <p class="cmd-hint" data-en="Via the Catbash launcher menu." data-zh="通过猫脚本主菜单启动 CPUX。">Via the Catbash launcher menu.</p>
-      </div>
+    <div class="section-head">
+      <span class="kicker" data-en="Sample run" data-zh="运行示例">Sample run</span>
+      <h2 id="demo-h" data-en="Three suites, back to back." data-zh="三个套件，依次进行。">Three suites, back to back.</h2>
     </div>
-
-    <h2 data-en="Short links" data-zh="短链">Short links</h2>
-    <table class="opts" style="margin-bottom:1.75rem">
-      <thead>
-        <tr>
-          <th data-en="URL" data-zh="链接">URL</th>
-          <th data-en="Target" data-zh="指向">Target</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>https://ba.sh/cpux</code></td>
-          <td data-en="Install script (curl | bash)" data-zh="安装脚本（curl | bash）">Install script (curl | bash)</td>
-        </tr>
-        <tr>
-          <td><code>https://catbash.net/cpux</code></td>
-          <td data-en="Same script on catbash.net" data-zh="catbash.net 同源脚本">Same script on catbash.net</td>
-        </tr>
-        <tr>
-          <td><code>https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh</code></td>
-          <td data-en="GitHub raw fallback" data-zh="GitHub raw 备用">GitHub raw fallback</td>
-        </tr>
-        <tr>
-          <td><code>https://catbash.net/cpux.html</code></td>
-          <td data-en="This documentation page" data-zh="本文档页">This documentation page</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p class="hint mt-1"
-       data-en="Needs outbound HTTPS (IPv4) to <code>cdn.geekbench.com</code> and <code>browser.geekbench.com</code>. Binaries are large (~200–400 MB each). Prefer a host you can load hard — do not run on a production box that freezes under full CPU."
-       data-zh="需要能访问 <code>cdn.geekbench.com</code> 与 <code>browser.geekbench.com</code> 的 IPv4 HTTPS。安装包较大（每个约 200–400 MB）。请在可承受满载的机器上测，勿在会卡死的生产机本地狂跑。">
-      Needs outbound HTTPS (IPv4) to <code>cdn.geekbench.com</code> and <code>browser.geekbench.com</code>. Binaries are large (~200–400 MB each). Prefer a host you can load hard — do not run on a production box that freezes under full CPU.
-    </p>
+    <figure class="term" id="cpuxTerm" data-src="/assets/demos/cpux.ansi" data-src-zh="/assets/demos/cpux.zh.ansi">
+  <div class="term-bar">
+    <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="term-title">root@catlab-01: ~</span>
+    <span class="term-tag" data-en="Sample output · demo data" data-zh="示例输出 · 演示数据">Sample output · demo data</span>
+    <span class="term-ctl">
+      <button class="term-btn" type="button" data-act="play" aria-label="Play"><svg class="i-play" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg><svg class="i-pause" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg></button>
+      <button class="term-btn" type="button" data-act="replay" aria-label="Replay" title="Replay" data-label-en="Replay" data-label-zh="重播"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M2.5 2.2v3h3"/></svg></button>
+    </span>
+  </div>
+  <pre class="term-screen" tabindex="0" role="region" aria-label="Sample CPUX output (demo data)" data-label-en="Sample CPUX output (demo data)" data-label-zh="CPUX 示例输出（演示数据）"><!--demo:cpux--><span class="ln"><span class="f114 b">root@catlab-01</span>:<span class="f81 b">~</span># curl -sL https://ba.sh/cpux | bash -s -- all</span><span class="ln"></span><span class="ln"><span class="f16 k81 b"> CPUX </span> <span class="b">v2.1.0</span> <span class="d">· CPU eXaminer · Geekbench 5/6/7</span></span><span class="ln">  Intel(R) Xeon(R) Processor @ 2.80GHz</span><span class="ln">  <span class="d">4 cores · 15.7 GiB RAM · x86_64 · kvm · Ubuntu 24.04.5 LTS</span></span><span class="ln">  <span class="d">Plan</span>  <span class="b">GB5 → GB6 → GB7</span>  <span class="d">· sequential, downloads removed afterwards</span></span><span class="ln"></span><span class="ln">  <span class="f114"><i class="g">✓</i></span> <span class="b">GB5 </span>  Single <span class="f114 b">1046</span>  Multi <span class="f114 b">3794</span>  <span class="d">14s</span></span><span class="ln">         <span class="d">https://browser.geekbench.com/v5/cpu/1234567</span></span><span class="ln">  <span class="f114"><i class="g">✓</i></span> <span class="b">GB6 </span>  Single <span class="f114 b">1373</span>  Multi <span class="f114 b">4219</span>  <span class="d">11s</span></span><span class="ln">         <span class="d">https://browser.geekbench.com/v6/cpu/1234567</span></span><span class="ln">  <span class="f114"><i class="g">✓</i></span> <span class="b">GB7 </span>  Single <span class="f114 b">1528</span>  Multi <span class="f114 b">5107</span>  <span class="d">11s</span></span><span class="ln">         <span class="d">https://browser.geekbench.com/v7/cpu/1234567</span></span><span class="ln"></span><span class="ln"><span class="f73">-- </span><span class="f222 b">Summary</span><span class="f73 b"> --------------------------------------------</span></span><span class="ln">    Suite   Single    Multi     Time  Report</span><span class="ln">  <span class="f114"><i class="g">✓</i></span> GB5   <span class="f114 b">    1046</span> <span class="f114 b">    3794</span>      14s  https://browser.geekbench.com/v5/cpu/1234567</span><span class="ln">  <span class="f114"><i class="g">✓</i></span> GB6   <span class="f114 b">    1373</span> <span class="f114 b">    4219</span>      11s  https://browser.geekbench.com/v6/cpu/1234567</span><span class="ln">  <span class="f114"><i class="g">✓</i></span> GB7   <span class="f114 b">    1528</span> <span class="f114 b">    5107</span>      11s  https://browser.geekbench.com/v7/cpu/1234567</span><span class="ln">  <span class="d">Total 36s · 3 suites</span></span><span class="ln">  <span class="d">Claim links (add a result to your Geekbench account):</span></span><span class="ln">    <span class="d">GB5   https://browser.geekbench.com/v5/cpu/1234567/claim?key=000000</span></span><span class="ln">    <span class="d">GB6   https://browser.geekbench.com/v6/cpu/1234567/claim?key=000000</span></span><span class="ln">    <span class="d">GB7   https://browser.geekbench.com/v7/cpu/1234567/claim?key=000000</span></span><span class="ln"></span><span class="ln"><span class="f114 b">root@catlab-01</span>:<span class="f81 b">~</span># <span class="cur"> </span></span><!--/demo--></pre>
+  <figcaption class="term-cap"><span data-en="Recorded from the real script with a stand-in Geekbench binary and a local score API — the scores are demo data, not a benchmark result." data-zh="用真实脚本录制，Geekbench 程序与取分接口均为本地替身——分数是演示数据，不是真实跑分结果。">Recorded from the real script with a stand-in Geekbench binary and a local score API — the scores are demo data, not a benchmark result.</span></figcaption>
+</figure>
   </div>
 </section>
 
-<footer>
-  <div class="wrap foot-in">
-    <div class="foot-brand">CPUX · <a href="/" style="color:inherit">猫脚本</a></div>
-    <div class="foot-links">
-      <a href="/">Home</a>
-      <a href="/sick.html">SICK</a>
-      <a href="/nets.html">NETS</a>
-      <a class="gh-icon" href="https://github.com/Yuri-NagaSaki/SICK" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+<section class="section" id="suites">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Suites" data-zh="测试套件">Suites</span>
+      <h2 data-en="Pick one, or all three." data-zh="选一个，或者三个都跑。">Pick one, or all three.</h2>
+    </div>
+    <div class="cover">
+      <div class="card"><h3 data-en="GB5 · 5.5.1" data-zh="GB5 · 5.5.1">GB5 · 5.5.1</h3><p data-en="Legacy workloads — the long-running baseline for older hosts." data-zh="经典负载——适合与较旧机器做长期对比。">Legacy workloads — the long-running baseline for older hosts.</p></div>
+      <div class="card"><h3 data-en="GB6 · 6.7.1" data-zh="GB6 · 6.7.1">GB6 · 6.7.1</h3><p data-en="Today&#x27;s mainstream server comparison. The default without a terminal." data-zh="当前主流的服务器对比基准；无终端时默认运行它。">Today's mainstream server comparison. The default without a terminal.</p></div>
+      <div class="card"><h3 data-en="GB7 · 7.0.0" data-zh="GB7 · 7.0.0">GB7 · 7.0.0</h3><p data-en="The latest suite; wants a newer glibc and more RAM." data-zh="最新套件；需要较新的 glibc 和更多内存。">The latest suite; wants a newer glibc and more RAM.</p></div>
+      <div class="card"><h3 data-en="Sequential" data-zh="串行">Sequential</h3><p data-en="Never in parallel — one suite at a time, so the scores stay honest." data-zh="从不并行——一次只跑一个套件，分数才可信。">Never in parallel — one suite at a time, so the scores stay honest.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="scores">
+  <div class="wrap">
+    <div class="split">
+      <div>
+        <span class="kicker" data-en="How scores are read back" data-zh="分数是怎么取回的">How scores are read back</span>
+        <h2 data-en="The tryout CLI never prints scores. CPUX does." data-zh="试用版 CLI 从不打印分数，CPUX 会。">The tryout CLI never prints scores. CPUX does.</h2>
+        <p class="muted" data-en="Geekbench&#x27;s tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within &lt;code&gt;--fetch-timeout&lt;/code&gt; (120 s)." data-zh="Geekbench 试用模式会把结果上传到 Geekbench Browser，但终端里一个分数都没有。很多脚本去抓结果页，一旦遇到 Cloudflare 就会得到空白甚至错位的分数。CPUX 在 &lt;code&gt;--fetch-timeout&lt;/code&gt;（120 秒）内依次询问一条有限的来源链，谁先给出完整答案就用谁。">Geekbench's tryout mode uploads results to the Geekbench Browser but leaves the terminal blank. Scripts that scrape the result page get empty — or swapped — columns when Cloudflare steps in. CPUX asks a bounded chain of sources, first complete answer wins, within <code>--fetch-timeout</code> (120 s).</p>
+        <p class="muted" data-en="Every number is paired with its own “Single-Core / Multi-Core Score” label, so the two can never be swapped. If all sources fail, you get a one-line &lt;code&gt;--fetch&lt;/code&gt; retry command." data-zh="每个数字都与自己的 “Single-Core / Multi-Core Score” 标签配对，单核和多核绝不会对调。所有来源都失败时，会给出一行 &lt;code&gt;--fetch&lt;/code&gt; 重试命令。">Every number is paired with its own “Single-Core / Multi-Core Score” label, so the two can never be swapped. If all sources fail, you get a one-line <code>--fetch</code> retry command.</p>
+      </div>
+      <ol class="pipe">
+        <li><div><b><span data-en="Local CLI output" data-zh="本地 CLI 输出">Local CLI output</span></b><span data-en="Licensed builds print a summary themselves." data-zh="授权版会自己打印分数汇总。">Licensed builds print a summary themselves.</span></div></li>
+        <li><div><b><span data-en="The result page" data-zh="结果页面">The result page</span></b><span data-en="&lt;code&gt;browser.geekbench.com&lt;/code&gt; directly — plain, then browser user agent, over IPv4." data-zh="直接访问 &lt;code&gt;browser.geekbench.com&lt;/code&gt;——先用普通 UA，再用浏览器 UA，走 IPv4。"><code>browser.geekbench.com</code> directly — plain, then browser user agent, over IPv4.</span></div></li>
+        <li><div><b><span data-en="Raw result JSON" data-zh="原始结果 JSON">Raw result JSON</span></b><span data-en="&lt;code&gt;&amp;lt;url&amp;gt;.gbN&lt;/code&gt; when it&#x27;s public (needs python3 or jq)." data-zh="公开时读取 &lt;code&gt;&amp;lt;url&amp;gt;.gbN&lt;/code&gt;（需要 python3 或 jq）。"><code>&lt;url&gt;.gbN</code> when it's public (needs python3 or jq).</span></div></li>
+        <li><div><b><span data-en="catbash.net/api/gb" data-zh="catbash.net/api/gb">catbash.net/api/gb</span></b><span data-en="A server-side fetch on Cloudflare (&lt;code&gt;worker.js&lt;/code&gt;), cached once found." data-zh="在 Cloudflare 上做服务端抓取（&lt;code&gt;worker.js&lt;/code&gt;），取到后会缓存。">A server-side fetch on Cloudflare (<code>worker.js</code>), cached once found.</span></div></li>
+        <li><div><b><span data-en="r.jina.ai" data-zh="r.jina.ai">r.jina.ai</span></b><span data-en="A reader proxy, with the cache bypassed." data-zh="阅读代理，绕过缓存。">A reader proxy, with the cache bypassed.</span></div></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="options">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Reference" data-zh="参考">Reference</span>
+      <h2 data-en="Options" data-zh="参数">Options</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col"><span data-en="Flag" data-zh="参数">Flag</span></th><th scope="col"><span data-en="Description" data-zh="说明">Description</span></th></tr></thead>
+        <tbody>
+          <tr><td>5 / -5 / --gb5</td><td><span data-en="Run Geekbench 5" data-zh="运行 Geekbench 5">Run Geekbench 5</span></td></tr>
+          <tr><td>6 / -6 / --gb6</td><td><span data-en="Run Geekbench 6" data-zh="运行 Geekbench 6">Run Geekbench 6</span></td></tr>
+          <tr><td>7 / -7 / --gb7</td><td><span data-en="Run Geekbench 7" data-zh="运行 Geekbench 7">Run Geekbench 7</span></td></tr>
+          <tr><td>all / -a</td><td><span data-en="Run 5 → 6 → 7 sequentially (versions also combine: &lt;code&gt;-5 -7&lt;/code&gt;)" data-zh="依次运行 5 → 6 → 7（也可组合，如 &lt;code&gt;-5 -7&lt;/code&gt;）">Run 5 → 6 → 7 sequentially (versions also combine: <code>-5 -7</code>)</span></td></tr>
+          <tr><td>-j, --json</td><td><span data-en="JSON result on stdout (progress on stderr)" data-zh="stdout 输出 JSON（进度在 stderr）">JSON result on stdout (progress on stderr)</span></td></tr>
+          <tr><td>--fetch URL…</td><td><span data-en="Only (re)fetch the scores of existing result URLs — no benchmark" data-zh="只为已有结果链接重新取分，不跑分">Only (re)fetch the scores of existing result URLs — no benchmark</span></td></tr>
+          <tr><td>--fetch-timeout SEC</td><td><span data-en="Stop trying for scores after SEC seconds (default 120)" data-zh="取分最长等待秒数（默认 120）">Stop trying for scores after SEC seconds (default 120)</span></td></tr>
+          <tr><td>-y, --yes</td><td><span data-en="Don&#x27;t ask; continue past warnings (e.g. no IPv4 to Geekbench)" data-zh="不询问；遇到警告继续（如无法通过 IPv4 访问 Geekbench）">Don't ask; continue past warnings (e.g. no IPv4 to Geekbench)</span></td></tr>
+          <tr><td>-k, --keep</td><td><span data-en="Keep the downloaded binaries (default: removed when done)" data-zh="保留下载的程序（默认跑完即删）">Keep the downloaded binaries (default: removed when done)</span></td></tr>
+          <tr><td>--no-clear / --no-color</td><td><span data-en="Keep the screen / plain output (&lt;code&gt;NO_COLOR&lt;/code&gt; honoured)" data-zh="不清屏 / 无颜色输出（支持 &lt;code&gt;NO_COLOR&lt;/code&gt;）">Keep the screen / plain output (<code>NO_COLOR</code> honoured)</span></td></tr>
+          <tr><td>-cn / -us</td><td><span data-en="Chinese / English UI" data-zh="中文 / 英文界面">Chinese / English UI</span></td></tr>
+          <tr><td>-h / -v</td><td><span data-en="Help / version" data-zh="帮助 / 版本">Help / version</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 style="margin:36px 0 14px"><span data-en="Environment" data-zh="环境变量">Environment</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col"><span data-en="Variable" data-zh="变量">Variable</span></th><th scope="col"><span data-en="Description" data-zh="说明">Description</span></th></tr></thead>
+        <tbody>
+          <tr><td>CPUX_GB5_VER · CPUX_GB6_VER · CPUX_GB7_VER</td><td><span data-en="Pin other Geekbench builds" data-zh="指定其他 Geekbench 版本">Pin other Geekbench builds</span></td></tr>
+          <tr><td>CPUX_MIRROR</td><td><span data-en="Extra download mirror, tried first (&lt;code&gt;…/Geekbench-X-Linux.tar.gz&lt;/code&gt;)" data-zh="额外的下载镜像，优先尝试（&lt;code&gt;…/Geekbench-X-Linux.tar.gz&lt;/code&gt;）">Extra download mirror, tried first (<code>…/Geekbench-X-Linux.tar.gz</code>)</span></td></tr>
+          <tr><td>CPUX_WORKDIR</td><td><span data-en="Where builds are unpacked (default: picked automatically, disk before tmpfs)" data-zh="解压目录（默认自动选择，优先磁盘而非 tmpfs）">Where builds are unpacked (default: picked automatically, disk before tmpfs)</span></td></tr>
+          <tr><td>CPUX_FETCH_TIMEOUT</td><td><span data-en="Seconds to keep trying for scores (default 120)" data-zh="取分超时秒数（默认 120）">Seconds to keep trying for scores (default 120)</span></td></tr>
+          <tr><td>CPUX_SCORE_API · CPUX_JINA</td><td><span data-en="Score sources; set to an empty string to disable one" data-zh="取分来源；设为空字符串即可禁用">Score sources; set to an empty string to disable one</span></td></tr>
+          <tr><td>JINA_API_KEY</td><td><span data-en="Optional key for higher r.jina.ai rate limits" data-zh="可选，用于提高 r.jina.ai 限额">Optional key for higher r.jina.ai rate limits</span></td></tr>
+          <tr><td>GEEKBENCH_EMAIL · GEEKBENCH_KEY</td><td><span data-en="Unlock a licensed build" data-zh="解锁授权版">Unlock a licensed build</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="examples">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Recipes" data-zh="常用命令">Recipes</span>
+      <h2 data-en="Examples" data-zh="示例">Examples</h2>
+    </div>
+    <div class="stack">
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- 6">curl -sL https://ba.sh/cpux | bash -s -- 6</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Geekbench 6 only — the usual VPS comparison." data-zh="只跑 Geekbench 6，最常见的 VPS 对比。">Geekbench 6 only — the usual VPS comparison.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- all -cn">curl -sL https://ba.sh/cpux | bash -s -- all -cn</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="All three suites with a Chinese UI. A long run — use a spare host." data-zh="三套全跑 + 中文界面。耗时较长，请在空闲机器上测。">All three suites with a Chinese UI. A long run — use a spare host.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- -5 -7">curl -sL https://ba.sh/cpux | bash -s -- -5 -7</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Geekbench 5, then 7." data-zh="只跑 GB5 和 GB7。">Geekbench 5, then 7.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- 6 --json &gt; gb6.json">curl -sL https://ba.sh/cpux | bash -s -- 6 --json &gt; gb6.json</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Machine-readable result: scores, URLs, timings." data-zh="机器可读的结果：分数、链接、耗时。">Machine-readable result: scores, URLs, timings.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456">curl -sL https://ba.sh/cpux | bash -s -- --fetch https://browser.geekbench.com/v6/cpu/123456</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Scores missing? Fetch them later for an existing result — no re-run." data-zh="分数没取到？稍后对已有结果重新取分，无需重跑。">Scores missing? Fetch them later for an existing result — no re-run.</p></div>
+      <div class="ex"><div class="cmdline"><span class="ps" aria-hidden="true">$</span><code class="cmd" data-cmd="curl -sL https://ba.sh/menu | bash -s -- cpux 6">curl -sL https://ba.sh/menu | bash -s -- cpux 6</code><button class="copy" type="button"><span data-en="Copy" data-zh="复制">Copy</span></button></div><p data-en="Through the launcher menu." data-zh="通过启动菜单运行。">Through the launcher menu.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="Notes" data-zh="说明">Notes</span>
+      <h2 data-en="Good to know" data-zh="使用须知">Good to know</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary data-en="What does it need?" data-zh="需要什么条件？">What does it need?</summary>
+        <div class="ans"><p data-en="Outbound HTTPS over IPv4 to &lt;code&gt;cdn.geekbench.com&lt;/code&gt; and &lt;code&gt;browser.geekbench.com&lt;/code&gt;, &lt;code&gt;curl&lt;/code&gt; or &lt;code&gt;wget&lt;/code&gt;, and &lt;code&gt;tar&lt;/code&gt;. Each build is a large download (roughly 200–400 MB unpacked); CPUX looks for a work directory with about 600 MB free and prefers disk over tmpfs." data-zh="需要能通过 IPv4 访问 &lt;code&gt;cdn.geekbench.com&lt;/code&gt; 与 &lt;code&gt;browser.geekbench.com&lt;/code&gt; 的 HTTPS，以及 &lt;code&gt;curl&lt;/code&gt; 或 &lt;code&gt;wget&lt;/code&gt;、&lt;code&gt;tar&lt;/code&gt;。每个版本下载量较大（解压后约 200–400 MB）；CPUX 会选一个约有 600 MB 空闲的工作目录，优先磁盘而非 tmpfs。">Outbound HTTPS over IPv4 to <code>cdn.geekbench.com</code> and <code>browser.geekbench.com</code>, <code>curl</code> or <code>wget</code>, and <code>tar</code>. Each build is a large download (roughly 200–400 MB unpacked); CPUX looks for a work directory with about 600 MB free and prefers disk over tmpfs.</p></div>
+      </details>
+      <details>
+        <summary data-en="Will it hurt my server?" data-zh="会影响我的服务器吗？">Will it hurt my server?</summary>
+        <div class="ans"><p data-en="Geekbench loads every core for minutes per suite. Run it on a host that can take full CPU load — not on a production box that freezes under pressure. CPUX warns when memory is under about 1 GiB or the machine is already busy, because both drag scores down." data-zh="Geekbench 每个套件都会把所有核心跑满数分钟。请在能承受满载的机器上运行——不要在一压就卡死的生产机上跑。内存低于约 1 GiB 或机器本身已经很忙时，CPUX 会给出警告，因为两者都会拉低分数。">Geekbench loads every core for minutes per suite. Run it on a host that can take full CPU load — not on a production box that freezes under pressure. CPUX warns when memory is under about 1 GiB or the machine is already busy, because both drag scores down.</p></div>
+      </details>
+      <details>
+        <summary data-en="The scores are missing — what now?" data-zh="分数没出来怎么办？">The scores are missing — what now?</summary>
+        <div class="ans"><p data-en="Fresh result pages can take a minute to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 120 seconds, then prints a one-line &lt;code&gt;--fetch&lt;/code&gt; command: run it later to read the scores without benchmarking again." data-zh="刚上传的结果页可能要等一会儿才出现，有些网络还会被 Cloudflare 拦截。CPUX 最多尝试 120 秒，然后给出一行 &lt;code&gt;--fetch&lt;/code&gt; 命令：稍后运行它即可读取分数，无需重新跑分。">Fresh result pages can take a minute to appear, and some networks get challenged by Cloudflare. CPUX keeps trying for up to 120 seconds, then prints a one-line <code>--fetch</code> command: run it later to read the scores without benchmarking again.</p></div>
+      </details>
+      <details>
+        <summary data-en="Where do the claim link and binaries go?" data-zh="认领链接和二进制去哪了？">Where do the claim link and binaries go?</summary>
+        <div class="ans"><p data-en="The claim link is printed and appended to &lt;code&gt;./geekbench_claim.url&lt;/code&gt;, so you can add the result to your Geekbench account. Unpacked builds are deleted after each suite unless you pass &lt;code&gt;-k&lt;/code&gt;." data-zh="认领链接会打印出来并追加到 &lt;code&gt;./geekbench_claim.url&lt;/code&gt;，方便把结果加到你的 Geekbench 账户。解压出的程序在每个套件结束后删除，除非加了 &lt;code&gt;-k&lt;/code&gt;。">The claim link is printed and appended to <code>./geekbench_claim.url</code>, so you can add the result to your Geekbench account. Unpacked builds are deleted after each suite unless you pass <code>-k</code>.</p></div>
+      </details>
+      <details>
+        <summary data-en="Where else can I get the script?" data-zh="脚本还有哪些地址？">Where else can I get the script?</summary>
+        <div class="ans"><p data-en="&lt;code&gt;https://ba.sh/cpux&lt;/code&gt; and &lt;code&gt;https://catbash.net/cpux&lt;/code&gt; serve the same file; &lt;code class=&quot;brk&quot;&gt;https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh&lt;/code&gt; is the GitHub fallback." data-zh="&lt;code&gt;https://ba.sh/cpux&lt;/code&gt; 与 &lt;code&gt;https://catbash.net/cpux&lt;/code&gt; 是同一个文件；&lt;code class=&quot;brk&quot;&gt;https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh&lt;/code&gt; 是 GitHub 备用地址。"><code>https://ba.sh/cpux</code> and <code>https://catbash.net/cpux</code> serve the same file; <code class="brk">https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh</code> is the GitHub fallback.</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="more">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker" data-en="More tools" data-zh="其他工具">More tools</span>
+      <h2 data-en="The rest of the kit." data-zh="工具箱里的其他工具。">The rest of the kit.</h2>
+    </div>
+    <div class="grid grid-3">
+      <a class="card next" href="/sick.html">
+        <span class="tool-top"><span class="chip">SICK</span><span class="full">Server Info &amp; Check Kit</span></span>
+        <p data-en="One-shot hardware inventory: CPU, memory per DIMM, disks &amp;amp; SMART, NVMe, RAID, NICs, GPU." data-zh="一次性硬件盘点：CPU、逐条内存、硬盘与 SMART、NVMe、RAID、网卡、显卡。">One-shot hardware inventory: CPU, memory per DIMM, disks &amp; SMART, NVMe, RAID, NICs, GPU.</p>
+        <span class="more" data-en="SICK docs" data-zh="SICK 文档">SICK docs</span>
       </a>
-      <a href="https://catcat.blog" target="_blank" rel="noopener">猫猫博客</a>
-      <span>MIT</span>
+      <a class="card next" href="/nets.html">
+        <span class="tool-top"><span class="chip">NETS</span><span class="full">Network Endpoint Throughput Sampler</span></span>
+        <p data-en="Public iperf3 send/recv against 23 curated endpoints in NA, EU and APAC." data-zh="对北美、欧洲、亚太 23 个精选公网节点跑 iperf3 上下行。">Public iperf3 send/recv against 23 curated endpoints in NA, EU and APAC.</p>
+        <span class="more" data-en="NETS docs" data-zh="NETS 文档">NETS docs</span>
+      </a>
+      <a class="card next" href="/#launcher">
+        <span class="tool-top"><span class="chip">MENU</span><span class="full">catbash.sh launcher</span></span>
+        <p data-en="Pick a tool from a menu — or run &lt;code&gt;all&lt;/code&gt;: SICK → NETS → CPUX in one scrollback." data-zh="从菜单选择工具——或运行 &lt;code&gt;all&lt;/code&gt;：SICK → NETS → CPUX 一次跑完。">Pick a tool from a menu — or run <code>all</code>: SICK → NETS → CPUX in one scrollback.</p>
+        <span class="more" data-en="Launcher" data-zh="启动菜单">Launcher</span>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-in">
+      <div>
+        <a class="brand" href="/"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path class="logo-head" d="M5 13.5 6 3.5l7 5.5h6l7-5.5 1 10V23a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/><path class="logo-ps" d="M10.5 15.5 14 18.5l-3.5 3M16.5 22h5"/></svg><span>猫脚本 · Catbash</span></a>
+        <p data-en="Open-source Linux server scripts you run with one &lt;code&gt;curl | bash&lt;/code&gt;." data-zh="一条 &lt;code&gt;curl | bash&lt;/code&gt; 就能跑的开源 Linux 服务器脚本。">Open-source Linux server scripts you run with one <code>curl | bash</code>.</p>
+      </div>
+      <div class="foot-cols">
+        <div>
+          <h2 data-en="Tools" data-zh="工具">Tools</h2>
+          <ul>
+            <li><a href="/sick.html">SICK</a></li>
+            <li><a href="/nets.html">NETS</a></li>
+            <li><a href="/cpux.html">CPUX</a></li>
+            <li><a href="/#launcher"><span data-en="Launcher menu" data-zh="启动菜单">Launcher menu</span></a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 data-en="Short links" data-zh="短链">Short links</h2>
+          <ul class="mono">
+            <li>ba.sh/menu · /sick</li>
+            <li>ba.sh/nets · /cpux</li>
+            <li>catbash.net/menu · …</li>
+          </ul>
+        </div>
+        <div>
+          <h2 data-en="Project" data-zh="项目">Project</h2>
+          <ul>
+            <li><a href="https://github.com/Yuri-NagaSaki/SICK" rel="noopener">GitHub</a></li>
+            <li><a href="https://catcat.blog" rel="noopener"><span data-en="Blog · catcat.blog" data-zh="博客 · catcat.blog">Blog · catcat.blog</span></a></li>
+            <li><a href="/#donate"><span data-en="Support" data-zh="赞助">Support</span></a></li>
+            <li><a href="https://github.com/Yuri-NagaSaki/SICK/blob/main/LICENSE" rel="noopener"><span data-en="MIT license" data-zh="MIT 许可证">MIT license</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© Yuri NagaSaki · MIT</span>
+      <span data-en="No trackers, no external requests." data-zh="无追踪、无外部请求。">No trackers, no external requests.</span>
     </div>
   </div>
 </footer>
-
 <script src="/assets/site.js"></script>
+<script src="/assets/term.js"></script>
 </body>
 </html>

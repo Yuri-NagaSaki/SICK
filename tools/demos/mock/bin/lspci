@@ -1,0 +1,8 @@
+#!/bin/bash
+cat <<'L'
+00:00.0 Host bridge: Intel Corporation Sky Lake-E DMI3 Registers (rev 07)
+02:00.0 Ethernet controller: Intel Corporation Ethernet Controller X710 for 10GbE SFP+ (rev 02)
+03:00.0 VGA compatible controller: ASPEED Technology, Inc. ASPEED Graphics Family (rev 41)
+18:00.0 RAID bus controller: Broadcom / LSI MegaRAID SAS-3 3108 [Invader] (rev 02)
+5e:00.0 Non-Volatile memory controller: Samsung Electronics Co Ltd NVMe SSD Controller PM9A1/PM9A3/980PRO
+L

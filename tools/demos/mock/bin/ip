@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Demo stub for ip(8): one NIC with documentation-range addresses.
+# Everything else (e.g. NETS' `ip -6 route get`) fails → no IPv6 route.
+case "$*" in
+  "-o link show")
+    echo "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000\    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00"
+    echo "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000\    link/ether 3c:ec:ef:12:34:56 brd ff:ff:ff:ff:ff:ff" ;;
+  "-o addr show")
+    echo "1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever"
+    echo "2: eth0    inet 203.0.113.24/24 brd 203.0.113.255 scope global eth0\       valid_lft forever preferred_lft forever"
+    echo "2: eth0    inet6 2001:db8:42::24/64 scope global \       valid_lft forever preferred_lft forever" ;;
+  *) exit 1 ;;
+esac

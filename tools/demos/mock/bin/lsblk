@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Demo stub for lsblk (only the forms SICK uses).
+case "$*" in
+  *-P*) cat <<'L'
+NAME="sda" SIZE="931.5G" MODEL="Samsung SSD 870 EVO 1TB" VENDOR="ATA     " TYPE="disk" TRAN="sata"
+NAME="sdb" SIZE="12.7T" MODEL="TOSHIBA MG07ACA14TE" VENDOR="ATA     " TYPE="disk" TRAN="sata"
+NAME="nvme0n1" SIZE="3.5T" MODEL="SAMSUNG MZQL23T8HCLS-00A07" VENDOR="" TYPE="disk" TRAN="nvme"
+NAME="nvme1n1" SIZE="3.5T" MODEL="SAMSUNG MZQL23T8HCLS-00A07" VENDOR="" TYPE="disk" TRAN="nvme"
+L
+  ;;
+  *) printf '%s\n' sda sdb nvme0n1 nvme1n1 ;;
+esac

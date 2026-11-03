@@ -1,0 +1,202 @@
+[1;38;5;114mroot@catlab-01[0m:[1;38;5;81m~[0m# ]999;tcurl -sL https://ba.sh/menu | bash -s -- all]999;/t
+
+[38;5;73m-- [2mstep 1/3[0m [1;48;5;81;38;5;16m SICK [0m [2m· hardware inventory[38;5;73m ----------------------------------------[0m
+  [2m→ sick: https://catbash.net/sick[0m
+[2mGenerating hardware report...[0m
+
+]999;w=182[1;48;5;81;38;5;16m SICK [0m v3.2.0[2m · Server Info & Check Kit[0m
+
+[38;5;73m════════════════════════════════════════════════════════════════════════════════[0m
+[1;38;5;222m                       System Hardware Information Report                       [0m
+[38;5;73m════════════════════════════════════════════════════════════════════════════════[0m
+
+[38;5;73m┌─ [1;38;5;222mReport Overview[0m[38;5;73m ───────────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+│ Version             : 3.2.0
+│ Mode                : Text
+│ Privacy             : IP/MAC masked
+│ Serials             : shown in full
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mSystem Information[0m[38;5;73m ────────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+│ Hostname            : catlab-01
+│ Operating System    : Ubuntu 24.04.5 LTS
+│ Kernel Version      : 6.18.44-fc-v230
+│ System Uptime       : up 43 minutes
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mCPU Information[0m[38;5;73m ───────────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+│ Model               : Intel(R) Xeon(R) Processor @ 2.80GHz
+│ Cores               : 4
+│ Threads             : 4
+│ Frequency           : 2799.998 MHz
+│ Cache               : 33792 KB
+│ Usage               : 31.7%
+[?25l[K[?25h│ CPU Temperature     : 45.0°C
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mCPU / Platform Status[0m[38;5;73m ─────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+│ Platform            : 1 socket(s), 1 NUMA node(s)
+│ Virtualization      : No (VT-x/AMD-V)
+│ Hypervisor          : kvm
+│ Microcode           : 0x1
+└──────────────────────────────────────────────────
+[?25l[K[?25h[38;5;73m┌─ [1;38;5;222mMemory (RAM) Information[0m[38;5;73m ──────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+│ Total               : [38;5;81m15.71 GB[0m
+│ Used                : [38;5;214m562.34 MB[0m
+│ Available           : [38;5;114m15.16 GB[0m
+│
+[38;5;81m│ Memory Modules:[0m
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [1mSize[0m     │ [1mType[0m   │ [1mFrequency[0m    │ [1mManufacturer[0m │ [1mSerial[0m           │ [1mModel[0m                  │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81m8 GB[0m     │ [38;5;81mDDR4[0m   │ 2666 MT/s    │ Samsung      │ 4A1F02C0         │ M391A1K43BB2-CTD       │
+│ [38;5;81m8 GB[0m     │ [38;5;81mDDR4[0m   │ 2666 MT/s    │ Samsung      │ 4A1F02C1         │ M391A1K43BB2-CTD       │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mDisk Drive Information[0m[38;5;73m ────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+[38;5;81m│ Mounted Filesystems:[0m
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [1mFilesystem[0m                         │ [1mSize[0m    │ [1mUsed[0m    │ [1mAvail[0m   │ [1mUse%[0m   │ [1mMounted[0m              │
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81m/dev/md0[0m                           │ 1.8T    │ 412G    │ 1.3T    │ [38;5;114m25%[0m    │ /                    │
+│ [38;5;81m/dev/nvme0n1p1[0m                     │ 511M    │ 6.1M    │ 505M    │ [38;5;114m2%[0m     │ /boot/efi            │
+│ [38;5;81m/dev/md1[0m                           │ 12T     │ 7.9T    │ 4.1T    │ [38;5;114m66%[0m    │ /data                │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+│
+[?25l]999;w=110  [38;5;81m⠋[0m Reading SMART data[2m[0m  [48;5;81m       [48;5;238m     [0m 5/8 [2m· 0s[0m[K]999;w=64  [38;5;81m⠙[0m Reading SMART data[2m[0m  [48;5;81m       [48;5;238m     [0m 5/8 [2m· 0s[0m[K]999;w=55[K[?25h[1m│ Disk Summary (defects=reallocated/pending/offline)[0m
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Device       │ Basic Info                         │ SMART  │ Hours    │ Temp   │ I/O                  │ Defects   │ Notes                │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81m/dev/sda[0m     │ 931.5G Samsung SSD 870 EVO 1TB     │ [38;5;114mPASS[0m   │ 12034h   │ [38;5;114m34°C[0m   │ [38;5;81mR? W22.7T[0m            │ [38;5;114m0/0/0[0m     │ -                    │
+│ [38;5;81m/dev/sdb[0m     │ 12.7T TOSHIBA MG07ACA14TE          │ [38;5;114mPASS[0m   │ 40210h   │ [38;5;114m41°C[0m   │ [38;5;214mno stats[0m             │ [38;5;203m8/2/0[0m     │ [38;5;203mbad sectors=10[0m       │
+│ [38;5;81m/dev/nvme0n1[0m │ 3.5T SAMSUNG MZQL23T8HCLS-00A07    │ [38;5;114mPASS[0m   │ 15000h   │ [38;5;114m38°C[0m   │ [38;5;81mR57.4T W45.9T[0m        │ -         │ [38;5;81mused 3%, spare 100%[0m  │
+│ [38;5;81m/dev/nvme1n1[0m │ 3.5T SAMSUNG MZQL23T8HCLS-00A07    │ [38;5;114mPASS[0m   │ 15000h   │ [38;5;114m38°C[0m   │ [38;5;81mR57.4T W45.9T[0m        │ -         │ [38;5;81mused 3%, spare 100%[0m  │
+│ [38;5;81mmegaraid,8[0m   │ SEAGATE ST4000NM0025               │ [38;5;114mPASS[0m   │ 51234h   │ [38;5;114m36°C[0m   │ [38;5;214mno stats[0m             │ [38;5;114mGD:0/UE:0[0m │ -                    │
+│ [38;5;81mmegaraid,9[0m   │ SEAGATE ST4000NM0025               │ [38;5;114mPASS[0m   │ 51234h   │ [38;5;114m36°C[0m   │ [38;5;214mno stats[0m             │ [38;5;114mGD:0/UE:0[0m │ -                    │
+│ [38;5;81mmegaraid,10[0m  │ SEAGATE ST4000NM0025               │ [38;5;114mPASS[0m   │ 51234h   │ [38;5;114m36°C[0m   │ [38;5;214mno stats[0m             │ [38;5;114mGD:0/UE:0[0m │ -                    │
+│ [38;5;81mmegaraid,11[0m  │ SEAGATE ST4000NM0025               │ [38;5;114mPASS[0m   │ 51234h   │ [38;5;114m36°C[0m   │ [38;5;214mno stats[0m             │ [38;5;114mGD:0/UE:0[0m │ -                    │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mNVMe Deep Health[0m[38;5;73m ──────────────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│ [1mDevice[0m         │ [1mModel[0m                      │ [1mTemp[0m    │ [1mUsed[0m    │ [1mSpare[0m   │ [1mStatus[0m  │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81m/dev/nvme0n1[0m   │ SAMSUNG MZQL23T8HCLS-00A07 │ [38;5;114m38°C[0m    │ 3%      │ 100%    │ [38;5;114mOK[0m      │
+│ [38;5;81m/dev/nvme1n1[0m   │ SAMSUNG MZQL23T8HCLS-00A07 │ [38;5;114m38°C[0m    │ 3%      │ 100%    │ [38;5;114mOK[0m      │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+│   [2m· Unsafe shutdowns (lifetime): nvme0n1=12 nvme1n1=12[0m
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mRAID Controller Information[0m[38;5;73m ───────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+[38;5;81m│ RAID/HBA Controllers:[0m
+├───────────────────────────────────────────────────────────────────────────┤
+│ [1mSlot[0m       │ [1mType[0m      │ [1mController[0m                                       │
+├───────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81m18:00.0[0m    │ [38;5;214mRAID[0m      │ Broadcom / LSI MegaRAID SAS-3 3108 [Invader]     │
+└───────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mNetwork Interface Information[0m[38;5;73m ─────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [1mIface[0m        │ [1mStatus[0m   │ [1mLink[0m         │ [1mMAC[0m                │ [1mIPv4[0m                 │ [1mModel[0m                    │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81meth0[0m         │ [38;5;114mUP[0m       │ 10000M/full  │ 3c:ec:ef:XX:XX:XX  │ 203.0.XX.XX/24       │ virtio_net               │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+│
+[38;5;214m│ RX/TX error & drop counters (cumulative):[0m
+│   [38;5;214m! eth0            rx_dropped=6[0m
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mGraphics Card Information[0m[38;5;73m ─────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+├────────────────────────────────────────────────────────────────────────────────┤
+│ [1mVendor[0m   │ [1mClass[0m      │ [1mModel[0m                                                  │
+├────────────────────────────────────────────────────────────────────────────────┤
+│ [38;5;81mASPEED[0m   │ [38;5;214mBMC[0m        │ ASPEED Technology, Inc. ASPEED Graphics Family         │
+└────────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────
+[38;5;73m┌─ [1;38;5;222mMotherboard Information[0m[38;5;73m ───────────────────────[0m
+[38;5;73m├──────────────────────────────────────────────────[0m
+]999;w=166│ Vendor              : Supermicro
+│ Model               : X11SCM-F
+│ Version             : 1.02
+│ BIOS Vendor         : American Megatrends Inc.
+│ BIOS Version        : 2.6
+└──────────────────────────────────────────────────
+
+[38;5;73m── [1;38;5;222mHealth[0m[38;5;73m ─────────────────────────────────────────[0m
+[38;5;203m✗ 1 problem[0m
+  [38;5;203m✗[0m sdb       8 reallocated sectors, 2 pending
+
+[38;5;114mReport generation completed![0m
+[2mGenerated on: 2026-11-03 10:46:34 UTC[0m
+
+
+[38;5;73m-- [2mstep 2/3[0m [1;48;5;81;38;5;16m NETS [0m [2m· iperf3, reduced endpoint set[38;5;73m ----------------------------------------[0m
+  [2m→ nets: https://catbash.net/nets[0m
+]999;w=40
+[1;48;5;81;38;5;16m NETS [0m [1mv0.5.0[0m [2m· Network Endpoint Throughput Sampler[0m
+  [2mRegion[0m   reduced · 8 endpoints        [2mStack[0m  [38;5;114mIPv4 ✓[0m  [38;5;245mIPv6 ✗[0m
+  [2mTest[0m     10s per direction · 4 streams · iperf 3.16
+  [2mLegend[0m   [38;5;81mSend[0m = upload  [38;5;114mRecv[0m = download  [38;5;221mbusy[0m = server occupied, try later  [38;5;203mfail[0m = unreachable
+  [2mPublic shared servers: numbers are comparative, not bare-metal capacity.[0m
+
+[38;5;73m-- [1;38;5;222miperf3 IPv4[38;5;73m --------------------------------------------------------------[0m
+
+  [1;38;5;222m[NA] North America[0m
+  [2mArea  Location            Provider                Send          Recv  Link  [0m
+  [38;5;245m----  ------------------  --------------  ------------  ------------  ------[0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m[48;5;238m                [0m send :18301  [2m0:00 · ~3m left[0m[K]999;w=64  [38;5;81m⠸[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m[48;5;238m                [0m send :18301  [2m0:00 · ~3m left[0m[K]999;w=70  [38;5;81m⠧[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m [48;5;238m               [0m send :18301  [2m0:01 · ~3m left[0m[K]999;w=64  [38;5;81m⠋[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m [48;5;238m               [0m send :18301  [2m0:01 · ~3m left[0m[K]999;w=86  [38;5;81m⠼[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m   [48;5;238m             [0m send :18301  [2m0:02 · ~3m left[0m[K]999;w=61  [38;5;81m⠧[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m[48;5;238m                [0m recv :18301  [2m0:02 · ~3m left[0m[K]999;w=78  [38;5;81m⠙[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m [48;5;238m               [0m recv :18301  [2m0:03 · ~3m left[0m[K]999;w=60  [38;5;81m⠼[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m [48;5;238m               [0m recv :18301  [2m0:03 · ~3m left[0m[K]999;w=64  [38;5;81m⠇[0m [2m[1/8][0m [1mNew York, US[0m [2m· PureVoltage[0m  [48;5;81m   [48;5;238m             [0m recv :18301  [2m0:04 · ~3m left[0m[K]999;w=63[K[?25h[?7h  [1;38;5;222mNA  [0m  [38;5;252mNew York, US      [0m  [38;5;180mPureVoltage   [0m  [1m[38;5;81m   1.68 Gbps[0m  [1m[38;5;114m   1.54 Gbps[0m  [38;5;245m40G   [0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m    [2m0:00 · ~24s left[0m[K]999;w=65  [38;5;81m⠸[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m[48;5;238m                [0m send :18302  [2m0:00 · ~24s left[0m[K]999;w=65  [38;5;81m⠦[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m [48;5;238m               [0m send :18302  [2m0:01 · ~24s left[0m[K]999;w=64  [38;5;81m⠙[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m [48;5;238m               [0m send :18302  [2m0:01 · ~24s left[0m[K]999;w=63  [38;5;81m⠼[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m   [48;5;238m             [0m send :18302  [2m0:02 · ~24s left[0m[K]999;w=62  [38;5;81m⠇[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m[48;5;238m                [0m recv :18302  [2m0:02 · ~24s left[0m[K]999;w=66  [38;5;81m⠙[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m [48;5;238m               [0m recv :18302  [2m0:03 · ~24s left[0m[K]999;w=61  [38;5;81m⠼[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m [48;5;238m               [0m recv :18302  [2m0:03 · ~24s left[0m[K]999;w=62  [38;5;81m⠧[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m [48;5;238m               [0m recv :18302  [2m0:03 · ~24s left[0m[K]999;w=64  [38;5;81m⠋[0m [2m[2/8][0m [1mLos Angeles, US[0m [2m· Clouvider[0m  [48;5;81m   [48;5;238m             [0m recv :18302  [2m0:04 · ~24s left[0m[K]999;w=63[K[?25h[?7h  [1;38;5;222mNA  [0m  [38;5;252mLos Angeles, US   [0m  [38;5;180mClouvider     [0m  [38;5;81m    947 Mbps[0m  [1m[38;5;114m   1.05 Gbps[0m  [38;5;245m10G   [0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m    [2m0:00 · ~20s left[0m[K]999;w=63  [38;5;81m⠸[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m send :18303  [2m0:01 · ~20s left[0m[K]999;w=64  [38;5;81m⠦[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m send :18303  [2m0:01 · ~20s left[0m[K]999;w=64  [38;5;81m⠏[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m send :18303  [2m0:01 · ~20s left[0m[K]999;w=64  [38;5;81m⠹[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m   [48;5;238m             [0m send :18303  [2m0:02 · ~20s left[0m[K]999;w=61  [38;5;81m⠦[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m[48;5;238m                [0m recv :18303  [2m0:02 · ~20s left[0m[K]999;w=62  [38;5;81m⠏[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m recv :18303  [2m0:03 · ~20s left[0m[K]999;w=61  [38;5;81m⠹[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m recv :18303  [2m0:03 · ~20s left[0m[K]999;w=63  [38;5;81m⠴[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m   [48;5;238m             [0m recv :18303  [2m0:04 · ~20s left[0m[K]999;w=55  [38;5;81m⠇[0m [2m[3/8][0m [1mMontreal, CA[0m [2m· Leaseweb[0m  [48;5;81m   [48;5;238m             [0m recv :18303  [2m0:04 · ~20s left[0m[K]999;w=135[K[?25h[?7h  [1;38;5;222mNA  [0m  [38;5;252mMontreal, CA      [0m  [38;5;180mLeaseweb      [0m  [1m[38;5;81m   1.44 Gbps[0m  [1m[38;5;114m   1.27 Gbps[0m  [38;5;245m10G   [0m
+
+  [1;38;5;222m[EU] Europe[0m
+  [2mArea  Location            Provider                Send          Recv  Link  [0m
+  [38;5;245m----  ------------------  --------------  ------------  ------------  ------[0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m[48;5;238m                [0m send :18304  [2m0:00 · ~16s left[0m[K]999;w=64  [38;5;81m⠸[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m [48;5;238m               [0m send :18304  [2m0:01 · ~16s left[0m[K]999;w=64  [38;5;81m⠧[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m [48;5;238m               [0m send :18304  [2m0:01 · ~16s left[0m[K]999;w=90  [38;5;81m⠋[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m   [48;5;238m             [0m send :18304  [2m0:02 · ~16s left[0m[K]999;w=64  [38;5;81m⠼[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m   [48;5;238m             [0m send :18304  [2m0:02 · ~16s left[0m[K]999;w=63  [38;5;81m⠧[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m [48;5;238m               [0m recv :18304  [2m0:03 · ~16s left[0m[K]999;w=110  [38;5;81m⠙[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m [48;5;238m               [0m recv :18304  [2m0:03 · ~16s left[0m[K]999;w=62  [38;5;81m⠼[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m   [48;5;238m             [0m recv :18304  [2m0:04 · ~16s left[0m[K]999;w=63  [38;5;81m⠇[0m [2m[4/8][0m [1mUnited Kingdom[0m [2m· OnlyServers[0m  [48;5;81m   [48;5;238m             [0m recv :18304  [2m0:04 · ~16s left[0m[K]999;w=61[K[?25h[?7h  [1;38;5;222mEU  [0m  [38;5;252mUnited Kingdom    [0m  [38;5;180mOnlyServers   [0m  [1m[38;5;81m   4.20 Gbps[0m  [1m[38;5;114m   3.84 Gbps[0m  [38;5;245m10G   [0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m    [2m0:00 · ~12s left[0m[K]999;w=64  [38;5;81m⠼[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m[48;5;238m                [0m send :18305  [2m0:01 · ~12s left[0m[K]999;w=62  [38;5;81m⠧[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m[48;5;238m                [0m send :18305  [2m0:01 · ~12s left[0m[K]999;w=62  [38;5;81m⠙[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m [48;5;238m               [0m send :18305  [2m0:02 · ~12s left[0m[K]999;w=75  [38;5;81m⠴[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m [48;5;238m               [0m send :18305  [2m0:02 · ~12s left[0m[K]999;w=61  [38;5;81m⠇[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m[48;5;238m                [0m recv :18305  [2m0:03 · ~12s left[0m[K]999;w=64  [38;5;81m⠹[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m[48;5;238m                [0m recv :18305  [2m0:03 · ~12s left[0m[K]999;w=55  [38;5;81m⠦[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m [48;5;238m               [0m recv :18305  [2m0:04 · ~12s left[0m[K]999;w=63  [38;5;81m⠏[0m [2m[5/8][0m [1mAmsterdam, NL[0m [2m· Eranium[0m  [48;5;81m [48;5;238m               [0m recv :18305  [2m0:04 · ~12s left[0m[K]999;w=61[K[?25h[?7h  [1;38;5;222mEU  [0m  [38;5;252mAmsterdam, NL     [0m  [38;5;180mEranium       [0m  [1m[38;5;81m   6.26 Gbps[0m  [1m[38;5;114m   5.96 Gbps[0m  [38;5;245m100G  [0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m    [2m0:00 · ~8s left[0m[K]999;w=65  [38;5;81m⠼[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m[48;5;238m                [0m send :18306  [2m0:00 · ~8s left[0m[K]999;w=67  [38;5;81m⠧[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m [48;5;238m               [0m send :18306  [2m0:01 · ~8s left[0m[K]999;w=63  [38;5;81m⠙[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m [48;5;238m               [0m send :18306  [2m0:01 · ~8s left[0m[K]999;w=75  [38;5;81m⠼[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m   [48;5;238m             [0m send :18306  [2m0:02 · ~8s left[0m[K]999;w=62  [38;5;81m⠇[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m[48;5;238m                [0m recv :18306  [2m0:02 · ~8s left[0m[K]999;w=63  [38;5;81m⠙[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m[48;5;238m                [0m recv :18306  [2m0:02 · ~8s left[0m[K]999;w=61  [38;5;81m⠴[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m [48;5;238m               [0m recv :18306  [2m0:03 · ~8s left[0m[K]999;w=64  [38;5;81m⠇[0m [2m[6/8][0m [1mFrankfurt, DE[0m [2m· Wobcom[0m  [48;5;81m [48;5;238m               [0m recv :18306  [2m0:03 · ~8s left[0m[K]999;w=63[K[?25h[?7h  [1;38;5;222mEU  [0m  [38;5;252mFrankfurt, DE     [0m  [38;5;180mWobcom        [0m  [1m[38;5;81m   8.91 Gbps[0m  [1m[38;5;114m   8.20 Gbps[0m  [38;5;245m25G   [0m
+
+  [1;38;5;222m[APAC] Asia-Pacific[0m
+  [2mArea  Location            Provider                Send          Recv  Link  [0m
+  [38;5;245m----  ------------------  --------------  ------------  ------------  ------[0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m[48;5;238m                [0m send :18307  [2m0:00 · ~4s left[0m[K]999;w=64  [38;5;81m⠼[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m[48;5;238m                [0m send :18307  [2m0:00 · ~4s left[0m[K]999;w=66  [38;5;81m⠧[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m send :18307  [2m0:01 · ~4s left[0m[K]999;w=64  [38;5;81m⠙[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m send :18307  [2m0:01 · ~4s left[0m[K]999;w=61  [38;5;81m⠴[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m   [48;5;238m             [0m send :18307  [2m0:02 · ~4s left[0m[K]999;w=62  [38;5;81m⠇[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m[48;5;238m                [0m recv :18307  [2m0:02 · ~4s left[0m[K]999;w=62  [38;5;81m⠹[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m recv :18307  [2m0:03 · ~4s left[0m[K]999;w=63  [38;5;81m⠦[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m [48;5;238m               [0m recv :18307  [2m0:03 · ~4s left[0m[K]999;w=62  [38;5;81m⠏[0m [2m[7/8][0m [1mTokyo, JP[0m [2m· Leaseweb[0m  [48;5;81m   [48;5;238m             [0m recv :18307  [2m0:04 · ~4s left[0m[K]999;w=61[K[?25h[?7h  [1;38;5;222mAPAC[0m  [38;5;252mTokyo, JP         [0m  [38;5;180mLeaseweb      [0m  [38;5;81m    601 Mbps[0m  [38;5;114m    689 Mbps[0m  [38;5;245m10G   [0m
+]999;w=55[?25l[?7l  [38;5;81m⠋[0m [2m[8/8][0m [1mHong Kong, HK[0m [2m· Leaseweb[0m    [2m0:00[0m[K]999;w=59[K[?25h[?7h  [1;38;5;222mAPAC[0m  [38;5;252mHong Kong, HK     [0m  [38;5;180mLeaseweb      [0m  [38;5;221m        busy[0m  [38;5;221m        busy[0m  [38;5;245m10G   [0m
+
+  [38;5;214m! Skipping IPv6 (no IPv6 connectivity).[0m
+
+[38;5;73m-- [1;38;5;222mSummary[38;5;73m ---------------------------------------------------------------[0m
+  [2mTests[0m     [38;5;114m14 ok[0m · [38;5;221m2 busy[0m · [38;5;203m0 fail[0m · 16 total
+  [2mFastest[0m   [38;5;81m↑ 8.91 Gbps  Frankfurt, DE · Wobcom (IPv4)[0m
+  [2m       [0m   [38;5;114m↓ 8.20 Gbps  Frankfurt, DE · Wobcom (IPv4)[0m
+  [2mTraffic[0m   [38;5;81m↑ 5.60 GiB[0m · [38;5;114m↓ 5.26 GiB[0m · 10.86 GiB total [2m(this run, iperf3 payload)[0m
+  [2mElapsed[0m   29s
+
+  [38;5;114m✓[0m Done · NETS v0.5.0
+
+[38;5;73m-- [2mstep 3/3[0m [1;48;5;81;38;5;16m CPUX [0m [2m· Geekbench 6[38;5;73m ----------------------------------------[0m
+  [2m→ cpux: https://catbash.net/cpux[0m
+
+[1;48;5;81;38;5;16m CPUX [0m [1mv2.1.0[0m [2m· CPU eXaminer · Geekbench 5/6/7[0m
+  Intel(R) Xeon(R) Processor @ 2.80GHz
+  [2m4 cores · 15.7 GiB RAM · x86_64 · kvm · Ubuntu 24.04.5 LTS[0m
+  [2mPlan[0m  [1mGB6[0m  [2m· sequential, downloads removed afterwards[0m
+  [38;5;214m! System is busy (load 4.58 on 4 cores) — scores will be lower than idle.[0m
+
+[?25l[?7l  [38;5;81m⠋[0m [1mGB6  [0m   [2m· 0s[0m[K]999;w=62  [38;5;81m⠙[0m [1mGB6  [0m download + unpack 0 MiB  [2m· 1s[0m[K]999;w=61  [38;5;81m⠙[0m [1mGB6  [0m preparing  [2m· 2s[0m[K]999;w=61  [38;5;81m⠋[0m [1mGB6  [0m single-core · #4 PDF Renderer  [2m· 3s[0m[K]999;w=61  [38;5;81m⠋[0m [1mGB6  [0m single-core · #10 Background Blur  [2m· 4s[0m[K]999;w=61  [38;5;81m⠏[0m [1mGB6  [0m single-core · #14 Photo Filter  [2m· 5s[0m[K]999;w=61  [38;5;81m⠏[0m [1mGB6  [0m [48;5;81m[48;5;238m                    [0m   0%  multi-core 1/16 File Compression  [2m· 6s[0m[K]999;w=61  [38;5;81m⠇[0m [1mGB6  [0m [48;5;81m   [48;5;238m                 [0m  18%  multi-core 4/16 PDF Renderer · ~4s left  [2m· 8s[0m[K]999;w=61  [38;5;81m⠇[0m [1mGB6  [0m [48;5;81m        [48;5;238m            [0m  43%  multi-core 8/16 Asset Compression · ~2s left  [2m· 9s[0m[K]999;w=61  [38;5;81m⠧[0m [1mGB6  [0m [48;5;81m            [48;5;238m        [0m  62%  multi-core 11/16 Horizon Detection · ~1s left  [2m· 10s[0m[K]999;w=61  [38;5;81m⠧[0m [1mGB6  [0m fetching scores · browser · #1  [2m· 11s[0m[K]999;w=61[K[?25h[?7h[1;38;5;222mGeekbench 6.7.1 Benchmark Test:[0m
+[38;5;73m---------------------------------[0m
+Test             | Value
+                 | 
+Single Core      | [38;5;114m[1m1373[0m
+Multi Core       | [38;5;114m[1m4219[0m
+Full Test        | [38;5;81mhttps://browser.geekbench.com/v6/cpu/1234567[0m
+Claim            | [2mhttps://browser.geekbench.com/v6/cpu/1234567/claim?key=000000[0m
+Duration         | [2m11s[0m
+
+
+  [38;5;114m✓[0m Full check finished in 0m42s · nothing left on disk.
+
+[1;38;5;114mroot@catlab-01[0m:[1;38;5;81m~[0m# 

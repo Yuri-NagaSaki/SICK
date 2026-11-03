@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Demo stub for smartctl: canned JSON from ../data (see tools/demos/capture.sh).
+D="$(cd "$(dirname "${BASH_SOURCE[0]}")/../data" && pwd)"
+sleep "${FAKE_DELAY:-0.12}"
+args="$*"
+case "$args" in
+  *--version*) echo "smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.8.0] (local build)"; exit 0 ;;
+  *--scan*)
+    printf '%s\n' "/dev/sda -d scsi # /dev/sda, SCSI device" \
+                  "/dev/sdb -d scsi # /dev/sdb, SCSI device" \
+                  "/dev/nvme0 -d nvme # /dev/nvme0, NVMe device"
+    for i in $(seq 8 $((7 + ${FAKE_MEMBERS:-4}))); do
+      echo "/dev/bus/0 -d megaraid,$i # /dev/bus/0 [megaraid_disk_$i], SCSI device"
+    done
+    exit 0 ;;
+esac
+if [[ "$args" =~ megaraid,([0-9]+) ]]; then sed "s/%ID%/${BASH_REMATCH[1]}/" "$D/sas.json"; exit 0; fi
+case "$args" in
+  *json*/dev/sda) cat "$D/ata_ssd.json" ;;
+  *json*/dev/sdb) cat "$D/ata_hdd.json" ;;
+  *json*/dev/nvme*) cat "$D/nvme.json" ;;
+  *) echo "smartctl: unsupported"; exit 1 ;;
+esac

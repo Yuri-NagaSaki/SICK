@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Demo shim for curl: Geekbench hosts are rewritten to the local mock
+# server (DEMO_MOCK_URL) so a CPUX capture never touches the network.
+# Every other URL is passed through untouched.
+self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self" | paste -sd: -)"
+mock="${DEMO_MOCK_URL:-}"
+[[ -n "$mock" ]] || exec curl "$@"
+args=()
+for a in "$@"; do
+  case "$a" in
+    https://browser.geekbench.com*) a="${mock}/gbb${a#https://browser.geekbench.com}" ;;
+    https://cdn.geekbench.com*)     a="${mock}/cdn${a#https://cdn.geekbench.com}" ;;
+    https://asset.bash.icu/*)       a="${mock}/cdn/${a##*/}" ;;
+  esac
+  args+=("$a")
+done
+exec curl "${args[@]}"
