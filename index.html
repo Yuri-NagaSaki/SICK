@@ -141,10 +141,15 @@
         <code>curl -sL https://ba.sh/menu | bash -s -- cpux all</code>
         <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- cpux all" data-en="copy" data-zh="复制">copy</button>
       </div>
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <code>curl -sL https://ba.sh/menu | bash -s -- all</code>
+        <button class="copy" type="button" data-copy="curl -sL https://ba.sh/menu | bash -s -- all" data-en="copy" data-zh="复制">copy</button>
+      </div>
       <p class="cmd-hint"
-         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code> after <code>bash -s --</code>."
-         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>/<code>cpux</code>。">
-        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code> after <code>bash -s --</code>.
+         data-en="Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> after <code>bash -s --</code> — <code>all</code> runs SICK → NETS (reduced) → CPUX (GB6) in one go."
+         data-zh="交互：<code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> 全部 · <code>0</code> 退出。或在 <code>bash -s --</code> 后写 <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> —— <code>all</code> 一次跑完 SICK → NETS（精简）→ CPUX（GB6）。">
+        Interactive: <code>1</code> SICK · <code>2</code> NETS · <code>3</code> CPUX · <code>4</code> all · <code>0</code> exit. Or pass <code>sick</code>/<code>nets</code>/<code>cpux</code>/<code>all</code> after <code>bash -s --</code> — <code>all</code> runs SICK → NETS (reduced) → CPUX (GB6) in one go.
       </p>
     </div>
   </div>
@@ -230,9 +235,9 @@
             <code>curl -sL https://catbash.net/nets | bash</code>
             <button class="copy" type="button" data-copy="curl -sL https://catbash.net/nets | bash" data-en="copy" data-zh="复制">copy</button>
           </div>
-          <p class="cmd-hint" data-en="Needs <code>iperf3</code> + <code>python3</code> · see <a href=&quot;/nets.html&quot;>NETS page</a>"
-             data-zh="需要 <code>iperf3</code> + <code>python3</code> · 详见 <a href=&quot;/nets.html&quot;>NETS 页</a>">
-            Needs <code>iperf3</code> + <code>python3</code> · see <a href="/nets.html">NETS page</a>
+          <p class="cmd-hint" data-en="Needs only <code>iperf3</code> · see <a href=&quot;/nets.html&quot;>NETS page</a>"
+             data-zh="只需 <code>iperf3</code> · 详见 <a href=&quot;/nets.html&quot;>NETS 页</a>">
+            Needs only <code>iperf3</code> · see <a href="/nets.html">NETS page</a>
           </p>
         </div>
       </div>
