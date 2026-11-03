@@ -16,7 +16,7 @@
 #
 set -uo pipefail
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 
 # Prefer catbash short links; ba.sh as fallbacks
 SICK_URLS=(
@@ -35,20 +35,29 @@ CPUX_URLS=(
   "https://raw.githubusercontent.com/Yuri-NagaSaki/SICK/main/cpux.sh"
 )
 
+# Shared catbash palette: accent 81 · brand 222 · ok 114 · err 203 · rule 73.
+USE_COLOR=0
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
-  C_HDR=$'\033[1;38;5;222m'
+  USE_COLOR=1
   C_DIM=$'\033[2m'
   C_ACC=$'\033[38;5;81m'
+  C_OK=$'\033[38;5;114m'
   C_BAR=$'\033[38;5;73m'
   C_ERR=$'\033[38;5;203m'
+  C_CHIP=$'\033[1;48;5;81;38;5;16m'
   NC=$'\033[0m'
   BOLD=$'\033[1m'
 else
-  C_HDR=""; C_DIM=""; C_ACC=""; C_BAR=""; C_ERR=""; NC=""; BOLD=""
+  C_DIM=""; C_ACC=""; C_OK=""; C_BAR=""; C_ERR=""; C_CHIP=""; NC=""; BOLD=""
 fi
+DOT="·"; [[ "${TERM:-}" == "linux" || -n "${CATBASH_ASCII:-}" ]] && DOT="-"
+
+chip() { # black-on-cyan label, [LABEL] without color
+  if ((USE_COLOR)); then printf '%s %s %s' "$C_CHIP" "$1" "$NC"; else printf '[%s]' "$1"; fi
+}
 
 err()  { printf '%s\n' "${C_ERR}$*${NC}" >&2; }
-info() { printf '%s\n' "${C_DIM}$*${NC}"; }
+info() { printf '  %s\n' "${C_DIM}$*${NC}"; }
 
 TMP_SCRIPT=""
 cleanup() { [[ -n "$TMP_SCRIPT" ]] && rm -f "$TMP_SCRIPT"; return 0; }
@@ -159,6 +168,12 @@ run_remote() {
   return 1
 }
 
+step_banner() { # n name detail
+  echo
+  printf '%s-- %sstep %s/3%s %s %s%s %s%s ----------------------------------------%s\n' \
+    "$C_BAR" "$C_DIM" "$1" "$NC" "$(chip "$2")" "$C_DIM" "$DOT" "$3" "$C_BAR" "$NC"
+}
+
 # Full check, yabs-style: one command, everything in one scrollback.
 run_all() {
   local lang="" rc=0 a
@@ -171,40 +186,40 @@ run_all() {
   done
   # Env, not flags: older deployed tool versions ignore unknown env vars.
   export CATBASH_NO_CLEAR=1
+  local t0=$SECONDS
   clear_screen
-  printf '%s\n' "${C_HDR}== 1/3 SICK ==${NC}"
+  step_banner 1 SICK "hardware inventory"
   run_remote sick ${lang:+"$lang"} || rc=1
-  printf '\n%s\n' "${C_HDR}== 2/3 NETS (reduced) ==${NC}"
+  step_banner 2 NETS "iperf3, reduced endpoint set"
   run_remote nets -r || rc=1
-  printf '\n%s\n' "${C_HDR}== 3/3 CPUX (Geekbench 6) ==${NC}"
+  step_banner 3 CPUX "Geekbench 6"
   run_remote cpux 6 -y ${lang:+"$lang"} || rc=1
+  local el=$((SECONDS - t0))
+  echo
+  if ((rc == 0)); then
+    printf '  %s✓%s Full check finished in %dm%02ds %s nothing left on disk.\n' "$C_OK" "$NC" $((el / 60)) $((el % 60)) "$DOT"
+  else
+    printf '  %s!%s Full check finished in %dm%02ds with errors (see above).\n' "$C_ERR" "$NC" $((el / 60)) $((el % 60))
+  fi
   return "$rc"
 }
 
+menu_item() { # key name tagline details
+  printf '  %s%s%s  %s%-5s%s %-30s %s%s%s\n' "${C_ACC}${BOLD}" "$1" "$NC" "$BOLD" "$2" "$NC" "$3" "$C_DIM" "$4" "$NC"
+}
+
 print_menu() {
-  # Box is 60 columns; "猫脚本" is 3 double-width glyphs (6 columns).
-  local title_w=$((20 + 1 + ${#VERSION})) pad
-  pad=$((58 - title_w)); ((pad < 1)) && pad=1
-  printf '%s\n' "${C_BAR}+----------------------------------------------------------+${NC}"
-  printf '%s|%s  %s猫脚本 / Catbash%s  v%s%*s%s|%s\n' \
-    "${C_BAR}" "${NC}" "${C_HDR}" "${NC}" "$VERSION" "$pad" "" "${C_BAR}" "${NC}"
-  printf '%s\n' "${C_BAR}+----------------------------------------------------------+${NC}"
   echo
-  printf '  %s1)%s  %sSICK%s   Server Info & Check Kit\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
-  printf '       %sOne-shot hardware inventory (CPU/RAM/disk/NIC…)%s\n' "${C_DIM}" "${NC}"
+  printf '%s %sv%s%s %s%s Linux server toolkit%s\n' "$(chip "猫脚本 Catbash")" "$BOLD" "$VERSION" "$NC" "$C_DIM" "$DOT" "$NC"
   echo
-  printf '  %s2)%s  %sNETS%s   Network Endpoint Throughput Sampler\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
-  printf '       %sPublic iperf3 send/recv tests worldwide%s\n' "${C_DIM}" "${NC}"
+  menu_item 1 SICK "Server Info & Check Kit"     "hardware ${DOT} disks/SMART ${DOT} RAID ${DOT} NICs"
+  menu_item 2 NETS "Network Throughput Sampler"  "iperf3 send/recv ${DOT} NA / EU / APAC"
+  menu_item 3 CPUX "CPU eXaminer"                "Geekbench 5 / 6 / 7 ${DOT} single + multi"
+  menu_item 4 ALL  "Full check"                  "SICK → NETS (reduced) → CPUX (GB6)"
+  printf '  %s%s%s  %s\n' "${C_ACC}${BOLD}" 0 "$NC" "Exit"
   echo
-  printf '  %s3)%s  %sCPUX%s   CPU eXaminer (Geekbench 5 / 6 / 7)\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
-  printf '       %sSequential CPU benchmarks with single/multi scores%s\n' "${C_DIM}" "${NC}"
-  echo
-  printf '  %s4)%s  %sALL%s    SICK → NETS (reduced) → CPUX (GB6)\n' "${C_ACC}" "${NC}" "${BOLD}" "${NC}"
-  printf '       %sFull server check in one scrollback%s\n' "${C_DIM}" "${NC}"
-  echo
-  printf '  %s0)%s  Exit\n' "${C_ACC}" "${NC}"
-  echo
-  printf '  %sDocs:%s https://catbash.net/\n' "${C_DIM}" "${NC}"
+  printf '  %sNo daemons, nothing kept: downloads are removed after each run.%s\n' "$C_DIM" "$NC"
+  printf '  %sDocs%s  https://catbash.net/\n' "$C_DIM" "$NC"
   echo
 }
 
@@ -226,7 +241,7 @@ interactive_menu() {
   while true; do
     clear_screen
     print_menu
-    read_tty "  Select [1/2/3/4/0]: " || { echo; return 0; }
+    read_tty "  Select [1-4, 0 = exit]: " || { echo; return 0; }
     choice="${REPLY_TEXT//[[:space:]]/}"
     choice="${choice,,}"
     rc=0

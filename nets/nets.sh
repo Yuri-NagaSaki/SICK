@@ -15,7 +15,7 @@
 #
 set -uo pipefail
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 # When piped via curl|bash, BASH_SOURCE may be /dev/fd/* — resolve carefully.
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -396,6 +396,10 @@ LIST_ONLY=false
 AUTO_YES=false           # -y : install missing deps without prompting
 NO_INSTALL=false         # --no-install : never install
 JSON_MODE=false          # -j : JSON on stdout, human output on stderr
+CLEANUP_MODE="ask"       # ask | yes (--cleanup) | no (--keep-packages)
+INSTALLED_PKG=""         # packages this run installed (removed on --cleanup)
+INSTALL_PM=""
+INSTALL_SUDO=()
 NO_CLEAR=false
 NO_COLOR_FLAG=false
 CONNECT_TIMEOUT=5
@@ -407,6 +411,9 @@ STATUS_FILE=""
 TICKER_PID=""
 RUN_START=0
 RUN_STARTED=false
+EP_DONE=0
+EP_TOTAL=0
+BEST_UP=0; BEST_UP_TXT=""; BEST_DOWN=0; BEST_DOWN_TXT=""
 INTERRUPTED=false
 
 HAVE_IPV4=false
@@ -423,21 +430,36 @@ TOTAL_TESTS=0
 # Result rows for --json (parallel arrays)
 J_IPV=(); J_ID=(); J_SEND_ST=(); J_SEND_MB=(); J_RECV_ST=(); J_RECV_MB=()
 
-RED=""; GREEN=""; YELLOW=""; CYAN=""; BOLD=""; DIM=""; NC=""
+BOLD=""; DIM=""; NC=""
 C_UP=""; C_DOWN=""; C_OK=""; C_BUSY=""; C_FAIL=""; C_META=""
-C_LOC=""; C_PROV=""; C_HDR=""; C_BAR=""
+C_LOC=""; C_PROV=""; C_HDR=""; C_BAR=""; C_ACC=""; C_WARN=""
+C_CHIP=""; BG_FILL=""; BG_EMPTY=""
+USE_COLOR=0
+SYM_OK="✓"; SYM_FAIL="✗"; SYM_WARN="!"; SYM_DOT="·"; SYM_UP="↑"; SYM_DOWN="↓"
+SPIN_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 
-# Colors only when the (human) output is a terminal.
+# Colors only when the (human) output is a terminal. Palette shared by all
+# catbash tools: accent 81 · brand 222 · ok 114 · warn 214 · err 203 · rule 73.
 setup_colors() {
+  # The Linux text console lacks braille/check glyphs.
+  if [[ "${TERM:-}" == "linux" || -n "${CATBASH_ASCII:-}" ]]; then
+    SYM_OK="+"; SYM_FAIL="x"; SYM_DOT="-"; SYM_UP="up"; SYM_DOWN="down"
+    SPIN_FRAMES=('|' '/' '-' '\')
+  fi
   [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]] || return 0
   $NO_COLOR_FLAG && return 0
-  RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
-  CYAN=$'\033[0;36m'; BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
+  USE_COLOR=1
+  C_ACC=$'\033[38;5;81m'
+  C_CHIP=$'\033[1;48;5;81;38;5;16m'
+  BG_FILL=$'\033[48;5;81m'
+  BG_EMPTY=$'\033[48;5;238m'
+  BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
   C_UP=$'\033[38;5;81m'     # upload / send
   C_DOWN=$'\033[38;5;114m'  # download / recv
   C_OK=$'\033[38;5;114m'
   C_BUSY=$'\033[38;5;221m'
   C_FAIL=$'\033[38;5;203m'
+  C_WARN=$'\033[38;5;214m'
   C_META=$'\033[38;5;245m'
   C_LOC=$'\033[38;5;252m'
   C_PROV=$'\033[38;5;180m'
@@ -463,6 +485,8 @@ Options:
   -j, --json            JSON results on stdout (progress goes to stderr)
   -y, --yes             Auto-install iperf3 without prompting
   --no-install          Never install; exit if iperf3 is missing
+  --cleanup             Remove iperf3 afterwards if this run installed it
+  --keep-packages       Keep it without asking (default: ask on a terminal)
   --no-clear            Do not clear the screen
   --no-color            Disable colors (NO_COLOR is honoured too)
   -l, --list            List endpoints and exit
@@ -484,10 +508,29 @@ clear_line() {
   return 0
 }
 log()  { clear_line; printf '%s\n' "$*"; }
-info() { clear_line; printf '%s\n' "${CYAN}$*${NC}"; }
-ok()   { clear_line; printf '%s\n' "${GREEN}$*${NC}"; }
-warn() { clear_line; printf '%s\n' "${YELLOW}$*${NC}"; }
-err()  { clear_line; printf '%s\n' "${RED}$*${NC}" >&2; }
+info() { clear_line; printf '  %s\n' "${DIM}$*${NC}"; }
+ok()   { clear_line; printf '  %s\n' "${C_OK}${SYM_OK}${NC} $*"; }
+warn() { clear_line; printf '  %s\n' "${C_WARN}${SYM_WARN} $*${NC}"; }
+err()  { clear_line; printf '  %s\n' "${C_FAIL}${SYM_FAIL} $*${NC}" >&2; }
+
+# Tool label: black on cyan when colored, [NETS] otherwise.
+chip() {
+  if ((USE_COLOR)); then printf '%s %s %s' "$C_CHIP" "$1" "$NC"; else printf '[%s]' "$1"; fi
+}
+
+# Progress bar of background-colored spaces (one column per cell even on
+# CJK terminals). mkbar PERCENT WIDTH → BAR (fork-free)
+mkbar() {
+  local p="${1:-0}" w="${2:-20}" f e hashes dashes
+  ((p < 0)) && p=0; ((p > 100)) && p=100
+  f=$((p * w / 100)); e=$((w - f))
+  if ((USE_COLOR)); then
+    printf -v BAR '%s%*s%s%*s%s' "$BG_FILL" "$f" "" "$BG_EMPTY" "$e" "" "$NC"
+  else
+    printf -v hashes '%*s' "$f" ""; printf -v dashes '%*s' "$e" ""
+    BAR="[${hashes// /#}${dashes// /-}]"
+  fi
+}
 
 fmt_dur() { # sets DUR: 129 -> 2m09s
   local s="${1:-0}"
@@ -587,6 +630,10 @@ ensure_deps() {
     apk)    install_cmd=("${sudo_prefix[@]}" apk add --no-cache) ;;
   esac
 
+  # Debian/Ubuntu pull libiperf0 in as well; remember it only if it is new.
+  local lib_new=false
+  if [[ "$pm" == apt ]] && ! dpkg -s libiperf0 >/dev/null 2>&1; then lib_new=true; fi
+
   info "Installing iperf3..."
   if ! "${install_cmd[@]}" iperf3 </dev/null; then
     err "Package install failed. Install iperf3 manually."
@@ -597,8 +644,43 @@ ensure_deps() {
     return 1
   fi
   IPERF_BIN="$(command -v iperf3)"
+  INSTALLED_PKG="iperf3"
+  if $lib_new && dpkg -s libiperf0 >/dev/null 2>&1; then INSTALLED_PKG+=" libiperf0"; fi
+  INSTALL_PM="$pm"; INSTALL_SUDO=("${sudo_prefix[@]}")
   ok "Installed $("$IPERF_BIN" --version 2>/dev/null | head -n 1)"
   return 0
+}
+
+# Leave the system as we found it: offer to remove what this run installed.
+# --cleanup removes without asking, --keep-packages never asks.
+maybe_cleanup_packages() {
+  [[ -n "$INSTALLED_PKG" ]] || return 0
+  local -a pkgs cmd=()
+  read -r -a pkgs <<<"$INSTALLED_PKG"
+  case "$CLEANUP_MODE" in
+    no) return 0 ;;
+    ask)
+      if $JSON_MODE || ! have_tty; then
+        info "Installed for this run: ${INSTALLED_PKG} (pass --cleanup to remove it automatically)."
+        return 0
+      fi
+      ask_yn "  Remove ${INSTALLED_PKG} (installed for this run)? [y/N]: " || return 0
+      ;;
+  esac
+  case "$INSTALL_PM" in
+    apt)    cmd=("${INSTALL_SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get remove -y -qq) ;;
+    dnf)    cmd=("${INSTALL_SUDO[@]}" dnf remove -y -q) ;;
+    yum)    cmd=("${INSTALL_SUDO[@]}" yum remove -y -q) ;;
+    pacman) cmd=("${INSTALL_SUDO[@]}" pacman -Rs --noconfirm) ;;
+    zypper) cmd=("${INSTALL_SUDO[@]}" zypper --non-interactive remove --clean-deps) ;;
+    apk)    cmd=("${INSTALL_SUDO[@]}" apk del) ;;
+    *) return 0 ;;
+  esac
+  if "${cmd[@]}" "${pkgs[@]}" </dev/null >/dev/null 2>&1; then
+    ok "Removed ${INSTALLED_PKG} ${SYM_DOT} nothing left behind."
+  else
+    warn "Could not remove ${INSTALLED_PKG}; remove it manually if you like."
+  fi
 }
 
 # Feature probes, once per run.
@@ -888,25 +970,40 @@ rcell() {
 }
 
 # ---------- live status line ----------
+# status_set SECONDS TEXT — SECONDS > 0 draws a bar that fills over that long
+# (one iperf3 attempt); 0 = no bar.
 status_set() {
   [[ -n "${STATUS_FILE:-}" ]] || return 0
-  printf '%s\n' "$*" >"$STATUS_FILE" 2>/dev/null || true
+  printf '%s\t%s\n' "$1" "$2" >"$STATUS_FILE" 2>/dev/null || true
 }
 
-# "  [/] Los Angeles · Clouvider   send :5203 · 7s" — redrawn in place.
+# One live line, redrawn in place:
+#   ⠹ [3/16] Los Angeles · Clouvider  ██████░░░░░░ send :5203  0:06 · ~4m left
+# Forks only `sleep`. Wrap is off while it runs (a narrow terminal clips the
+# line instead of scrolling); ticker_stop restores cursor and wrap.
 ticker_start() {
   [[ -t 1 && -n "$STATUS_FILE" ]] || return 0
-  local label="$1"
+  local label="$1" tail="${2:-}"
   : >"$STATUS_FILE"
   (
     trap 'exit 0' TERM
-    local f='|/-\' i=0 t0=$SECONDS d="" line=""
+    local i=0 n=${#SPIN_FRAMES[@]} t0=$SECONDS line="" prev="" secs=0 text="" ta=$SECONDS el bar pct
+    printf '\033[?25l\033[?7l'
     while :; do
-      if [[ -r "$STATUS_FILE" ]] && IFS= read -r line <"$STATUS_FILE" && [[ -n "$line" ]]; then d="$line"; fi
-      printf '\r  %s[%s]%s %s  %s%s · %ds%s\033[K' \
-        "$C_META" "${f:i % 4:1}" "$NC" "$label" "$DIM" "$d" $((SECONDS - t0)) "$NC"
+      if [[ -r "$STATUS_FILE" ]] && IFS= read -r line <"$STATUS_FILE" && [[ -n "$line" ]]; then
+        if [[ "$line" != "$prev" ]]; then prev="$line"; ta=$SECONDS; fi
+        secs="${line%%$'\t'*}"; text="${line#*$'\t'}"
+      fi
+      bar=""
+      if [[ "$secs" =~ ^[0-9]+$ ]] && ((secs > 0)); then
+        pct=$(((SECONDS - ta) * 100 / secs)); ((pct > 99)) && pct=99
+        mkbar "$pct" 16; bar="$BAR "
+      fi
+      el=$((SECONDS - t0))
+      printf '\r  %s%s%s %s  %s%s  %s%d:%02d%s%s\033[K' \
+        "$C_ACC" "${SPIN_FRAMES[i % n]}" "$NC" "$label" "$bar" "$text" "$DIM" $((el / 60)) $((el % 60)) "$tail" "$NC"
       i=$((i + 1))
-      sleep 0.2
+      sleep 0.12
     done
   ) &
   TICKER_PID=$!
@@ -917,7 +1014,7 @@ ticker_stop() {
     kill "$TICKER_PID" 2>/dev/null
     wait "$TICKER_PID" 2>/dev/null
     TICKER_PID=""
-    [[ -t 1 ]] && printf '\r\033[K'
+    [[ -t 1 ]] && printf '\r\033[K\033[?25h\033[?7h'
   fi
   return 0
 }
@@ -983,9 +1080,9 @@ run_iperf_range() {
     p=$((p0 + (start + k) % span))
     tries=$((tries + 1))
     note="${dir} :${p}"
-    ((tries > 1)) && note+=" · try ${tries}"
-    ((busy)) && note+=" (busy)"
-    status_set "$note"
+    ((tries > 1)) && note+=" ${SYM_DOT} try ${tries}"
+    ((busy)) && note+=" ${SYM_DOT} last port busy"
+    status_set "$TEST_TIME" "$note"
     run_iperf_once "$host" "$p" "$ipver" "$reverse"
     RG_WHY="$IP_ST"
     case "$IP_ST" in
@@ -1017,13 +1114,53 @@ format_speed_text() {
   esac
 }
 
-speed_color() {
+speed_color() { # status direction mbps — ≥ 1 Gbps is bold
+  local b=""
+  [[ "${3%%.*}" =~ ^[0-9]+$ ]] && ((${3%%.*} >= 1000)) && b="$BOLD"
   case "$1" in
-    ok)   if [[ "$2" == "up" ]]; then printf '%s' "$C_UP"; else printf '%s' "$C_DOWN"; fi ;;
+    ok)   if [[ "$2" == "up" ]]; then printf '%s' "$b$C_UP"; else printf '%s' "$b$C_DOWN"; fi ;;
     busy) printf '%s' "$C_BUSY" ;;
     fail) printf '%s' "$C_FAIL" ;;
     *)    printf '%s' "$C_META" ;;
   esac
+}
+
+# Remaining-time estimate from the average endpoint so far (or a guess).
+eta_text() {
+  local left=$((EP_TOTAL - EP_DONE)) per dirs=2 s
+  ((left > 0)) || return 0
+  ($SKIP_SEND || $SKIP_RECV) && dirs=1
+  if ((EP_DONE > 1)); then per=$(((SECONDS - RUN_START) / (EP_DONE - 1)))
+  else per=$((dirs * (TEST_TIME + 2))); fi
+  s=$((left * per))
+  if ((s >= 60)); then printf ' %s ~%dm left' "$SYM_DOT" $(((s + 30) / 60)); else printf ' %s ~%ds left' "$SYM_DOT" "$s"; fi
+}
+
+note_best() { # status mbps up|down city provider ipver
+  [[ "$1" == ok && "${2%%.*}" =~ ^[0-9]+$ ]] || return 0
+  local v=${2%%.*} txt="$4 · $5 (IPv$6)"
+  if [[ "$3" == up ]]; then
+    ((v > BEST_UP)) && { BEST_UP=$v; BEST_UP_TXT="$(format_speed_text ok "$2")  $txt"; }
+  else
+    ((v > BEST_DOWN)) && { BEST_DOWN=$v; BEST_DOWN_TXT="$(format_speed_text ok "$2")  $txt"; }
+  fi
+  return 0
+}
+
+# Endpoints that will actually be tested (for [n/N] and the time estimate).
+count_planned() {
+  local ipver i n=0
+  for ipver in 4 6; do
+    [[ -n "$FORCE_IP" && "$FORCE_IP" != "$ipver" ]] && continue
+    [[ "$ipver" == 4 ]] && ! $HAVE_IPV4 && continue
+    [[ "$ipver" == 6 ]] && ! $HAVE_IPV6 && continue
+    for ((i = 0; i < ${#EP_ID[@]}; i++)); do
+      [[ "$ipver" == "6" && "${EP_STACK[$i]}" == "IPv4" ]] && continue
+      [[ "$ipver" == "4" && "${EP_STACK[$i]}" == "IPv6" ]] && continue
+      n=$((n + 1))
+    done
+  done
+  EP_TOTAL=$n
 }
 
 track_result() {
@@ -1041,24 +1178,20 @@ track_result() {
 }
 
 print_header() {
-  local v4c v4s v6c v6s mode=""
-  if $HAVE_IPV4; then v4c="$C_OK"; v4s=on; else v4c="$C_FAIL"; v4s=off; fi
-  if $HAVE_IPV6; then v6c="$C_OK"; v6s=on; else v6c="$C_META"; v6s=off; fi
-  $SKIP_RECV && mode=" · send only"
-  $SKIP_SEND && mode=" · recv only"
-  # ASCII-only frame — wide Unicode box-drawing misaligns on many CJK terminals
-  printf '%s\n' "${C_BAR}+--------------------------------------------------------------------------+${NC}"
-  printf '%s|%s  %sNETS v%s%s — Network Endpoint Throughput Sampler\n' \
-    "${C_BAR}" "${NC}" "${C_HDR}" "$VERSION" "${NC}"
-  printf '%s\n' "${C_BAR}+--------------------------------------------------------------------------+${NC}"
-  printf '  %sRegion%s      %s\n' "${BOLD}" "${NC}" "$REGION"
-  printf '  %sDuration%s    %ss / direction · parallel %s%s\n' "${BOLD}" "${NC}" "$TEST_TIME" "$PARALLEL" "$mode"
-  printf '  %sStack%s       IPv4 %s%s%s · IPv6 %s%s%s\n' \
-    "${BOLD}" "${NC}" "$v4c" "$v4s" "${NC}" "$v6c" "$v6s" "${NC}"
-  printf '  %sEndpoints%s   %d · %s\n' "${BOLD}" "${NC}" "${#EP_ID[@]}" "$("$IPERF_BIN" --version 2>/dev/null | head -n 1 | awk '{print $1, $2}')"
-  printf '  %sLegend%s      %sSend=upload%s  %sRecv=download%s  %sbusy%s  %sfail%s\n' \
-    "${BOLD}" "${NC}" "${C_UP}" "${NC}" "${C_DOWN}" "${NC}" "${C_BUSY}" "${NC}" "${C_FAIL}" "${NC}"
-  printf '%s  Note: public shared servers — busy is normal; not bare-metal capacity.%s\n' "${DIM}" "${NC}"
+  local v4 v6 mode="" ver
+  if $HAVE_IPV4; then v4="${C_OK}IPv4 ${SYM_OK}${NC}"; else v4="${C_META}IPv4 ${SYM_FAIL}${NC}"; fi
+  if $HAVE_IPV6; then v6="${C_OK}IPv6 ${SYM_OK}${NC}"; else v6="${C_META}IPv6 ${SYM_FAIL}${NC}"; fi
+  $SKIP_RECV && mode=" ${SYM_DOT} send only"
+  $SKIP_SEND && mode=" ${SYM_DOT} recv only"
+  ver="$("$IPERF_BIN" --version 2>/dev/null | head -n 1 | awk '{print $1, $2}')"
+  echo
+  printf '%s %sv%s%s %s%s Network Endpoint Throughput Sampler%s\n' "$(chip NETS)" "$BOLD" "$VERSION" "$NC" "$DIM" "$SYM_DOT" "$NC"
+  printf '  %sRegion%s   %s %s %d endpoints        %sStack%s  %s  %s\n' \
+    "$DIM" "$NC" "$REGION" "$SYM_DOT" "${#EP_ID[@]}" "$DIM" "$NC" "$v4" "$v6"
+  printf '  %sTest%s     %ss per direction %s %s streams%s %s %s\n' "$DIM" "$NC" "$TEST_TIME" "$SYM_DOT" "$PARALLEL" "$mode" "$SYM_DOT" "$ver"
+  printf '  %sLegend%s   %sSend%s = upload  %sRecv%s = download  %sbusy%s = server occupied, try later  %sfail%s = unreachable\n' \
+    "$DIM" "$NC" "$C_UP" "$NC" "$C_DOWN" "$NC" "$C_BUSY" "$NC" "$C_FAIL" "$NC"
+  printf '  %sPublic shared servers: numbers are comparative, not bare-metal capacity.%s\n' "$DIM" "$NC"
   echo
 }
 
@@ -1087,17 +1220,19 @@ run_mode_table() {
 
   if [[ "$ipver" == "4" ]] && ! $HAVE_IPV4; then
     warn "Skipping ${mode_label} (no IPv4 connectivity)."
+    echo
     return 0
   fi
   if [[ "$ipver" == "6" ]] && ! $HAVE_IPV6; then
     warn "Skipping ${mode_label} (no IPv6 connectivity)."
+    echo
     return 0
   fi
   if [[ -n "$FORCE_IP" && "$FORCE_IP" != "$ipver" ]]; then
     return 0
   fi
 
-  printf '%s\n' "${C_BAR}-- iperf3 ${mode_label} -----------------------------------------------------------${NC}"
+  printf '%s-- %siperf3 %s%s --------------------------------------------------------------%s\n' "$C_BAR" "$C_HDR" "$mode_label" "$C_BAR" "$NC"
 
   local i host p0 p1 stack city prov speed_meta reg
   local send_st send_mb send_by recv_st recv_mb recv_by send_s recv_s good_port
@@ -1128,8 +1263,9 @@ run_mode_table() {
     fam_ok=true
     host_has_family "$host" "$ipver" || fam_ok=false
 
+    EP_DONE=$((EP_DONE + 1))
     if $fam_ok; then
-      ticker_start "$(fit "$city" "$W_LOC") · $(fit "$prov" "$W_PROV")"
+      ticker_start "${DIM}[${EP_DONE}/${EP_TOTAL}]${NC} ${BOLD}$(fit "$city" "$W_LOC")${NC} ${DIM}${SYM_DOT} $(fit "$prov" "$W_PROV")${NC}" "$(eta_text)"
       if ! $SKIP_SEND; then
         run_iperf_range "$host" "$p0" "$p1" "$ipver" 0
         send_st="$RG_ST"; send_mb="$RG_MB"; send_by="$RG_BY"; good_port="$RG_PORT"
@@ -1161,13 +1297,15 @@ run_mode_table() {
 
     send_s="$(format_speed_text "$send_st" "$send_mb")"
     recv_s="$(format_speed_text "$recv_st" "$recv_mb")"
+    note_best "$send_st" "$send_mb" up "$city" "$prov" "$ipver"
+    note_best "$recv_st" "$recv_mb" down "$city" "$prov" "$ipver"
 
     printf '  '
     lcell "$W_REG" "$(region_label "$reg")" "$C_HDR"; printf '  '
     lcell "$W_LOC" "$(fit "$city" "$W_LOC")" "$C_LOC"; printf '  '
     lcell "$W_PROV" "$(fit "$prov" "$W_PROV")" "$C_PROV"; printf '  '
-    rcell "$W_SPD" "$send_s" "$(speed_color "$send_st" up)"; printf '  '
-    rcell "$W_SPD" "$recv_s" "$(speed_color "$recv_st" down)"; printf '  '
+    rcell "$W_SPD" "$send_s" "$(speed_color "$send_st" up "$send_mb")"; printf '  '
+    rcell "$W_SPD" "$recv_s" "$(speed_color "$recv_st" down "$recv_mb")"; printf '  '
     lcell "$W_LINK" "$(fit "$speed_meta" "$W_LINK")" "$C_META"
     printf '\n'
   done
@@ -1183,20 +1321,18 @@ print_summary() {
   tot_h="$(human_bytes "$total_bytes")"
   fmt_dur "$elapsed"
 
-  printf '%s\n' "${C_BAR}-- Summary ----------------------------------------------------------------${NC}"
-  printf '  %sElapsed%s     %s\n' "${BOLD}" "${NC}" "$DUR"
-  printf '  %sTests%s       %s%d ok%s  %s%d busy%s  %s%d fail%s  %d total\n' \
-    "${BOLD}" "${NC}" \
-    "${C_OK}" "$TOTAL_OK" "${NC}" \
-    "${C_BUSY}" "$TOTAL_BUSY" "${NC}" \
-    "${C_FAIL}" "$TOTAL_FAIL" "${NC}" \
-    "$TOTAL_TESTS"
-  printf '  %sTraffic%s     %sSend(up)   %s%s\n' "${BOLD}" "${NC}" "${C_UP}" "$up_h" "${NC}"
-  printf '               %sRecv(down) %s%s\n' "${C_DOWN}" "$down_h" "${NC}"
-  printf '               total      %s\n' "$tot_h"
-  printf '  %s             (this run only — iperf3 payload)%s\n' "${DIM}" "${NC}"
-  printf '%s\n' "${C_BAR}--------------------------------------------------------------------------${NC}"
-  $INTERRUPTED || ok "Done · NETS v${VERSION}"
+  printf '%s-- %sSummary%s ---------------------------------------------------------------%s\n' "$C_BAR" "$C_HDR" "$C_BAR" "$NC"
+  printf '  %sTests%s     %s%d ok%s %s %s%d busy%s %s %s%d fail%s %s %d total\n' "$DIM" "$NC" \
+    "$C_OK" "$TOTAL_OK" "$NC" "$SYM_DOT" "$C_BUSY" "$TOTAL_BUSY" "$NC" "$SYM_DOT" "$C_FAIL" "$TOTAL_FAIL" "$NC" "$SYM_DOT" "$TOTAL_TESTS"
+  if [[ -n "$BEST_UP_TXT" || -n "$BEST_DOWN_TXT" ]]; then
+    [[ -n "$BEST_UP_TXT" ]]   && printf '  %sFastest%s   %s%s %s%s\n' "$DIM" "$NC" "$C_UP" "$SYM_UP" "$BEST_UP_TXT" "$NC"
+    [[ -n "$BEST_DOWN_TXT" ]] && printf '  %s%s%s   %s%s %s%s\n' "$DIM" "$( [[ -n "$BEST_UP_TXT" ]] && printf '       ' || printf 'Fastest' )" "$NC" "$C_DOWN" "$SYM_DOWN" "$BEST_DOWN_TXT" "$NC"
+  fi
+  printf '  %sTraffic%s   %s%s %s%s %s %s%s %s%s %s %s total %s(this run, iperf3 payload)%s\n' "$DIM" "$NC" \
+    "$C_UP" "$SYM_UP" "$up_h" "$NC" "$SYM_DOT" "$C_DOWN" "$SYM_DOWN" "$down_h" "$NC" "$SYM_DOT" "$tot_h" "$DIM" "$NC"
+  printf '  %sElapsed%s   %s\n' "$DIM" "$NC" "$DUR"
+  echo
+  $INTERRUPTED || ok "Done ${SYM_DOT} NETS v${VERSION}"
 }
 
 json_str() {
@@ -1252,6 +1388,8 @@ parse_args() {
       --recv-only) SKIP_SEND=true; shift ;;
       -j|--json) JSON_MODE=true; shift ;;
       -y|--yes) AUTO_YES=true; shift ;;
+      --cleanup) CLEANUP_MODE="yes"; shift ;;
+      --keep-packages) CLEANUP_MODE="no"; shift ;;
       --no-install) NO_INSTALL=true; shift ;;
       --no-clear) NO_CLEAR=true; shift ;;
       --no-color) NO_COLOR_FLAG=true; shift ;;
@@ -1308,6 +1446,7 @@ main() {
   detect_connectivity
   print_header
 
+  count_planned
   RUN_START=$SECONDS
   RUN_STARTED=true
   if [[ -z "$FORCE_IP" || "$FORCE_IP" == "4" ]]; then
@@ -1319,6 +1458,7 @@ main() {
 
   print_summary $((SECONDS - RUN_START))
   $JSON_MODE && emit_json
+  maybe_cleanup_packages
   # Exit 1 only when nothing at all succeeded.
   if ((TOTAL_TESTS > 0 && TOTAL_OK == 0)); then exit 1; fi
   exit 0
