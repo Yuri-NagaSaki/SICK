@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax
+        run: |
+          for f in catbash.sh cpux.sh nets/nets.sh hardware_info.sh tests/run.sh; do
+            bash -n "$f"
+          done
+
+      - name: ShellCheck
+        run: shellcheck -S warning catbash.sh cpux.sh nets/nets.sh hardware_info.sh tests/run.sh
+
+      - name: Worker syntax
+        run: node --check worker.js
+
+      - name: Parser tests (gawk + mawk)
+        run: |
+          sudo apt-get install -y -qq mawk gawk >/dev/null
+          AWK=gawk bash tests/run.sh
+          AWK=mawk bash tests/run.sh
