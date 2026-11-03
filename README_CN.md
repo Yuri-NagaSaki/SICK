@@ -91,6 +91,8 @@ curl -sL https://ba.sh/sick | bash -s -- --json
 | `-j` / `--json` | 仅向 stdout 打印 JSON |
 | `-y` / `--yes` | 不询问，直接安装缺失工具 |
 | `--no-install` | 从不安装；只用现有工具 |
+| `--no-color` / `--color` | 无颜色 / 强制颜色（支持 `NO_COLOR`） |
+| `--no-clear` | 不清屏 |
 | `-h` / `-v` | 帮助 / 版本 |
 
 ### 报告覆盖

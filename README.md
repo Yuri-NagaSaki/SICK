@@ -91,6 +91,8 @@ Use `sudo` for complete data (dmidecode, SMART, some sensors need root).
 | `-j` / `--json` | JSON to stdout only |
 | `-y` / `--yes` | Install missing tools without prompting |
 | `--no-install` | Never install; use tools already present |
+| `--no-color` / `--color` | Plain output / force colors (`NO_COLOR` honoured) |
+| `--no-clear` | Do not clear the screen |
 | `-h` / `-v` | Help / version |
 
 ### Report coverage
