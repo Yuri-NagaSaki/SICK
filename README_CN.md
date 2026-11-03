@@ -93,7 +93,10 @@ curl -sL https://ba.sh/sick | bash -s -- --json
 | `--no-install` | 从不安装；只用现有工具 |
 | `--no-color` / `--color` | 无颜色 / 强制颜色（支持 `NO_COLOR`） |
 | `--no-clear` | 不清屏 |
+| `--cleanup` / `--keep-packages` | 卸载本次安装的工具 / 保留且不询问 |
 | `-h` / `-v` | 帮助 / 版本 |
+
+报告末尾有 **健康结论**：`✓ 未发现问题`，或列出问题（✗：SMART 失败、坏扇区、RAID 降级、NVMe 严重警告、不可纠正 ECC 等）和警告（!：寿命消耗 ≥ 80%、温度过高、文件系统 ≥ 90% 等）。JSON 中对应 `health` 字段。
 
 ### 报告覆盖
 

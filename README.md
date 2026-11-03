@@ -93,7 +93,10 @@ Use `sudo` for complete data (dmidecode, SMART, some sensors need root).
 | `--no-install` | Never install; use tools already present |
 | `--no-color` / `--color` | Plain output / force colors (`NO_COLOR` honoured) |
 | `--no-clear` | Do not clear the screen |
+| `--cleanup` / `--keep-packages` | Remove the tools this run installed / keep them without asking |
 | `-h` / `-v` | Help / version |
+
+The report ends with a **Health** verdict — `✓ No problems found` or a list of problems (✗: SMART failure, bad sectors, degraded RAID, NVMe critical warnings, uncorrectable ECC…) and warnings (!: wear ≥ 80%, high temperatures, filesystems ≥ 90%…). JSON gets the same under `health`.
 
 ### Report coverage
 
