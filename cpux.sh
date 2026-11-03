@@ -30,6 +30,7 @@
 #   CPUX_SCORE_API      score API URL ("" disables; default catbash.net)
 #   CPUX_JINA           reader prefix ("" disables; default https://r.jina.ai/)
 #   JINA_API_KEY        optional key for higher r.jina.ai rate limits
+#   CPUX_DEBUG=1        save every fetched score page to ./cpux-debug/
 #   GEEKBENCH_EMAIL + GEEKBENCH_KEY   unlock a licensed build
 #   NO_COLOR            disable colors
 #
@@ -547,6 +548,7 @@ download_and_extract() {
 #
 # Layouts handled:
 #   score card   <div class='score'>1047</div><div class='note'>Single-Core Score</div>
+#   (label variants without "Score" or with "Thread" are accepted too)
 #   table row    <th>Single-Core Score</th><th class='score'>1047</th>   | Single-Core Score | 1047 |
 #   CLI summary  "  Single-Core Score             1047"
 # A number *before* the label (score card) outranks one after it, and the
@@ -587,7 +589,8 @@ parse_scores_file() {
         t = tolower(tok[i])
         for (j = 1; j <= 2; j++) {
           kind = (j == 1) ? "single" : "multi"
-          lab = kind "[- ]?core score"
+          # "Single-Core Score", also "Single-Core" / "Single-Thread Score" variants
+          lab = kind "[- ]?(core|thread|threaded)( score)?"
           if (t ~ ("^" lab "$")) {
             if (i > 1) vote(kind, tok[i - 1], 1.5)
             if (i < k) vote(kind, tok[i + 1], 1)
@@ -643,7 +646,9 @@ http_get() {
                  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
                  -H 'Accept-Language: en-US,en;q=0.9') ;;
     api)     a+=(-A "$UA_CPUX" -H 'Accept: application/json') ;;
-    jina)    a+=(-A "$UA_CPUX" -H 'X-No-Cache: true' -H 'X-Timeout: 25')
+    jina)    a+=(-A "$UA_CPUX" -H 'X-No-Cache: true' -H 'X-Timeout: 25') ;;&
+    jinab)   a+=(-A "$UA_CPUX" -H 'X-No-Cache: true' -H 'X-Engine: browser' -H 'X-Timeout: 40') ;;&
+    jina|jinab)
              [[ -n "${JINA_API_KEY:-}" ]] && a+=(-H "Authorization: Bearer ${JINA_API_KEY}") ;;
   esac
   : >"$out"
@@ -658,15 +663,24 @@ http_get() {
 }
 
 # Short reason for a failed fetch (for the final diagnostic line).
+# Short reason for a failed fetch (shown in the final note, so it should
+# tell a Cloudflare wall from a page whose layout the parser did not know).
 classify_fetch() {
-  local code="$1" f="$2" cf=0
-  grep -qiE 'just a moment|cf-chl|challenge-platform|attention required|cf-browser-verification' "$f" 2>/dev/null && cf=1
+  local code="$1" f="$2" cf=0 title="" up=""
+  grep -qiE 'just a moment|cf-chl|challenge-platform|attention required|cf-browser-verification|verif(y|ying) you are human|performing security verification|checking your browser|enable javascript and cookies' "$f" 2>/dev/null && cf=1
+  # Page title: jina prints "Title: …", HTML has <title>.
+  title="$(grep -m 1 -oE '^Title: .{1,60}|<title>[^<]{1,60}' "$f" 2>/dev/null | sed 's/^Title: //; s/^<title>//')"
+  up="$(grep -oE '"upstream"[[:space:]]*:[[:space:]]*[0-9]+' "$f" 2>/dev/null | grep -oE '[0-9]+$' | head -n 1)"
   case "$code" in
     000) printf 'unreachable' ;;
     404) printf '404 not ready' ;;
     429) printf '429 rate-limited' ;;
-    200) if ((cf)); then printf 'cloudflare challenge'; else printf 'no scores on page'; fi ;;
-    *)   if ((cf)); then printf '%s cloudflare' "$code"; else printf 'HTTP %s' "$code"; fi ;;
+    200) if ((cf)); then printf 'cloudflare challenge'
+         elif [[ -n "$title" ]]; then printf 'no scores on page "%s"' "$title"
+         else printf 'no scores on page'; fi ;;
+    *)   if ((cf)); then printf '%s cloudflare' "$code"
+         elif [[ -n "$up" ]]; then printf 'upstream %s' "$up"
+         else printf 'HTTP %s' "$code"; fi ;;
   esac
 }
 
@@ -693,7 +707,7 @@ fetch_scores() {
     if merge_scores "$s" "$m"; then SCORE_SRC="local"; return 0; fi
   fi
   [[ -z "$SCORE_API" ]] && dead[api]=1
-  [[ -z "$JINA_PREFIX" ]] && dead[jina]=1
+  [[ -z "$JINA_PREFIX" ]] && { dead[jina]=1; dead[jina-browser]=1; }
 
   # try_src NAME URL MODE TIMEOUT PARSER
   try_src() {
@@ -703,6 +717,10 @@ fetch_scores() {
     ((t > left)) && t=$left
     status_set -1 "$(T "fetching scores" "获取分数") ${SYM_DOT} ${name} ${SYM_DOT} #${attempt}"
     http_get "$u" "$page" "$mode" "$t"
+    if [[ -n "${CPUX_DEBUG:-}" ]]; then
+      mkdir -p "${CPUX_DEBUG_DIR:=./cpux-debug}" 2>/dev/null &&
+        cp "$page" "${CPUX_DEBUG_DIR}/${attempt}-${name}-${HTTP_CODE}.txt" 2>/dev/null
+    fi
     if [[ "$HTTP_CODE" == 200 ]]; then
       read -r s m < <("$parser" "$page")
       if merge_scores "$s" "$m"; then SCORE_SRC="$name"; return 0; fi
@@ -712,8 +730,8 @@ fetch_scores() {
     # Stop hammering sources that will not change their mind soon.
     case "$name:$why" in
       gb:*cloudflare*|browser:*cloudflare*|gb:HTTP\ 403|browser:HTTP\ 403) dead[$name]=1 ;;
-      api:404*|api:unreachable|api:HTTP*) dead[$name]=1 ;;
-      jina:unreachable|json:*) dead[$name]=1 ;;
+      api:404*|api:unreachable|api:HTTP*|api:upstream*) dead[$name]=1 ;;
+      jina*:unreachable|json:*) dead[$name]=1 ;;
     esac
     return 1
   }
@@ -727,6 +745,8 @@ fetch_scores() {
     fi
     try_src api  "${SCORE_API}?url=${url}" api 30 parse_scores_api && break
     try_src jina "${JINA_PREFIX}${url}"    jina 35 parse_scores_file && break
+    # Full headless-browser render: needed when scores are filled in by JS.
+    try_src jina-browser "${JINA_PREFIX}${url}" jinab 50 parse_scores_file && break
     # back off: 3, 6, 9 … capped at 15 s, never past the deadline
     nap=$((attempt * 3)); ((nap > 15)) && nap=15
     left=$((deadline - SECONDS)); ((left <= 3)) && break
@@ -739,7 +759,7 @@ fetch_scores() {
 
   if [[ -n "$SCORE_SINGLE" && -n "$SCORE_MULTI" ]]; then return 0; fi
   local k note=""
-  for k in gb browser json api jina; do
+  for k in gb browser json api jina jina-browser; do
     [[ -n "${last[$k]:-}" ]] && note+="${note:+ · }${k}: ${last[$k]}"
   done
   FETCH_NOTE="$note"

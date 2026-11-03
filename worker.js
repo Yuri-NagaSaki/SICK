@@ -75,9 +75,10 @@ export function parseGeekbenchScores(text) {
     .filter((t) => t && !/^:?-+:?$/.test(t));
 
   const pick = (kind) => {
-    const label = new RegExp(`^${kind}[- ]?core score$`, "i");
-    const numFirst = new RegExp(`^([0-9,]+) ${kind}[- ]?core score$`, "i");
-    const labelFirst = new RegExp(`^${kind}[- ]?core score ?:? ?([0-9,]+)$`, "i");
+    const lab = `${kind}[- ]?(?:core|thread|threaded)(?: score)?`;
+    const label = new RegExp(`^${lab}$`, "i");
+    const numFirst = new RegExp(`^([0-9,]+) ${lab}$`, "i");
+    const labelFirst = new RegExp(`^${lab} ?:? ?([0-9,]+)$`, "i");
     const votes = new Map();
     const vote = (raw, weight) => {
       const v = String(raw || "").replace(/,/g, "");
