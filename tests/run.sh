@@ -36,6 +36,7 @@ echo "cpux.sh — Geekbench score parser"
     "jina_bold_commas.md|12345 98765"
     "cli_summary.txt|1047 3912"
     "cloudflare_challenge.html|- -"
+    "label_variants.md|2345 11872"
   )
   for c in "${GB_CASES[@]}"; do
     check "${c%%|*}" "${c#*|}" "$(parse_scores_file "$FX/geekbench/${c%%|*}")"
@@ -83,7 +84,8 @@ if command -v node >/dev/null 2>&1; then
     const { parseGeekbenchScores } = await import(process.argv[1]);
     const fx = process.argv[2];
     const cases = { "result_page.html": [1047, 3912], "jina_tables.md": [1047, 3912], "jina_cards.md": [1047, 3912],
-                    "jina_bold_commas.md": [12345, 98765], "cli_summary.txt": [1047, 3912], "cloudflare_challenge.html": [null, null] };
+                    "jina_bold_commas.md": [12345, 98765], "cli_summary.txt": [1047, 3912], "cloudflare_challenge.html": [null, null],
+                    "label_variants.md": [2345, 11872] };
     let bad = 0;
     for (const [f, [s, m]] of Object.entries(cases)) {
       const r = parseGeekbenchScores(fs.readFileSync(`${fx}/${f}`, "utf8"));
